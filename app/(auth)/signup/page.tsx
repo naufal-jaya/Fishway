@@ -352,19 +352,20 @@ export default function SignupPage() {
         </div>
       </div>
 
-      <div className="flex-1 min-h-screen flex items-center justify-center px-6 z-30">
-        <div className="w-full bg-white rounded-3xl shadow-[0_1px_3px_rgba(0,0,0,0.25)] my-auto py-10 px-16 max-w-[480px] max-h-[740px] overflow-y-auto">
+      <div className="flex-1 min-h-screen flex items-center justify-center px-8 py-10 z-30">
+        <div className="w-full bg-white rounded-3xl shadow-[0_1px_3px_rgba(0,0,0,0.25)] my-auto py-6 px-6 sm:py-10 sm:px-16 max-w-[300px] sm:max-w-[480px]">
           <div className="flex justify-center mb-2">
             <Image
               src="/images/logo2_blue.png"
               alt="Fishway"
-              width={140}
-              height={44}
+              width={100}
+              height={32}
+              className ="sm:w-[140px] sm:h-[44px]"
             />
           </div>
 
-          <div className="text-center mb-6">
-            <h2 className="text-2xl font-bold text-gray-800">
+          <div className="text-center mb-2">
+            <h2 className="text-lg sm:text-2xl font-bold text-gray-800">
               {isProfileStep ? "Lengkapi Profil" : "Buat Akun"}
             </h2>
             <p className="text-gray-400 text-sm mt-1">
@@ -378,7 +379,7 @@ export default function SignupPage() {
             <form
               onSubmit={handleProfileSubmit}
               noValidate
-              className="space-y-4"
+              className="space-y-1 sm:space-y-4"
             >
               <div className="grid grid-cols-2 gap-2">
                 <button
@@ -665,7 +666,7 @@ export default function SignupPage() {
                 </button>
               </form>
 
-              <div className="flex items-center gap-3 my-6">
+              <div className="flex items-center gap-3 my-2">
                 <div className="flex-1 h-px bg-gray-200" />
                 <span className="text-xs text-gray-400">
                   atau daftar dengan
@@ -685,7 +686,7 @@ export default function SignupPage() {
                 </button>
               </div>
 
-              <p className="text-center text-sm text-gray-500 mt-5">
+              <p className="text-center text-sm text-gray-500 mt-2">
                 Sudah punya akun?{" "}
                 <Link
                   href="/login"

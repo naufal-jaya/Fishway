@@ -144,15 +144,15 @@ export default function LoginPage() {
       </div>
 
       {/* Right panel */}
-      <div className="flex-1 mih-h-screen flex items-center justify-center px-6 z-30">
-        <div className="w-full bg-white rounded-3xl shadow-[0_1px_3px_rgba(0,0,0,0.25)] my-auto  py-10 px-16 max-w-[480px] max-h-[740px] ">
+      <div className="flex-1 min-h-screen flex items-center justify-center px-8 py-10 z-30">
+        <div className="w-full bg-white rounded-3xl shadow-[0_1px_3px_rgba(0,0,0,0.25)] my-auto py-6 px-6 sm:py-10 sm:px-16 max-w-[300px] sm:max-w-[480px]">
           {/* Logo mobile */}
-          <div className="flex justify-center mb-8 lg:hidden">
+          <div className="flex justify-center mb-2 lg:hidden">
             <Image
               src="/images/logo2_blue.png"
               alt="Fishway"
-              width={140}
-              height={44}
+              width={100}
+              height={32}
             />
           </div>
 
@@ -166,8 +166,8 @@ export default function LoginPage() {
             />
           </div>
 
-          <div className="text-center mb-4">
-            <h2 className="text-2xl font-bold text-gray-800">
+          <div className="text-center mb-2">
+            <h2 className="text-2xl font-bold text-gray-800 sm:text-2xl">
               Masuk ke Fishway
             </h2>
             <p className="text-gray-400 text-sm mt-1">
@@ -175,7 +175,7 @@ export default function LoginPage() {
             </p>
           </div>
 
-          <form onSubmit={handleSubmit} noValidate className="space-y-4">
+          <form onSubmit={handleSubmit} noValidate className="space-y-2">
             {/* Email */}
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-1.5">
@@ -207,7 +207,7 @@ export default function LoginPage() {
                       setErrors((prev) => ({ ...prev, email: undefined }));
                   }}
                   placeholder="Masukkan email Anda"
-                  className={`w-full pl-10 pr-4 py-3 rounded-xl border text-sm outline-none transition-all ${
+                  className={`w-full pl-10 pr-4 py-3 rounded-xl border text-xs sm:text-sm outline-none transition-all ${
                     errors.email
                       ? "border-red-400 bg-red-50 focus:ring-2 focus:ring-red-200"
                       : "border-gray-200 bg-gray-50 focus:border-[#568EC5] focus:ring-2 focus:ring-blue-100 focus:bg-white"
@@ -250,7 +250,7 @@ export default function LoginPage() {
                       setErrors((prev) => ({ ...prev, password: undefined }));
                   }}
                   placeholder="Masukkan password Anda"
-                  className={`w-full pl-10 pr-11 py-3 rounded-xl border text-sm outline-none transition-all ${
+                  className={`w-full pl-10 pr-11 py-3 rounded-xl border text-xs sm:text-sm outline-none transition-all ${
                     errors.password
                       ? "border-red-400 bg-red-50 focus:ring-2 focus:ring-red-200"
                       : "border-gray-200 bg-gray-50 focus:border-[#568EC5] focus:ring-2 focus:ring-blue-100 focus:bg-white"
@@ -358,7 +358,7 @@ export default function LoginPage() {
           </form>
 
           {/* Divider */}
-          <div className="flex items-center gap-3 my-6">
+          <div className="flex items-center gap-3 my-3">
             <div className="flex-1 h-px bg-gray-200" />
             <span className="text-xs text-gray-400">atau masuk dengan</span>
             <div className="flex-1 h-px bg-gray-200" />
@@ -404,7 +404,7 @@ export default function LoginPage() {
             ))}
           </div>
 
-          <p className="text-center text-sm text-gray-500 mt-6">
+          <p className="text-center text-sm text-gray-500 mt-3">
             Belum punya akun?{" "}
             <Link
               href="/signup"
