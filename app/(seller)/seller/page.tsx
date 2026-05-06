@@ -184,8 +184,17 @@ export default async function SellerDashboardPage() {
               ) : (
                 recentOrders.map((order) => {
                   const oDate = new Date(order.created_at).toLocaleDateString('id-ID');
-                  const buyerName = order.buyers?.accounts?.name || "Pembeli";
-                  const productStr = order.order_items?.[0]?.products?.name || "Produk";
+                  const buyerData = Array.isArray(order.buyers) ? order.buyers[0] : order.buyers;
+                  const accountData = buyerData && Array.isArray((buyerData as any).accounts) 
+                    ? (buyerData as any).accounts[0] 
+                    : (buyerData as any)?.accounts;
+                  const buyerName = accountData?.name || "Pembeli";
+                  
+                  const productData = order.order_items?.[0];
+                  const productInfo = productData && Array.isArray((productData as any).products)
+                    ? (productData as any).products[0]
+                    : (productData as any)?.products;
+                  const productStr = productInfo?.name || "Produk";
                   
                   return (
                     <div

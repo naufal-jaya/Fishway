@@ -1,4 +1,5 @@
 export type PriceOption = {
+  id?: string;
   label: string;
   price: number;
   stock: number;

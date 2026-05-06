@@ -132,7 +132,7 @@ export default async function ProfilePage() {
                     >
                       <div>
                         <p className="font-medium text-gray-800 text-sm">
-                          {order.stores?.name}
+                          {(Array.isArray(order.stores) ? order.stores[0]?.name : (order.stores as any)?.name) || "Toko"}
                         </p>
                         <p className="text-xs text-gray-400">
                           {order.id.split("-")[0]} · {oDate}

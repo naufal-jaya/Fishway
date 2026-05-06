@@ -7,6 +7,7 @@ import Image from "next/image";
 import { createClient } from "@/utils/supabase/server";
 import { cookies } from "next/headers";
 import { MapPin } from "lucide-react";
+import { notFound } from "next/navigation";
 
 const WA_NUMBER = "6281234567890"; // Ganti nomor WA penjual
 
@@ -95,8 +96,10 @@ export default async function ProductDetailPage({
   const totalStock = hasVariants
     ? priceOptions.reduce((sum, option) => sum + option.stock, 0)
     : (product.stock ?? 0);
-  const sellerName = product.stores?.name || "Penjual";
-  const waNumber = product.stores?.phone || WA_NUMBER;
+
+  const sellerInfo = Array.isArray(product.stores) ? product.stores[0] : product.stores;
+  const sellerName = (sellerInfo as any)?.name || "Penjual";
+  const waNumber = (sellerInfo as any)?.phone || WA_NUMBER;
   const waLink = `https://wa.me/${waNumber}?text=Halo, saya tertarik dengan ${product.name}`;
 
   return (
