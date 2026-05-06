@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import Image from "next/image";
-import { Home, LogOut, ShoppingCart, Tag, User, Search, Package, ClipboardList, Store } from "lucide-react";
+import { Home, LogOut, LogIn, ShoppingCart, Tag, User, Search, Package, ClipboardList, Store } from "lucide-react";
 import { createClient } from "@/utils/supabase/supabaseClient";
 
 export default function Navbar() {
@@ -106,32 +106,47 @@ export default function Navbar() {
               <Link href="/seller/orders" className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${pathname === "/seller/orders" ? "bg-white/20 text-white" : "hover:bg-white/10 text-white/90"}`}><ClipboardList size={18} /> <span className="hidden lg:inline">Pesanan</span></Link>
               <Link href="/seller" className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${pathname === "/seller" ? "bg-white/20 text-white" : "hover:bg-white/10 text-white/90"}`}><Store size={18} /> <span className="hidden lg:inline">Store</span></Link>
             </>
-          ) : (
+          ) : userInfo.role === "Pembeli" ? (
             <>
               <Link href="/" className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${pathname === "/" ? "bg-white/20 text-white" : "hover:bg-white/10 text-white/90"}`}><Home size={18} /> <span className="hidden lg:inline">Home</span></Link>
               <Link href="/cart" className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${pathname === "/cart" ? "bg-white/20 text-white" : "hover:bg-white/10 text-white/90"}`}><ShoppingCart size={18} /> <span className="hidden lg:inline">Keranjang</span></Link>
               <Link href="/orders" className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${pathname === "/orders" ? "bg-white/20 text-white" : "hover:bg-white/10 text-white/90"}`}><ClipboardList size={18} /> <span className="hidden lg:inline">Orders</span></Link>
             </>
+          ) : (
+            <>
+              <Link href="/" className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${pathname === "/" ? "bg-white/20 text-white" : "hover:bg-white/10 text-white/90"}`}><Home size={18} /> <span className="hidden lg:inline">Home</span></Link>
+            </>
           )}
 
-          {userInfo.name && (
-            <Link href="/profile" className="mx-2 text-right leading-tight hover:bg-white/10 p-2 rounded-lg transition-colors flex flex-col justify-center">
-              <p className="max-w-[160px] truncate text-sm font-semibold">
-                {userInfo.name}
-              </p>
-              <p className="text-[10px] text-white/75">
-                {userInfo.role || "Profil"}
-              </p>
+          {userInfo.name ? (
+            <>
+              <Link href="/profile" className="mx-2 text-right leading-tight hover:bg-white/10 p-2 rounded-lg transition-colors flex flex-col justify-center">
+                <p className="max-w-[160px] truncate text-sm font-semibold">
+                  {userInfo.name}
+                </p>
+                <p className="text-[10px] text-white/75">
+                  {userInfo.role || "Profil"}
+                </p>
+              </Link>
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="px-4 py-2 rounded-lg text-sm font-medium text-white/90 transition-colors hover:bg-white/10"
+                aria-label="Logout"
+              >
+                <LogOut size={18} />
+              </button>
+            </>
+          ) : (
+            <Link
+              href="/login"
+              className="px-4 py-2 rounded-lg text-sm font-medium text-white/90 transition-colors hover:bg-white/10 flex items-center gap-2"
+              aria-label="Login"
+            >
+              <LogIn size={18} />
+              <span className="hidden lg:inline">Masuk</span>
             </Link>
           )}
-          <button
-            type="button"
-            onClick={handleLogout}
-            className="px-4 py-2 rounded-lg text-sm font-medium text-white/90 transition-colors hover:bg-white/10"
-            aria-label="Logout"
-          >
-            <LogOut size={18} />
-          </button>
         </div>
 
         {/* Mobile Nav */}
@@ -142,22 +157,39 @@ export default function Navbar() {
               <Link href="/seller/orders" className={`px-2 py-1 rounded text-xs font-medium transition-colors ${pathname === "/seller/orders" ? "bg-white/20" : "hover:bg-white/10"}`}><ClipboardList size={22} /></Link>
               <Link href="/seller" className={`px-2 py-1 rounded text-xs font-medium transition-colors ${pathname === "/seller" ? "bg-white/20" : "hover:bg-white/10"}`}><Store size={22} /></Link>
             </>
-          ) : (
+          ) : userInfo.role === "Pembeli" ? (
             <>
               <Link href="/" className={`px-2 py-1 rounded text-xs font-medium transition-colors ${pathname === "/" ? "bg-white/20" : "hover:bg-white/10"}`}><Home size={22} /></Link>
               <Link href="/cart" className={`px-2 py-1 rounded text-xs font-medium transition-colors ${pathname === "/cart" ? "bg-white/20" : "hover:bg-white/10"}`}><ShoppingCart size={22} /></Link>
               <Link href="/orders" className={`px-2 py-1 rounded text-xs font-medium transition-colors ${pathname === "/orders" ? "bg-white/20" : "hover:bg-white/10"}`}><ClipboardList size={22} /></Link>
             </>
+          ) : (
+            <>
+              <Link href="/" className={`px-2 py-1 rounded text-xs font-medium transition-colors ${pathname === "/" ? "bg-white/20" : "hover:bg-white/10"}`}><Home size={22} /></Link>
+            </>
           )}
-          <Link href="/profile" className={`px-2 py-1 rounded text-xs font-medium transition-colors ${pathname === "/profile" ? "bg-white/20" : "hover:bg-white/10"}`}><User size={22} /></Link>
-          <button
-            type="button"
-            onClick={handleLogout}
-            className="px-2 py-1 rounded text-xs font-medium transition-colors hover:bg-white/10"
-            aria-label="Logout"
-          >
-            <LogOut size={22} />
-          </button>
+          
+          {userInfo.name ? (
+            <>
+              <Link href="/profile" className={`px-2 py-1 rounded text-xs font-medium transition-colors ${pathname === "/profile" ? "bg-white/20" : "hover:bg-white/10"}`}><User size={22} /></Link>
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="px-2 py-1 rounded text-xs font-medium transition-colors hover:bg-white/10"
+                aria-label="Logout"
+              >
+                <LogOut size={22} />
+              </button>
+            </>
+          ) : (
+            <Link
+              href="/login"
+              className="px-2 py-1 rounded text-xs font-medium transition-colors hover:bg-white/10"
+              aria-label="Login"
+            >
+              <LogIn size={22} />
+            </Link>
+          )}
         </div>
       </div>
     </nav>

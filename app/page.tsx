@@ -76,29 +76,29 @@ export default async function HomePage() {
       <Navbar />
       <Container>
         {/* Category Filter */}
-        <h1 className="text-4xl font-bold my-8">
-          Selamat Datang di Fishway, {displayName}
+        <h1 className="text-xl sm:text-4xl font-bold my-6 sm:my-8">
+          Selamat Datang di Fishway
         </h1>
         {/* Section Title */}
-        <div className="flex items-center px-4 justify-between mb-4">
-          <h2 className="text-3xl font-bold text-gray-800">Produk Terbaru</h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg sm:text-3xl font-bold text-gray-800">Produk Terbaru</h2>
         </div>
 
         {/* Product Grid */}
-        <div className="grid grid-cols-2 px-4 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-4">
           {products.slice(0, 4).map((product) => (
             <ProductCard key={product.id} product={product} />
           ))}
         </div>
 
-        <div className="flex items-center px-4 justify-between mb-2 mt-12">
-          <h2 className="text-3xl font-bold text-gray-800">Katalog Produk</h2>
-          <span className="text-sm text-gray-500">
+        <div className="flex items-center justify-between mb-2 mt-12">
+          <h2 className="text-lg sm:text-3xl font-bold text-gray-800">Katalog Produk</h2>
+          <span className="text-xs sm:text-sm text-gray-500">
             {products.length} produk
           </span>
         </div>
 
-        <div className="flex gap-2 overflow-x-auto pb-2 px-4 mb-2 mt-4">
+        <div className="flex gap-2 overflow-x-auto pb-2 px-0 sm:px-4 mb-2 mt-4">
           {CATEGORIES.map((cat) => (
             <button
               key={cat}
@@ -113,7 +113,7 @@ export default async function HomePage() {
           ))}
         </div>
 
-        <div className="grid grid-cols-2 px-4 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           {products.map((product) => (
             <ProductCard key={product.id} product={product} />
           ))}
