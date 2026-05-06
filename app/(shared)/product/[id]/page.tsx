@@ -1,21 +1,97 @@
 import Container from "@/components/Container";
-import { PRODUCTS, formatPrice } from "@/lib/data";
+import { formatPrice, PriceOption } from "@/lib/data";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import Navbar from "@/components/Navbar";
+import { createClient } from "@/utils/supabase/server";
+import { cookies } from "next/headers";
 import { MapPin } from "lucide-react";
 
 const WA_NUMBER = "6281234567890"; // Ganti nomor WA penjual
 
-export default function ProductDetailPage({
+type ProductRow = {
+  id: string;
+  store_id: string;
+  name: string;
+  description: string | null;
+  condition: string | null;
+  origin: string | null;
+  category: string | null;
+  location: string | null;
+  price: number | null;
+  unit: string | null;
+  stock: number | null;
+  price_options?: PriceOption[] | string | null;
+  stores?: {
+    name: string;
+    phone: string;
+  } | null;
+};
+
+function normalizePriceOptions(value: unknown): PriceOption[] {
+  if (Array.isArray(value)) {
+    return value.filter(
+      (item): item is PriceOption =>
+        typeof item === "object" &&
+        item !== null &&
+        typeof (item as any).label === "string" &&
+        typeof (item as any).price === "number" &&
+        typeof (item as any).stock === "number",
+    );
+  }
+
+  if (typeof value === "string") {
+    try {
+      const parsed = JSON.parse(value);
+      if (Array.isArray(parsed)) {
+        return parsed.filter(
+          (item): item is PriceOption =>
+            typeof item === "object" &&
+            item !== null &&
+            typeof (item as any).label === "string" &&
+            typeof (item as any).price === "number" &&
+            typeof (item as any).stock === "number",
+        );
+      }
+    } catch {
+      return [];
+    }
+  }
+
+  return [];
+}
+
+export default async function ProductDetailPage({
   params,
 }: {
   params: { id: string };
 }) {
-  const product = PRODUCTS.find((p) => p.id === params.id);
-  if (!product) notFound();
+  const supabase = createClient(cookies());
+  const { data: product, error } = await supabase
+    .from("products")
+    .select("*, stores(name, phone)")
+    .eq("id", params.id)
+    .maybeSingle<ProductRow>();
 
-  const waLink = `https://wa.me/${WA_NUMBER}?text=Halo, saya tertarik dengan ${product.name}`;
+  if (error || !product) {
+    console.error(error ?? "Product not found");
+    notFound();
+  }
+
+  const priceOptions = normalizePriceOptions(product.price_options);
+  const hasVariants = priceOptions.length > 0;
+  const minPrice = hasVariants
+    ? Math.min(...priceOptions.map((opt) => opt.price))
+    : (product.price ?? 0);
+  const maxPrice = hasVariants
+    ? Math.max(...priceOptions.map((opt) => opt.price))
+    : (product.price ?? 0);
+  const totalStock = hasVariants
+    ? priceOptions.reduce((sum, option) => sum + option.stock, 0)
+    : (product.stock ?? 0);
+  const sellerName = product.stores?.name || "Penjual";
+  const waNumber = product.stores?.phone || WA_NUMBER;
+  const waLink = `https://wa.me/${waNumber}?text=Halo, saya tertarik dengan ${product.name}`;
 
   return (
     <div>
@@ -34,7 +110,7 @@ export default function ProductDetailPage({
           <div className="card overflow-hidden md:flex">
             {/* Product Image */}
             <div className="bg-blue-50 md:w-72 h-56 md:h-auto flex items-center justify-center text-8xl flex-shrink-0">
-              {product.emoji}
+              <span>{(product as any).emoji || "🐟"}</span>
             </div>
 
             {/* Product Info */}
@@ -50,35 +126,21 @@ export default function ProductDetailPage({
               </div>
 
               {/* PRICE (SAFE FOR TYPE 0/1) */}
-              {product.type === 0 ? (
-                <p className="text-3xl font-bold text-primary">
-                  {formatPrice(product.price)}
-                  <span className="text-lg font-normal text-gray-400">
-                    /{product.unit}
-                  </span>
-                </p>
-              ) : (
-                <div>
-                  <p className="text-3xl font-bold text-primary">
-                    {formatPrice(
-                      Math.min(...product.priceOptions.map((p) => p.price)),
-                    )}{" "}
-                    -{" "}
-                    {formatPrice(
-                      Math.max(...product.priceOptions.map((p) => p.price)),
-                    )}
-                  </p>
+              <div>
+                {hasVariants ? (
+                  <>
+                    <p className="text-3xl font-bold text-primary">
+                      {formatPrice(minPrice)} - {formatPrice(maxPrice)}
+                    </p>
+                    <p className="text-xs text-gray-400">
+                      {priceOptions.length} varian tersedia
+                    </p>
 
-                  <p className="text-xs text-gray-400">
-                    {product.priceOptions.length} varian tersedia
-                  </p>
-
-                  {product.type === 1 && (
-                    <div className="space-y-2">
+                    <div className="space-y-2 mt-3">
                       <p className="text-xs text-gray-400">Varian tersedia:</p>
 
                       <div className="space-y-2">
-                        {product.priceOptions.map((opt) => (
+                        {priceOptions.map((opt) => (
                           <div
                             key={opt.label}
                             className="flex items-center justify-between bg-gray-50 rounded-lg px-3 py-2"
@@ -99,29 +161,50 @@ export default function ProductDetailPage({
                         ))}
                       </div>
                     </div>
-                  )}
-                </div>
-              )}
+                  </>
+                ) : (
+                  <p className="text-3xl font-bold text-primary">
+                    {formatPrice(product.price ?? 0)}
+                    {product.unit ? (
+                      <span className="text-lg font-normal text-gray-400">
+                        /{product.unit}
+                      </span>
+                    ) : null}
+                  </p>
+                )}
+              </div>
 
-              <p className="text-gray-600 text-sm leading-relaxed">
-                {product.description}
-              </p>
+              <div className="grid gap-2 text-gray-600 text-sm leading-relaxed">
+                {product.description ? <p>{product.description}</p> : null}
+                {product.condition ? (
+                  <p>
+                    <span className="font-semibold text-gray-800">
+                      Kondisi:
+                    </span>{" "}
+                    {product.condition}
+                  </p>
+                ) : null}
+                {product.origin ? (
+                  <p>
+                    <span className="font-semibold text-gray-800">Asal:</span>{" "}
+                    {product.origin}
+                  </p>
+                ) : null}
+              </div>
 
               <div className="grid grid-cols-2 gap-3 text-sm">
                 {/* SELLER */}
                 <div className="bg-gray-50 rounded-lg p-3">
                   <p className="text-gray-400 text-xs mb-0.5">Penjual</p>
-                  <p className="font-semibold text-gray-800">
-                    {product.seller}
-                  </p>
+                  <p className="font-semibold text-gray-800">{sellerName}</p>
                 </div>
 
-                {/* LOCATION (FIXED MAPPIN) */}
+                {/* LOCATION */}
                 <div className="bg-gray-50 rounded-lg p-3">
                   <p className="text-gray-400 text-xs mb-0.5">Lokasi</p>
                   <p className="font-semibold text-gray-800 flex items-center gap-1">
                     <MapPin className="w-3.5 h-3.5 text-gray-500 shrink-0" />
-                    {product.location}
+                    {product.location || "-"}
                   </p>
                 </div>
 
@@ -129,12 +212,8 @@ export default function ProductDetailPage({
                 <div className="bg-gray-50 rounded-lg p-3">
                   <p className="text-gray-400 text-xs mb-0.5">Stok</p>
                   <p className="font-semibold text-gray-800">
-                    {product.type === 0
-                      ? `${product.stock} ${product.unit}`
-                      : `${product.priceOptions.reduce(
-                          (sum, p) => sum + p.stock,
-                          0,
-                        )} pcs`}
+                    {totalStock}{" "}
+                    {hasVariants ? "unit" : (product.unit ?? "unit")}
                   </p>
                 </div>
 
@@ -142,7 +221,11 @@ export default function ProductDetailPage({
                 <div className="bg-gray-50 rounded-lg p-3">
                   <p className="text-gray-400 text-xs mb-0.5">Satuan</p>
                   <p className="font-semibold text-gray-800">
-                    {product.type === 0 ? `Per ${product.unit}` : "Bervariasi"}
+                    {hasVariants
+                      ? "Bervariasi"
+                      : product.unit
+                        ? `Per ${product.unit}`
+                        : "Unit"}
                   </p>
                 </div>
               </div>

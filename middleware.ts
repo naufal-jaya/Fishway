@@ -4,7 +4,6 @@ import { createClient } from "@/utils/supabase/middleware";
 type Role = "buyer" | "seller";
 
 const roleAccess: Record<string, Role[]> = {
-  "/": ["buyer", "seller"],
   "/seller": ["seller"],
   "/products": ["seller"],
   "/orders": ["seller"],
@@ -58,5 +57,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/", "/login", "/signup", "/cart", "/seller", "/products", "/orders"],
+  matcher: ["/login", "/signup", "/cart", "/seller", "/products", "/orders"],
 };

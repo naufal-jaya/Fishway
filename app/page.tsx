@@ -19,7 +19,7 @@ export default async function HomePage() {
   const supabase = createClient(cookies());
   const {
     data: { user },
-  } = await supabase.auth.getUser();
+  } = await supabase.auth.getUser();"/"
   const { data: account } = user
     ? await supabase
         .from("accounts")
