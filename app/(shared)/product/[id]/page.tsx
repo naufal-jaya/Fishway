@@ -1,14 +1,36 @@
 import Container from "@/components/Container";
-import { formatPrice, PriceOption } from "@/lib/data";
+import ProductGallery from "@/components/ProductGallery";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
-import ProductActions from "@/components/ProductActions";
 import Image from "next/image";
 import { createClient } from "@/utils/supabase/server";
 import { cookies } from "next/headers";
-import { MapPin } from "lucide-react";
+import { notFound } from "next/navigation";
+import {
+  ChevronRight,
+  ChevronLeft,
+  Leaf,
+  Activity,
+  Globe,
+  Package,
+  ThermometerSun,
+  Droplets,
+  Box,
+  Truck,
+  CheckCircle2,
+  FishIcon,
+  HandPlatter,
+  FishSymbol,
+} from "lucide-react";
+import ProductActions from "@/components/ProductActions";
 
-const WA_NUMBER = "6281234567890"; // Ganti nomor WA penjual
+const WA_NUMBER = "6281234567890";
+
+type PriceOption = {
+  label: string;
+  price: number;
+  stock: number;
+};
 
 type ProductRow = {
   id: string;
@@ -27,11 +49,10 @@ type ProductRow = {
   jenis: string | null;
   food: string | null;
   image: string | null;
+  suhu_ideal?: string | null;
+  ph_ideal?: string | null;
   price_options?: PriceOption[] | string | null;
-  stores?: {
-    name: string;
-    phone: string;
-  } | null;
+  stores?: { name: string; phone: string } | null;
 };
 
 function normalizePriceOptions(value: unknown): PriceOption[] {
@@ -42,10 +63,9 @@ function normalizePriceOptions(value: unknown): PriceOption[] {
         item !== null &&
         typeof (item as any).label === "string" &&
         typeof (item as any).price === "number" &&
-        typeof (item as any).stock === "number",
+        typeof (item as any).stock === "number"
     );
   }
-
   if (typeof value === "string") {
     try {
       const parsed = JSON.parse(value);
@@ -56,14 +76,13 @@ function normalizePriceOptions(value: unknown): PriceOption[] {
             item !== null &&
             typeof (item as any).label === "string" &&
             typeof (item as any).price === "number" &&
-            typeof (item as any).stock === "number",
+            typeof (item as any).stock === "number"
         );
       }
     } catch {
       return [];
     }
   }
-
   return [];
 }
 
@@ -80,132 +99,167 @@ export default async function ProductDetailPage({
     .maybeSingle<ProductRow>();
 
   if (error || !product) {
-    console.error(error ?? "Product not found");
     notFound();
   }
 
   const priceOptions = normalizePriceOptions(product.price_options);
-  const hasVariants = priceOptions.length > 0;
-  const minPrice = hasVariants
-    ? Math.min(...priceOptions.map((opt) => opt.price))
-    : (product.price ?? 0);
-  const maxPrice = hasVariants
-    ? Math.max(...priceOptions.map((opt) => opt.price))
-    : (product.price ?? 0);
-  const totalStock = hasVariants
-    ? priceOptions.reduce((sum, option) => sum + option.stock, 0)
-    : (product.stock ?? 0);
   const sellerName = product.stores?.name || "Penjual";
   const waNumber = product.stores?.phone || WA_NUMBER;
-  const waLink = `https://wa.me/${waNumber}?text=Halo, saya tertarik dengan ${product.name}`;
+
+  const attrs = [
+    { icon: <FishSymbol className="w-4 h-4" />, label: "Jenis", value: product.jenis || product.category },
+    { icon: <Activity className="w-4 h-4" />, label: "Kondisi", value: product.condition },
+    { icon: <Globe className="w-4 h-4" />, label: "Asal", value: product.origin },
+    { icon: <HandPlatter className="w-4 h-4" />, label: "Pakan", value: product.food },
+    { icon: <ThermometerSun className="w-4 h-4" />, label: "Suhu Ideal", value: product.suhu_ideal ?? "26–30°C" },
+    { icon: <Droplets className="w-4 h-4" />, label: "pH Air Ideal", value: product.ph_ideal ?? "6,5–7,5" },
+  ].filter((a) => a.value);
+
+  const packaging = [
+    { icon: <Box className="w-5 h-5 text-black-500" />, label: "Plastik double + oksigen" },
+    { icon: <Package className="w-5 h-5 text-black-500" />, label: "Dus styrofoam (opsional)" },
+    { icon: <Truck className="w-5 h-5 text-black-500" />, label: "Dikirim setiap hari" },
+    { icon: <CheckCircle2 className="w-5 h-5 text-black-500" />, label: "Aman sampai tujuan" },
+  ];
 
   return (
-    <div>
-      <Navbar />
+    <div className="min-h-screen bg-gray-50">
+
+      <div
+          className="fixed top-0 left-0 h-full pointer-events-none z-0"
+          style={{
+            backgroundImage: "url('/images/latar.png')",
+            backgroundRepeat: "no-repeat",
+            backgroundSize: "contain",
+            backgroundPosition: "left center",
+            width: "1300px",
+            opacity: 1,
+          }}
+        />
+      <div className="relative z-10">
+<Navbar />
       <Container>
-        <div className="max-w-3xl mx-auto">
+        <div className="max-w-5xl mx-auto py-6 relative z-10">
+        
           {/* Breadcrumb */}
-          <nav className="text-sm text-gray-500 mb-4">
-            <Link href="/" className="hover:text-primary">
-              Home
-            </Link>
-            <span className="mx-2">/</span>
-            <span className="text-gray-800">{product.name}</span>
+          <Link href="/" className="inline-flex items-center text-gray-400 hover:text-[#407BB5] mb-4">
+          <ChevronLeft className="w-5 h-5" />
+          </Link>
+          <nav className="flex items-center gap-1 text-sm text-gray-400 mb-5">
+            <Link href="/" className="hover:text-[#407BB5] transition-colors">Home</Link>
+            <ChevronRight className="w-3.5 h-3.5" />
+            <Link href="/" className="hover:text-[#407BB5] transition-colors">Produk</Link>
+            <ChevronRight className="w-3.5 h-3.5" />
+            <span className="text-gray-700 font-medium">{product.name}</span>
           </nav>
 
-          <div className="card overflow-hidden md:flex">
-            {/* Product Image */}
-            <div className="bg-blue-50 md:w-72 h-56 md:h-auto flex items-center justify-center text-8xl flex-shrink-0 relative overflow-hidden">
-              <Image 
-                src={product.gambar || "/images/default.png"} 
-                alt={product.name || "Product"}
-                fill
-                sizes="(max-width: 768px) 100vw, 50vw"
-                className="object-cover"
-              />
+          {/* Main Card */}
+          <div className="bg-transparent border-none shadow-none overflow-visible">
+            <div className="flex flex-col md:flex-row gap-6">
+
+              {/* Gallery — handled client side */}
+              <div className="md:w-1/2">
+                  <ProductGallery
+                    mainImage={product.gambar || "/images/default.png"}
+                    extraImages={[product.image, product.gambar].filter(Boolean) as string[]}
+                    name={product.name}
+                  />
+              </div>
+              
+              
+
+              {/* Right: Info + Actions */}
+              <div className="md:w-1/2 p-6 border-t md:border-t-0 md:border-l border-gray-100">
+                <h1 className="text-4xl font-bold text-gray-900 mb-2">{product.name}</h1>
+
+                {/* Rating */}
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="flex">
+                    {[1,2,3,4,5].map((s) => (
+                      <svg key={s} className={`w-4 h-4 ${s <= 3 ? "text-amber-400 fill-amber-400" : "text-gray-200 fill-gray-200"}`} viewBox="0 0 20 20">
+                        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                      </svg>
+                    ))}
+                  </div>
+                  <span className="text-sm text-gray-400">5 Reviews</span>
+                </div>
+
+                <ProductActions
+                  product={{
+                    id: product.id,
+                    name: product.name,
+                    type: product.type,
+                    price: product.price,
+                    unit: product.unit,
+                    stock: product.stock,
+                  }}
+                  priceOptions={priceOptions}
+                  waNumber={waNumber}
+                  sellerName={sellerName}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Bottom: Tab Info */}
+          <div className="mt-4 bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+            {/* Tab bar — static, Info Produk always shown */}
+            <div className="flex border-b border-gray-100">
+              {["Info Produk", "Ulasan (3)", "Rekomendasi"].map((tab, i) => (
+                <button
+                  key={tab}
+                  className={`px-6 py-3.5 text-sm font-medium transition-colors ${
+                    i === 0
+                      ? "border-b-2 border-[#407BB5] text-[#407BB5]"
+                      : "text-gray-400 hover:text-gray-600"
+                  }`}
+                >
+                  {tab}
+                </button>
+              ))}
             </div>
 
-            {/* Product Info */}
-            <div className="p-6 flex-1 space-y-4">
+            <div className="p-6 space-y-6">
+              {/* Deskripsi */}
               <div>
-                <span className="text-xs bg-blue-100 text-primary px-2 py-0.5 rounded-full font-medium">
-                  {product.jenis || product.category}
-                </span>
-
-                <h1 className="text-2xl font-bold text-gray-800 mt-2">
-                  {product.name}
-                </h1>
+                <h3 className="font-semibold text-gray-800 mb-2">Deskripsi Produk</h3>
+                <p className="text-sm text-gray-500 leading-relaxed">
+                  {product.description || "Produk segar berkualitas, dibudidayakan secara higienis."}
+                </p>
               </div>
 
-              <div className="grid gap-2 text-gray-600 text-sm leading-relaxed border-b pb-4">
-                {product.description ? <p>{product.description}</p> : null}
-                {product.condition ? (
-                  <p>
-                    <span className="font-semibold text-gray-800">
-                      Kondisi:
-                    </span>{" "}
-                    {product.condition}
-                  </p>
-                ) : null}
-                {product.origin ? (
-                  <p>
-                    <span className="font-semibold text-gray-800">Asal:</span>{" "}
-                    {product.origin}
-                  </p>
-                ) : null}
-                {product.food ? (
-                  <p>
-                    <span className="font-semibold text-gray-800">Pakan:</span>{" "}
-                    {product.food}
-                  </p>
-                ) : null}
+              {/* Attributes */}
+              <div className="flex gap-3 overflow-x-auto scrollbar-hide">
+                {attrs.map((a) => (
+                  <div key={a.label} className="flex items-start gap-2.5 bg-gray-50 rounded-xl p-3">
+                    <span className="text-black-500 mt-0.5 flex-shrink-0">{a.icon}</span>
+                    <div>
+                      <p className="text-xs text-gray-400 mb-0.5">{a.label}</p>
+                      <p className="text-sm font-medium text-gray-800">{a.value}</p>
+                    </div>
+                  </div>
+                ))}
               </div>
 
-              <div className="grid grid-cols-2 gap-3 text-sm pb-4">
-                {/* SELLER */}
-                <div className="bg-gray-50 rounded-lg p-3">
-                  <p className="text-gray-400 text-xs mb-0.5">Penjual</p>
-                  <p className="font-semibold text-gray-800">{sellerName}</p>
-                </div>
-
-                {/* LOCATION */}
-                <div className="bg-gray-50 rounded-lg p-3">
-                  <p className="text-gray-400 text-xs mb-0.5">Lokasi</p>
-                  <p className="font-semibold text-gray-800 flex items-center gap-1">
-                    <MapPin className="w-3.5 h-3.5 text-gray-500 shrink-0" />
-                    {product.location || "-"}
-                  </p>
+              {/* Packaging */}
+              <div>
+                <h3 className="font-semibold text-gray-800 mb-3">Pengiriman &amp; Packaging</h3>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  {packaging.map((p) => (
+                    <div key={p.label} className="flex items-start gap-2.5 bg-gray-50 rounded-xl p-3">
+                      <span className="flex-shrink-0 mt-0.5">{p.icon}</span>
+                      <p className="text-sm text-gray-600 leading-snug">{p.label}</p>
+                    </div>
+                  ))}
                 </div>
               </div>
-
-              {/* ACTION COMPONENT */}
-              <ProductActions 
-                product={{
-                  id: product.id,
-                  name: product.name,
-                  type: product.type,
-                  price: product.price,
-                  unit: product.unit,
-                  stock: product.stock,
-                }}
-                priceOptions={priceOptions}
-                waNumber={waNumber}
-                sellerName={sellerName}
-              />
             </div>
           </div>
 
-          {/* Related */}
-          <div className="mt-8">
-            <h3 className="text-lg font-bold text-gray-800 mb-2">
-              Produk Lainnya
-            </h3>
-            <Link href="/" className="text-sm text-primary hover:underline">
-              Lihat semua produk →
-            </Link>
-          </div>
         </div>
       </Container>
+      </div>
+      
     </div>
   );
 }

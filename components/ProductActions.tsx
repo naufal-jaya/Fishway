@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { ShoppingCart, Zap, MessageCircle, Minus, Plus } from "lucide-react";
 import { formatPrice, PriceOption } from "@/lib/data";
 import { addToCart } from "@/lib/cart";
 
@@ -25,101 +26,69 @@ export default function ProductActions({
   waNumber,
   sellerName,
 }: ProductActionsProps) {
-  // State
   const [quantity, setQuantity] = useState(1);
   const [selectedVariant, setSelectedVariant] = useState<PriceOption | null>(
     priceOptions.length > 0 ? priceOptions[0] : null
   );
   const [isAdding, setIsAdding] = useState(false);
 
-  // Compute values
-  const currentPrice =
-    product.type === 1
-      ? selectedVariant?.price || 0
-      : product.price || 0;
+  const currentPrice = product.type === 1 ? selectedVariant?.price || 0 : product.price || 0;
+  const currentStock = product.type === 1 ? selectedVariant?.stock || 0 : product.stock || 0;
+  const currentUnit  = product.type === 1 ? selectedVariant?.label || "Unit" : product.unit || "Unit";
 
-  const currentStock =
-    product.type === 1
-      ? selectedVariant?.stock || 0
-      : product.stock || 0;
-
-  const currentUnit =
-    product.type === 1
-      ? selectedVariant?.label || "Unit"
-      : product.unit || "Unit";
-
-  // Handlers
-  const handleIncrease = () => {
-    if (quantity < currentStock) setQuantity((q) => q + 1);
-  };
-
-  const handleDecrease = () => {
-    if (quantity > 1) setQuantity((q) => q - 1);
-  };
+  const handleIncrease = () => { if (quantity < currentStock) setQuantity((q) => q + 1); };
+  const handleDecrease = () => { if (quantity > 1) setQuantity((q) => q - 1); };
 
   const handleAddToCart = async () => {
     setIsAdding(true);
     try {
-      const variantId = product.type === 1 ? selectedVariant?.id : undefined;
+      const variantId = product.type === 1 ? (selectedVariant as any)?.id : undefined;
       const res = await addToCart(product.id, quantity, variantId);
-
-      if (res.error) {
-        alert(res.error);
-      } else {
-        alert("Berhasil ditambahkan ke keranjang!");
-      }
-    } catch (err) {
+      
+      await new Promise((r) => setTimeout(r, 500));
+      
+      if (res.error) alert(res.error);
+      else alert("Berhasil ditambahkan ke keranjang!");
+    } catch {
       alert("Terjadi kesalahan sistem.");
     } finally {
       setIsAdding(false);
     }
   };
 
-  // WhatsApp Message Formatting
-  const variantText =
-    product.type === 1 && selectedVariant
-      ? ` Varian: ${selectedVariant.label}`
-      : "";
-  const totalHarga = formatPrice(currentPrice * quantity);
-
-  const message = `Halo ${sellerName}, saya ingin membeli produk ini:
-Nama Produk: ${product.name}${variantText}
-Jumlah: ${quantity} ${currentUnit}
-Total Harga: ${totalHarga}
-
-Apakah stok masih tersedia?`;
-
-  const waLink = `https://wa.me/${waNumber}?text=${encodeURIComponent(message)}`;
+  const variantText = product.type === 1 && selectedVariant ? ` Varian: ${selectedVariant.label}` : "";
+  const totalHarga  = formatPrice(currentPrice * quantity);
+  const message = `Halo ${sellerName}, saya ingin membeli produk ini:\nNama Produk: ${product.name}${variantText}\nJumlah: ${quantity} ${currentUnit}\nTotal Harga: ${totalHarga}\n\nApakah stok masih tersedia?`;
+  const waLink  = `https://wa.me/${waNumber}?text=${encodeURIComponent(message)}`;
+  const buyLink = `/checkout?product=${product.id}&qty=${quantity}${selectedVariant ? `&variant=${(selectedVariant as any).id}` : ""}`;
 
   return (
-    <div className="space-y-6">
-      {/* Dynamic Price Display */}
+    <div className="space-y-5">
+       <hr className="border-gray-300" />
+      {/* Harga */}
       <div>
-        <p className="text-3xl font-bold text-primary">
+        <p className="text-2xl font-bold text-gray-900">
           {formatPrice(currentPrice)}
-          <span className="text-lg font-normal text-gray-400 ml-1">
-            /{currentUnit}
-          </span>
+          <span className="text-base font-normal text-gray-400 ml-1">/{currentUnit}</span>
         </p>
-        <p className="text-sm text-gray-500 mt-1">Stok tersisa: {currentStock}</p>
       </div>
 
-      {/* Variant Selection (Type 1 only) */}
+      <hr className="border-gray-300" />
+
+      {/* Pilih Ukuran / Varian — hanya type 1 */}
       {product.type === 1 && priceOptions.length > 0 && (
         <div className="space-y-2">
-          <p className="text-sm font-semibold text-gray-800">Pilih Varian:</p>
+          <p className="text-sm font-semibold text-gray-700">Pilih ukuran</p>
           <div className="flex flex-wrap gap-2">
             {priceOptions.map((opt) => (
               <button
-                key={opt.id || opt.label}
-                onClick={() => {
-                  setSelectedVariant(opt);
-                  setQuantity(1); // Reset qty on variant change
-                }}
-                className={`px-4 py-2 border rounded-xl text-sm transition-all ${selectedVariant?.label === opt.label
-                    ? "border-primary bg-primary/10 text-primary font-semibold"
+                key={(opt as any).id || opt.label}
+                onClick={() => { setSelectedVariant(opt); setQuantity(1); }}
+                className={`px-4 py-1.5 border rounded-lg text-sm transition-all ${
+                  selectedVariant?.label === opt.label
+                    ? "border-blue-500 bg-blue-50 text-blue-600 font-medium"
                     : "border-gray-200 text-gray-600 hover:border-gray-300"
-                  }`}
+                }`}
               >
                 {opt.label}
               </button>
@@ -128,48 +97,76 @@ Apakah stok masih tersedia?`;
         </div>
       )}
 
-      {/* Quantity Selection */}
+      
+
+      {/* Jumlah + Stok */}
       <div className="space-y-2">
-        <p className="text-sm font-semibold text-gray-800">Kuantitas:</p>
-        <div className="flex items-center gap-3 w-fit border border-gray-200 rounded-xl p-1 bg-white">
-          <button
-            onClick={handleDecrease}
-            disabled={quantity <= 1}
-            className="w-8 h-8 flex items-center justify-center text-gray-500 hover:bg-gray-100 rounded-lg disabled:opacity-50"
-          >
-            -
-          </button>
-          <span className="w-8 text-center font-semibold text-gray-800">
-            {quantity}
-          </span>
-          <button
-            onClick={handleIncrease}
-            disabled={quantity >= currentStock}
-            className="w-8 h-8 flex items-center justify-center text-gray-500 hover:bg-gray-100 rounded-lg disabled:opacity-50"
-          >
-            +
-          </button>
+        <p className="text-sm font-semibold text-gray-700">Jumlah</p>
+        <div className="flex items-center gap-4">
+          <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden">
+            <button
+              onClick={handleDecrease}
+              disabled={quantity <= 1}
+              className="w-9 h-9 flex items-center justify-center text-gray-500 hover:bg-gray-50 disabled:opacity-40"
+            >
+              <Minus className="w-3.5 h-3.5" />
+            </button>
+            <span className="w-10 text-center text-sm font-semibold text-gray-800">{quantity}</span>
+            <button
+              onClick={handleIncrease}
+              disabled={quantity >= currentStock}
+              className="w-9 h-9 flex items-center justify-center text-gray-500 hover:bg-gray-50 disabled:opacity-40"
+            >
+              <Plus className="w-3.5 h-3.5" />
+            </button>
+          </div>
+          <span className="text-sm text-gray-400">Stok: {currentStock} {currentUnit}</span>
         </div>
       </div>
 
-      {/* ACTION BUTTONS */}
-      <div className="flex gap-3 pt-4 border-t border-gray-100">
+     
+
+      {/* Tombol Aksi */}
+      <div className="flex gap-3 pt-2">
+        {/* Keranjang */}
+        <button
+          onClick={handleAddToCart}
+          disabled={isAdding || currentStock === 0}
+          style={{ borderColor: "#407BB5", color:"#407BB5"}}
+          className="flex-1 flex items-center justify-center gap-2 h-11 px-5 min-w-[160px] border-2 rounded-xl text-sm font-semibold transition hover:bg-blue-50"
+          >
+          {isAdding ? (
+            <span className="w-4 h-4 border-2 border-[#407BB5] border-t-transparent rounded-full animate-spin"></span>
+          ) : (
+            <>
+              <ShoppingCart className="w-4 h-4" />
+              <span className="whitespace-nowrap">+ Keranjang</span>
+            </>
+          )}
+        </button>
+
+        {/* Beli Sekarang */}
+        <Link
+          href={buyLink}
+          style={{backgroundColor: "#407BB5"}}
+          className="flex-1 flex items-center justify-center gap-2 h-11 px-5 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:opacity-90 transition"
+          >
+          Beli Sekarang
+        </Link>
+
+        {/* Hubungi WA */}
         <Link
           href={waLink}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex-1 btn-primary text-center py-3 rounded-xl flex items-center justify-center gap-2"
+        className="flex-1 flex items-center justify-center gap-2 h-11 px-5 bg-green-500 text-white rounded-xl text-sm font-semibold hover:bg-green-600 transition"
         >
-          <span>💬</span> WhatsApp
-        </Link>
-
-        <button
-          onClick={handleAddToCart}
-          disabled={isAdding || currentStock === 0}
-          className="flex-1 btn-outline text-center py-3 rounded-xl flex items-center justify-center gap-2 disabled:opacity-50"
-        >
-          <span>🛒</span> {isAdding ? "Menambahkan..." : "Keranjang"}
-        </button>
+          <svg className="w-4 h-4 fill-white" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
+            <path d="M12 0C5.373 0 0 5.373 0 12c0 2.124.558 4.17 1.541 5.943L.057 23.571a.5.5 0 00.6.633l5.782-1.457A11.944 11.944 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.894a9.877 9.877 0 01-5.031-1.378l-.36-.214-3.733.941.993-3.608-.235-.372A9.833 9.833 0 012.106 12C2.106 6.533 6.533 2.106 12 2.106S21.894 6.533 21.894 12 17.467 21.894 12 21.894z"/>
+          </svg>
+          Hubungi
+      </Link>
       </div>
     </div>
   );
