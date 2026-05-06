@@ -11,7 +11,12 @@ type BaseProduct = {
   seller: string;
   location: string;
   description: string;
-  emoji: string;
+  gambar: string;
+  jenis: string;
+  condition: string;
+  origin: string;
+  food: string;
+  image: string;
 };
 
 export type Product =
@@ -43,7 +48,12 @@ export const PRODUCTS: Product[] = [
     location: "Jakarta Utara",
     description:
       "Salmon segar impor langsung dari nelayan, cocok untuk sashimi atau dibakar.",
-    emoji: "🐟",
+    gambar: "/images/default.png",
+    jenis: "Salmon",
+    condition: "Segar (Fresh)",
+    origin: "Norwegia",
+    food: "Pelet",
+    image: "/images/default.png",
     type: 0,
   },
   {
@@ -56,7 +66,12 @@ export const PRODUCTS: Product[] = [
     seller: "Bu Sari",
     location: "Surabaya",
     description: "Udang windu besar segar, cocok untuk berbagai masakan.",
-    emoji: "🦐",
+    gambar: "/images/default.png",
+    jenis: "Windu",
+    condition: "Beku (Frozen)",
+    origin: "Tambak Sidoarjo",
+    food: "Alami",
+    image: "/images/default.png",
     type: 0,
   },
   {
@@ -69,7 +84,12 @@ export const PRODUCTS: Product[] = [
     seller: "Pak Hendra",
     location: "Makassar",
     description: "Cumi segar tangkapan hari ini, daging tebal dan kenyal.",
-    emoji: "🦑",
+    gambar: "/images/default.png",
+    jenis: "Cumi Biasa",
+    condition: "Segar (Fresh)",
+    origin: "Selat Makassar",
+    food: "Ikan Kecil",
+    image: "/images/default.png",
     type: 0,
   },
   {
@@ -82,7 +102,12 @@ export const PRODUCTS: Product[] = [
     seller: "Pak Budi",
     location: "Jakarta Utara",
     description: "Kerapu premium, dagingnya putih dan lembut.",
-    emoji: "🐠",
+    gambar: "/images/default.png",
+    jenis: "Kerapu Macan",
+    condition: "Hidup (Live)",
+    origin: "Kepulauan Seribu",
+    food: "Udang",
+    image: "/images/default.png",
     type: 0,
   },
   {
@@ -95,7 +120,12 @@ export const PRODUCTS: Product[] = [
     seller: "Ibu Dewi",
     location: "Balikpapan",
     description: "Kepiting bakau betina bertelur, segar dari tambak.",
-    emoji: "🦀",
+    gambar: "/images/default.png",
+    jenis: "Kepiting Bakau",
+    condition: "Hidup (Live)",
+    origin: "Kalimantan",
+    food: "Kerang",
+    image: "/images/default.png",
     type: 0,
   },
   {
@@ -108,7 +138,12 @@ export const PRODUCTS: Product[] = [
     seller: "Pak Santoso",
     location: "Bogor",
     description: "Lele dumbo segar dari kolam, ukuran konsumsi.",
-    emoji: "🐡",
+    gambar: "/images/default.png",
+    jenis: "Lele",
+    condition: "Hidup (Live)",
+    origin: "Bogor",
+    food: "Pelet",
+    image: "/images/default.png",
     type: 0,
   },
   {
@@ -117,8 +152,13 @@ export const PRODUCTS: Product[] = [
     category: "Ikan Air Tawar",
     seller: "Pak Budi",
     location: "Magetan",
-    description: "Lele segar langsung dari petani Magetan.",
-    emoji: "🐡",
+    description: "Ikan koki hias langsung dari peternak Magetan.",
+    gambar: "/images/default.png",
+    jenis: "Ikan Hias",
+    condition: "Hidup (Live)",
+    origin: "Magetan",
+    food: "Pelet Halus",
+    image: "/images/default.png",
     type: 1,
     priceOptions: [
       { label: "1 ons", price: 5000, stock: 5 },

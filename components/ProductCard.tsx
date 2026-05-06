@@ -1,13 +1,20 @@
 import Link from "next/link";
 import { MapPin } from 'lucide-react';
 import { Product, formatPrice } from "@/lib/data";
+import Image from "next/image";
 
 export default function ProductCard({ product }: { product: Product }) {
   return (
     <Link href={`/product/${product.id}`} className="block group">
       <div className="card gap-0 grid grid-row-2 h-[280px] overflow-hidden hover:shadow-md transition-shadow ">
-        <div className="bg-blue-100  h-36 flex items-center justify-center text-5xl">
-          {product.emoji}
+        <div className="bg-blue-100 h-36 flex items-center justify-center text-5xl overflow-hidden relative">
+          <Image 
+            src={product.gambar || "/images/default.png"} 
+            alt={product.name || "Product"} 
+            fill 
+            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+            className="object-cover"
+          />
         </div>
 
         <div className="p-4">

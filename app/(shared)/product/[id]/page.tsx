@@ -1,8 +1,9 @@
 import Container from "@/components/Container";
 import { formatPrice, PriceOption } from "@/lib/data";
 import Link from "next/link";
-import { notFound } from "next/navigation";
 import Navbar from "@/components/Navbar";
+import ProductActions from "@/components/ProductActions";
+import Image from "next/image";
 import { createClient } from "@/utils/supabase/server";
 import { cookies } from "next/headers";
 import { MapPin } from "lucide-react";
@@ -21,6 +22,11 @@ type ProductRow = {
   price: number | null;
   unit: string | null;
   stock: number | null;
+  type: number;
+  gambar: string | null;
+  jenis: string | null;
+  food: string | null;
+  image: string | null;
   price_options?: PriceOption[] | string | null;
   stores?: {
     name: string;
@@ -69,7 +75,7 @@ export default async function ProductDetailPage({
   const supabase = createClient(cookies());
   const { data: product, error } = await supabase
     .from("products")
-    .select("*, stores(name, phone)")
+    .select("*, stores(name, phone), price_options(*)")
     .eq("id", params.id)
     .maybeSingle<ProductRow>();
 
@@ -109,15 +115,21 @@ export default async function ProductDetailPage({
 
           <div className="card overflow-hidden md:flex">
             {/* Product Image */}
-            <div className="bg-blue-50 md:w-72 h-56 md:h-auto flex items-center justify-center text-8xl flex-shrink-0">
-              <span>{(product as any).emoji || "🐟"}</span>
+            <div className="bg-blue-50 md:w-72 h-56 md:h-auto flex items-center justify-center text-8xl flex-shrink-0 relative overflow-hidden">
+              <Image 
+                src={product.gambar || "/images/default.png"} 
+                alt={product.name || "Product"}
+                fill
+                sizes="(max-width: 768px) 100vw, 50vw"
+                className="object-cover"
+              />
             </div>
 
             {/* Product Info */}
             <div className="p-6 flex-1 space-y-4">
               <div>
                 <span className="text-xs bg-blue-100 text-primary px-2 py-0.5 rounded-full font-medium">
-                  {product.category}
+                  {product.jenis || product.category}
                 </span>
 
                 <h1 className="text-2xl font-bold text-gray-800 mt-2">
@@ -125,56 +137,7 @@ export default async function ProductDetailPage({
                 </h1>
               </div>
 
-              {/* PRICE (SAFE FOR TYPE 0/1) */}
-              <div>
-                {hasVariants ? (
-                  <>
-                    <p className="text-3xl font-bold text-primary">
-                      {formatPrice(minPrice)} - {formatPrice(maxPrice)}
-                    </p>
-                    <p className="text-xs text-gray-400">
-                      {priceOptions.length} varian tersedia
-                    </p>
-
-                    <div className="space-y-2 mt-3">
-                      <p className="text-xs text-gray-400">Varian tersedia:</p>
-
-                      <div className="space-y-2">
-                        {priceOptions.map((opt) => (
-                          <div
-                            key={opt.label}
-                            className="flex items-center justify-between bg-gray-50 rounded-lg px-3 py-2"
-                          >
-                            <span className="text-sm text-gray-700">
-                              {opt.label}
-                            </span>
-
-                            <div className="text-right">
-                              <p className="text-sm font-semibold text-primary">
-                                {formatPrice(opt.price)}
-                              </p>
-                              <p className="text-[11px] text-gray-400">
-                                Stok: {opt.stock}
-                              </p>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </>
-                ) : (
-                  <p className="text-3xl font-bold text-primary">
-                    {formatPrice(product.price ?? 0)}
-                    {product.unit ? (
-                      <span className="text-lg font-normal text-gray-400">
-                        /{product.unit}
-                      </span>
-                    ) : null}
-                  </p>
-                )}
-              </div>
-
-              <div className="grid gap-2 text-gray-600 text-sm leading-relaxed">
+              <div className="grid gap-2 text-gray-600 text-sm leading-relaxed border-b pb-4">
                 {product.description ? <p>{product.description}</p> : null}
                 {product.condition ? (
                   <p>
@@ -190,9 +153,15 @@ export default async function ProductDetailPage({
                     {product.origin}
                   </p>
                 ) : null}
+                {product.food ? (
+                  <p>
+                    <span className="font-semibold text-gray-800">Pakan:</span>{" "}
+                    {product.food}
+                  </p>
+                ) : null}
               </div>
 
-              <div className="grid grid-cols-2 gap-3 text-sm">
+              <div className="grid grid-cols-2 gap-3 text-sm pb-4">
                 {/* SELLER */}
                 <div className="bg-gray-50 rounded-lg p-3">
                   <p className="text-gray-400 text-xs mb-0.5">Penjual</p>
@@ -207,47 +176,22 @@ export default async function ProductDetailPage({
                     {product.location || "-"}
                   </p>
                 </div>
-
-                {/* STOCK */}
-                <div className="bg-gray-50 rounded-lg p-3">
-                  <p className="text-gray-400 text-xs mb-0.5">Stok</p>
-                  <p className="font-semibold text-gray-800">
-                    {totalStock}{" "}
-                    {hasVariants ? "unit" : (product.unit ?? "unit")}
-                  </p>
-                </div>
-
-                {/* UNIT */}
-                <div className="bg-gray-50 rounded-lg p-3">
-                  <p className="text-gray-400 text-xs mb-0.5">Satuan</p>
-                  <p className="font-semibold text-gray-800">
-                    {hasVariants
-                      ? "Bervariasi"
-                      : product.unit
-                        ? `Per ${product.unit}`
-                        : "Unit"}
-                  </p>
-                </div>
               </div>
 
-              {/* ACTION BUTTONS */}
-              <div className="flex gap-3 pt-2">
-                <Link
-                  href={waLink}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex-1 btn-primary text-center py-3 rounded-xl flex items-center justify-center gap-2"
-                >
-                  <span>💬</span> Hubungi Penjual
-                </Link>
-
-                <Link
-                  href="/cart"
-                  className="flex-1 btn-outline text-center py-3 rounded-xl flex items-center justify-center gap-2"
-                >
-                  <span>🛒</span> Tambah Keranjang
-                </Link>
-              </div>
+              {/* ACTION COMPONENT */}
+              <ProductActions 
+                product={{
+                  id: product.id,
+                  name: product.name,
+                  type: product.type,
+                  price: product.price,
+                  unit: product.unit,
+                  stock: product.stock,
+                }}
+                priceOptions={priceOptions}
+                waNumber={waNumber}
+                sellerName={sellerName}
+              />
             </div>
           </div>
 

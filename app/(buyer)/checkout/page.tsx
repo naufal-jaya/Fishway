@@ -1,17 +1,69 @@
 import Container from "@/components/Container";
-import { DUMMY_CART, formatPrice, getCartItemPrice } from "@/lib/data";
+import { formatPrice } from "@/lib/data";
 import Navbar from "@/components/Navbar";
+import { createClient } from "@/utils/supabase/server";
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
+import CheckoutClient from "@/components/CheckoutClient";
 
-const subtotal = DUMMY_CART.reduce(
-  (sum, item) => sum + getCartItemPrice(item) * item.qty,
-  0,
-);
+export default async function CheckoutPage() {
+  const supabase = createClient(cookies());
+  const { data: { user } } = await supabase.auth.getUser();
 
-const shipping = 15000;
+  if (!user) redirect("/");
 
-const total = subtotal + shipping;
+  // Fetch account & buyer info
+  const [{ data: account }, { data: buyer }] = await Promise.all([
+    supabase.from("accounts").select("name, address").eq("id", user.id).maybeSingle(),
+    supabase.from("buyers").select("phone").eq("id", user.id).maybeSingle()
+  ]);
 
-export default function CheckoutPage() {
+  // Fetch Cart
+  const { data: cart } = await supabase
+    .from("carts")
+    .select(`
+      id,
+      cart_items (
+        id,
+        quantity,
+        products (
+          id, name, type, price, unit
+        ),
+        price_options (
+          id, label, price
+        )
+      )
+    `)
+    .eq("buyer_id", user.id)
+    .maybeSingle();
+
+  const cartItems = cart?.cart_items || [];
+  
+  if (cartItems.length === 0) {
+    redirect("/cart");
+  }
+
+  let subtotal = 0;
+  
+  const formattedItems = cartItems.map((item: any) => {
+    const product = item.products;
+    const variant = item.price_options;
+    
+    const itemPrice = product?.type === 0 ? product.price : variant?.price || 0;
+    
+    subtotal += itemPrice * item.quantity;
+
+    return {
+      id: item.id,
+      name: product?.name || "Produk",
+      qty: item.quantity,
+      price: itemPrice,
+    };
+  });
+
+  const shipping = 15000;
+  const total = subtotal + shipping;
+
   return (
     <div>
       <Navbar />
@@ -20,7 +72,7 @@ export default function CheckoutPage() {
 
         <div className="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto">
           {/* Delivery Form */}
-          <div className="card p-6 space-y-4">
+          <div className="card p-6 space-y-4 h-fit">
             <h2 className="font-bold text-gray-800 text-lg border-b pb-3">
               📦 Alamat Pengiriman
             </h2>
@@ -31,7 +83,7 @@ export default function CheckoutPage() {
               </label>
               <input
                 type="text"
-                defaultValue="Andi Pratama"
+                defaultValue={account?.name || ""}
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none focus:border-primary"
               />
             </div>
@@ -41,7 +93,7 @@ export default function CheckoutPage() {
               </label>
               <input
                 type="tel"
-                defaultValue="08123456789"
+                defaultValue={buyer?.phone || ""}
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none focus:border-primary"
               />
             </div>
@@ -50,7 +102,8 @@ export default function CheckoutPage() {
                 Alamat Lengkap
               </label>
               <textarea
-                defaultValue="Jl. Merdeka No. 10, Bogor, Jawa Barat"
+                defaultValue={account?.address || ""}
+                placeholder="Masukkan alamat pengiriman lengkap..."
                 rows={3}
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none focus:border-primary resize-none"
               />
@@ -75,21 +128,21 @@ export default function CheckoutPage() {
                 🧾 Pesanan
               </h2>
               <div className="space-y-2">
-                {DUMMY_CART.map((item) => (
+                {formattedItems.map((item: any) => (
                   <div key={item.id} className="flex justify-between text-sm">
                     <span className="text-gray-600">
                       {item.name} x{item.qty}
                     </span>
                     <span className="font-medium">
-                      {formatPrice(getCartItemPrice(item) * item.qty)}
+                      {formatPrice(item.price * item.qty)}
                     </span>
                   </div>
                 ))}
-                <div className="flex justify-between text-sm text-gray-500">
+                <div className="flex justify-between text-sm text-gray-500 pt-2">
                   <span>Ongkos Kirim</span>
-                  <span>{formatPrice(15000)}</span>
+                  <span>{formatPrice(shipping)}</span>
                 </div>
-                <div className="border-t pt-2 flex justify-between font-bold text-primary text-base">
+                <div className="border-t pt-2 mt-2 flex justify-between font-bold text-primary text-base">
                   <span>Total Bayar</span>
                   <span>{formatPrice(total)}</span>
                 </div>
@@ -114,13 +167,8 @@ export default function CheckoutPage() {
               <p className="text-xs text-gray-400 mt-1">Berlaku 15 menit</p>
             </div>
 
-            {/* Confirm Button */}
-            <button className="btn-primary w-full py-3 rounded-xl text-base">
-              ✅ Sudah Scan, Konfirmasi Pembayaran
-            </button>
-            <p className="text-xs text-center text-gray-400">
-              Pesanan akan diproses setelah pembayaran dikonfirmasi
-            </p>
+            {/* Confirm Button Client Component */}
+            <CheckoutClient />
           </div>
         </div>
       </Container>
