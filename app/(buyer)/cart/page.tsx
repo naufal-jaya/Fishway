@@ -1,27 +1,68 @@
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import Container from "@/components/Container";
-import {
-  DUMMY_CART,
-  formatPrice,
-  getCartItemPrice,
-  getCartItemUnit,
-} from "@/lib/data";
+import { createClient } from "@/utils/supabase/server";
+import { formatPrice } from "@/lib/data";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
+import Image from "next/image";
+import CartItemControl from "@/components/CartItemControl";
 
-export default function CartPage() {
-  const role = cookies().get("role")?.value;
-  console.log(role);
+export default async function CartPage() {
+  const supabase = createClient(cookies());
 
-  if (role !== "seller") {
-    console.log("403/404 papa role tidak sesuai");
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect("/"); // Or redirect to login
   }
 
-  const subtotal = DUMMY_CART.reduce(
-    (sum, item) => sum + getCartItemPrice(item) * item.qty,
-    0,
-  );
+  // Fetch the active cart for the user
+  const { data: cart } = await supabase
+    .from("carts")
+    .select(`
+      id,
+      cart_items (
+        id,
+        quantity,
+        products (
+          id, name, type, price, unit, gambar, location,
+          stores (name)
+        ),
+        price_options (
+          id, label, price
+        )
+      )
+    `)
+    .eq("buyer_id", user.id)
+    .maybeSingle();
+
+  const cartItems = cart?.cart_items || [];
+
+  let subtotal = 0;
+  
+  const formattedItems = cartItems.map((item: any) => {
+    const product = item.products;
+    const variant = item.price_options;
+    
+    const itemPrice = product?.type === 0 ? product.price : variant?.price || 0;
+    const itemUnit = product?.type === 0 ? product.unit : variant?.label || "unit";
+    
+    subtotal += itemPrice * item.quantity;
+
+    return {
+      id: item.id,
+      productId: product?.id,
+      name: product?.name || "Produk Tidak Ditemukan",
+      seller: product?.stores?.name || "Penjual",
+      location: product?.location || "-",
+      gambar: product?.gambar || "/images/default.png",
+      qty: item.quantity,
+      price: itemPrice,
+      unit: itemUnit,
+    };
+  });
+
   const ongkir = 15000;
   const total = subtotal + ongkir;
 
@@ -33,7 +74,7 @@ export default function CartPage() {
           🛒 Keranjang Belanja
         </h1>
 
-        {DUMMY_CART.length === 0 ? (
+        {formattedItems.length === 0 ? (
           <div className="card p-12 text-center">
             <p className="text-5xl mb-4">🛒</p>
             <p className="text-gray-500 mb-4">Keranjang kamu kosong</p>
@@ -45,11 +86,17 @@ export default function CartPage() {
           <div className="grid md:grid-cols-3 gap-6">
             {/* Item List */}
             <div className="md:col-span-2 space-y-3">
-              {DUMMY_CART.map((item) => (
+              {formattedItems.map((item: any) => (
                 <div key={item.id} className="card p-4 flex gap-4 items-center">
-                  {/* Emoji */}
-                  <div className="bg-blue-50 w-16 h-16 rounded-lg flex items-center justify-center text-3xl flex-shrink-0">
-                    {item.emoji}
+                  {/* Image */}
+                  <div className="bg-blue-50 w-16 h-16 rounded-lg flex items-center justify-center text-3xl flex-shrink-0 relative overflow-hidden">
+                    <Image 
+                      src={item.gambar || "/images/default.png"} 
+                      alt={item.name || "Product"} 
+                      fill
+                      sizes="64px"
+                      className="object-cover"
+                    />
                   </div>
                   {/* Info */}
                   <div className="flex-1 min-w-0">
@@ -60,30 +107,18 @@ export default function CartPage() {
                       {item.seller} · {item.location}
                     </p>
                     <p className="text-primary font-bold mt-1">
-                      {formatPrice(getCartItemPrice(item))}/
-                      {getCartItemUnit(item)}
+                      {formatPrice(item.price)}/
+                      {item.unit}
                     </p>
                   </div>
-                  {/* Qty Control */}
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    <button className="w-7 h-7 rounded-full border border-gray-300 flex items-center justify-center text-gray-600 hover:bg-gray-100 text-sm">
-                      −
-                    </button>
-                    <span className="w-6 text-center font-medium">
-                      {item.qty}
-                    </span>
-                    <button className="w-7 h-7 rounded-full border border-gray-300 flex items-center justify-center text-gray-600 hover:bg-gray-100 text-sm">
-                      +
-                    </button>
-                  </div>
+                  {/* Qty Control and Remove */}
+                  <CartItemControl itemId={item.id} initialQty={item.qty} />
+                  
                   {/* Subtotal */}
-                  <div className="text-right flex-shrink-0">
+                  <div className="text-right flex-shrink-0 min-w-[80px]">
                     <p className="font-bold text-gray-800">
-                      {formatPrice(getCartItemPrice(item) * item.qty)}
+                      {formatPrice(item.price * item.qty)}
                     </p>
-                    <button className="text-red-400 hover:text-red-600 text-xs mt-1">
-                      Hapus
-                    </button>
                   </div>
                 </div>
               ))}
@@ -97,7 +132,7 @@ export default function CartPage() {
                 </h2>
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between text-gray-600">
-                    <span>Subtotal ({DUMMY_CART.length} item)</span>
+                    <span>Subtotal ({formattedItems.length} item)</span>
                     <span>{formatPrice(subtotal)}</span>
                   </div>
                   <div className="flex justify-between text-gray-600">

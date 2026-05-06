@@ -1,11 +1,41 @@
 import Container from "@/components/Container";
-import { PRODUCTS, formatPrice } from "@/lib/data";
+import { formatPrice } from "@/lib/data";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import { Pencil } from "lucide-react";
+import { createClient } from "@/utils/supabase/server";
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
+import Image from "next/image";
 
-export default function SellerProductsPage() {
-  const myProducts = PRODUCTS.filter((p) => p.seller === "Pak Budi");
+export default async function SellerProductsPage() {
+  const supabase = createClient(cookies());
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect("/");
+  }
+
+  // Fetch the seller's store
+  const { data: store } = await supabase
+    .from("stores")
+    .select("id")
+    .eq("seller_id", user.id)
+    .maybeSingle();
+
+  let myProducts: any[] = [];
+  
+  if (store) {
+    const { data } = await supabase
+      .from("products")
+      .select("*, price_options(*)")
+      .eq("store_id", store.id)
+      .order("created_at", { ascending: false });
+      
+    if (data) {
+      myProducts = data;
+    }
+  }
 
   return (
     <div>
@@ -47,12 +77,13 @@ export default function SellerProductsPage() {
                     key={product.id}
                     className="card p-4 flex gap-4 items-start"
                   >
-                    {/* IMAGE */}
-                    <div className="w-24 h-24 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
-                      <img
-                        src={"/images/default.png"}
+                    <div className="w-24 h-24 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0 relative">
+                      <Image
+                        src={product.gambar || "/images/default.png"}
                         alt={product.name || "product"}
-                        className="w-full h-full object-cover"
+                        fill
+                        className="object-cover"
+                        sizes="96px"
                       />
                     </div>
 
@@ -75,8 +106,8 @@ export default function SellerProductsPage() {
                         </p>
                       ) : (
                         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 mt-2">
-                          {product.priceOptions.map((opt) => {
-                            const sold = 5; // sementara dummy kalau belum ada data
+                          {(product.price_options || []).map((opt: any) => {
+                            const sold = 0; // sementara dummy kalau belum ada data
 
                             return (
                               <div
@@ -114,8 +145,8 @@ export default function SellerProductsPage() {
 
                         <span className="px-2 py-1 rounded bg-[#407BB5] text-white">
                           {product.type === 0
-                            ? `${product.stock} ${product.unit}`
-                            : `${product.priceOptions.reduce((sum, p) => sum + p.stock, 0)} unit`}
+                            ? `${product.stock || 0} ${product.unit || 'unit'}`
+                            : `${(product.price_options || []).reduce((sum: number, p: any) => sum + (p.stock || 0), 0)} unit`}
                         </span>
 
                         {/* TERJUAL */}
@@ -179,10 +210,9 @@ export default function SellerProductsPage() {
                   </div>
                 </div>
 
-                {/* BUTTON */}
-                <button className="w-full btn-primary py-3 text-sm">
+                <Link href="/products/add" className="w-full btn-primary py-3 text-sm flex justify-center items-center">
                   + Tambahkan Produk
-                </button>
+                </Link>
               </div>
             </div>
           </div>
