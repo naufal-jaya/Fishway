@@ -1,50 +1,102 @@
 import Container from "@/components/Container";
-import { PRODUCTS, DUMMY_ORDERS, formatPrice } from "@/lib/data";
+import { formatPrice } from "@/lib/data";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
+import { createClient } from "@/utils/supabase/server";
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 
-const sellerProducts = PRODUCTS.filter((p) => p.seller === "Pak Budi");
-const totalRevenue = DUMMY_ORDERS.reduce((s, o) => s + o.total, 0);
+export default async function SellerDashboardPage() {
+  const supabase = createClient(cookies());
+  const { data: { user } } = await supabase.auth.getUser();
 
-export default function SellerDashboardPage() {
+  if (!user) {
+    redirect("/");
+  }
+
+  // Get Store
+  const { data: store } = await supabase
+    .from("stores")
+    .select("id, name, phone")
+    .eq("seller_id", user.id)
+    .maybeSingle();
+
+  if (!store) {
+    return (
+      <div>
+        <Navbar />
+        <Container>
+          <div className="card p-12 text-center mt-8">
+            <h2 className="text-xl font-bold mb-4">Anda belum memiliki toko.</h2>
+            <p className="text-gray-500 mb-6">Silakan buat toko terlebih dahulu untuk mulai berjualan.</p>
+            {/* TODO: Add create store button */}
+          </div>
+        </Container>
+      </div>
+    );
+  }
+
+  // Get Products Count
+  const { count: productsCount } = await supabase
+    .from("products")
+    .select("*", { count: "exact", head: true })
+    .eq("store_id", store.id);
+
+  // Get Orders
+  const { data: orders } = await supabase
+    .from("orders")
+    .select(`
+      id, status, total_amount, shipping_cost, created_at,
+      buyers ( accounts ( name ) ),
+      order_items ( products ( name ) )
+    `)
+    .eq("store_id", store.id)
+    .order("created_at", { ascending: false });
+
+  const totalOrders = orders?.length || 0;
+  const pendingOrders = orders?.filter(o => o.status === "Menunggu Konfirmasi" || o.status === "Diproses").length || 0;
+  const totalRevenue = orders?.filter(o => o.status === "Selesai").reduce((sum, o) => sum + o.total_amount, 0) || 0;
+  
+  const recentOrders = orders?.slice(0, 3) || [];
+
   return (
     <div>
       <Navbar />
       <Container>
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-4xl mx-auto py-8">
           {/* Header */}
-          <div className="flex items-center justify-between mb-6">
+          <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-8 gap-4">
             <div>
               <h1 className="text-2xl font-bold text-gray-800">
                 Dashboard Penjual
               </h1>
-              <p className="text-gray-500 text-sm">
-                Selamat datang, Pak Budi 👋
+              <p className="text-gray-500 text-sm mt-1">
+                Toko: <span className="font-semibold text-gray-700">{store.name}</span> | 📞 {store.phone || "Tidak ada nomor telp"}
               </p>
             </div>
-            <Link href="/products" className="btn-primary text-sm">
+            <Link href="/products/add" className="btn-primary text-sm whitespace-nowrap">
               + Tambah Produk
             </Link>
           </div>
 
           {/* Stats */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
             {[
               {
                 label: "Total Produk",
-                value: sellerProducts.length,
+                value: productsCount || 0,
                 icon: "📦",
                 color: "bg-blue-50 text-blue-600",
               },
               {
                 label: "Pesanan Masuk",
-                value: DUMMY_ORDERS.length,
+                value: totalOrders,
                 icon: "🛍️",
                 color: "bg-green-50 text-green-600",
               },
               {
                 label: "Perlu Diproses",
-                value: 1,
+                value: pendingOrders,
                 icon: "⏳",
                 color: "bg-yellow-50 text-yellow-600",
               },
@@ -70,7 +122,7 @@ export default function SellerDashboardPage() {
           </div>
 
           {/* Menu Cards */}
-          <div className="grid md:grid-cols-2 gap-4 mb-6">
+          <div className="grid md:grid-cols-2 gap-4 mb-8">
             <Link
               href="/products"
               className="card p-6 hover:shadow-md transition-shadow group"
@@ -84,7 +136,7 @@ export default function SellerDashboardPage() {
                     Kelola Produk
                   </h3>
                   <p className="text-sm text-gray-500">
-                    {sellerProducts.length} produk aktif
+                    {productsCount || 0} produk aktif
                   </p>
                 </div>
                 <span className="text-gray-300 group-hover:text-primary transition-colors text-xl">
@@ -93,7 +145,7 @@ export default function SellerDashboardPage() {
               </div>
             </Link>
             <Link
-              href="/orders"
+              href="/seller/orders"
               className="card p-6 hover:shadow-md transition-shadow group"
             >
               <div className="flex items-center gap-4">
@@ -105,7 +157,7 @@ export default function SellerDashboardPage() {
                     Kelola Pesanan
                   </h3>
                   <p className="text-sm text-gray-500">
-                    {DUMMY_ORDERS.length} total pesanan
+                    {totalOrders} total pesanan
                   </p>
                 </div>
                 <span className="text-gray-300 group-hover:text-primary transition-colors text-xl">
@@ -120,42 +172,52 @@ export default function SellerDashboardPage() {
             <div className="flex justify-between items-center mb-4">
               <h2 className="font-bold text-gray-800">Pesanan Terbaru</h2>
               <Link
-                href="/orders"
+                href="/seller/orders"
                 className="text-sm text-primary hover:underline"
               >
                 Lihat semua
               </Link>
             </div>
             <div className="space-y-3">
-              {DUMMY_ORDERS.slice(0, 3).map((order) => (
-                <div
-                  key={order.id}
-                  className="flex items-center justify-between text-sm border-b pb-3 last:border-0 last:pb-0"
-                >
-                  <div>
-                    <p className="font-medium text-gray-800">{order.product}</p>
-                    <p className="text-xs text-gray-400">
-                      {order.buyer} · {order.date}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <p className="font-bold text-gray-800">
-                      {formatPrice(order.total)}
-                    </p>
-                    <span
-                      className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                        order.status === "Selesai"
-                          ? "bg-green-100 text-green-700"
-                          : order.status === "Dikirim"
-                            ? "bg-blue-100 text-blue-700"
-                            : "bg-yellow-100 text-yellow-700"
-                      }`}
+              {recentOrders.length === 0 ? (
+                <p className="text-sm text-gray-500 text-center py-4">Belum ada pesanan terbaru.</p>
+              ) : (
+                recentOrders.map((order) => {
+                  const oDate = new Date(order.created_at).toLocaleDateString('id-ID');
+                  const buyerName = order.buyers?.accounts?.name || "Pembeli";
+                  const productStr = order.order_items?.[0]?.products?.name || "Produk";
+                  
+                  return (
+                    <div
+                      key={order.id}
+                      className="flex items-center justify-between text-sm border-b pb-3 last:border-0 last:pb-0 hover:bg-gray-50 p-2 -mx-2 rounded-lg transition-colors"
                     >
-                      {order.status}
-                    </span>
-                  </div>
-                </div>
-              ))}
+                      <div>
+                        <p className="font-medium text-gray-800">{productStr} {order.order_items.length > 1 ? `(+${order.order_items.length - 1} lainnya)` : ""}</p>
+                        <p className="text-xs text-gray-400">
+                          {buyerName} · {oDate}
+                        </p>
+                      </div>
+                      <div className="text-right flex flex-col items-end gap-1">
+                        <p className="font-bold text-gray-800">
+                          {formatPrice(order.total_amount + order.shipping_cost)}
+                        </p>
+                        <span
+                          className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${
+                            order.status === "Selesai"
+                              ? "bg-green-100 text-green-700"
+                              : order.status === "Dikirim"
+                                ? "bg-blue-100 text-blue-700"
+                                : "bg-yellow-100 text-yellow-700"
+                          }`}
+                        >
+                          {order.status}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
             </div>
           </div>
         </div>

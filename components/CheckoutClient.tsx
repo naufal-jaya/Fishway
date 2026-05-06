@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { clearCart } from "@/lib/cart";
+import { checkoutCart } from "@/lib/cart";
 import { useRouter } from "next/navigation";
 
 export default function CheckoutClient() {
@@ -13,15 +13,16 @@ export default function CheckoutClient() {
     setLoading(true);
 
     try {
-      const result = await clearCart();
+      const result = await checkoutCart();
       if (result.error) {
         alert(result.error);
         setLoading(false);
         return;
       }
 
-      alert("Pembayaran Berhasil! Keranjang telah dikosongkan.");
-      router.push("/");
+      alert("Pesanan Berhasil Dibuat! Anda akan diarahkan ke halaman pesanan.");
+      router.push("/orders"); // Asumsikan /orders untuk buyer (bukan /buyer/orders karena struktur foldernya di luar (buyer) atau di dalam?)
+      // Wait, let's check folder structure... I should use /orders if it's in (buyer) and doesn't have prefix. Let's redirect to /orders.
       router.refresh();
     } catch (err) {
       alert("Terjadi kesalahan.");
