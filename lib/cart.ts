@@ -133,3 +133,115 @@ export async function clearCart() {
   revalidatePath("/checkout");
   return { success: true };
 }
+
+export async function checkoutCart() {
+  const supabase = createClient(cookies());
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Not logged in" };
+
+  const { data: cart } = await supabase
+    .from("carts")
+    .select(`
+      id,
+      cart_items (
+        id,
+        quantity,
+        product_id,
+        selected_variant_id,
+        products (
+          id, type, price, store_id, name,
+          price_options (id, price)
+        )
+      )
+    `)
+    .eq("buyer_id", user.id)
+    .maybeSingle();
+
+  if (!cart || !cart.cart_items || cart.cart_items.length === 0) {
+    return { error: "Keranjang kosong" };
+  }
+
+  // Upsert ke buyers table untuk mencegah foreign key error
+  const { data: buyerExists } = await supabase.from("buyers").select("id").eq("id", user.id).maybeSingle();
+  if (!buyerExists) {
+    await supabase.from("buyers").insert({ id: user.id });
+  }
+
+  const storeOrders: Record<string, any[]> = {};
+  
+  for (const item of cart.cart_items) {
+    const product = item.products as any;
+    if (!product || !product.store_id) continue;
+    
+    if (!storeOrders[product.store_id]) {
+      storeOrders[product.store_id] = [];
+    }
+    
+    let price = 0;
+    if (product.type === 1 && item.selected_variant_id && product.price_options) {
+      const opt = product.price_options.find((o: any) => o.id === item.selected_variant_id);
+      price = opt?.price || 0;
+    } else {
+      price = product.price || 0;
+    }
+
+    storeOrders[product.store_id].push({
+      product_id: product.id,
+      quantity: item.quantity,
+      selected_variant_id: item.selected_variant_id,
+      price: price
+    });
+  }
+
+  if (Object.keys(storeOrders).length === 0) {
+    return { error: "Gagal checkout: Produk tidak memiliki informasi toko (store_id) yang valid." };
+  }
+
+  const createdOrderIds = [];
+
+  for (const storeId in storeOrders) {
+    const items = storeOrders[storeId];
+    const totalAmount = items.reduce((sum, i) => sum + (i.price * i.quantity), 0);
+    const shippingCost = 15000;
+    
+    const { data: order, error: orderError } = await supabase
+      .from("orders")
+      .insert({
+        buyer_id: user.id,
+        store_id: storeId,
+        status: "Menunggu Konfirmasi",
+        total_amount: totalAmount,
+        shipping_cost: shippingCost
+      })
+      .select("id")
+      .single();
+
+    if (orderError || !order) {
+      console.error(orderError);
+      return { error: `Gagal membuat pesanan: ${orderError?.message || 'Unknown'}` };
+    }
+
+    createdOrderIds.push(order.id);
+
+    const orderItemsData = items.map(i => ({
+      order_id: order.id,
+      product_id: i.product_id,
+      quantity: i.quantity,
+      selected_variant_id: i.selected_variant_id,
+      price: i.price
+    }));
+
+    const { error: itemsError } = await supabase
+      .from("order_items")
+      .insert(orderItemsData);
+
+    if (itemsError) {
+      console.error(itemsError);
+      return { error: `Gagal menambahkan item pesanan: ${itemsError?.message || 'Unknown'}` };
+    }
+  }
+
+  await clearCart();
+
+  return { success: true, orderIds: createdOrderIds };
+}

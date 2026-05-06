@@ -3,12 +3,15 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { createClient } from "@/utils/supabase/supabaseClient";
 
 export default function ForgotPasswordPage() {
+  const router = useRouter();
   const supabase = createClient();
-  const [mode, setMode] = useState<"request" | "reset">("request");
+  const [mode, setMode] = useState<"request" | "verify" | "reset">("request");
   const [email, setEmail] = useState("");
+  const [otp, setOtp] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
@@ -20,36 +23,12 @@ export default function ForgotPasswordPage() {
 
   const validatePassword = (value: string) => value.length >= 8;
 
+  // Reset mode if email changes
   useEffect(() => {
-    if (typeof window === "undefined") return;
-
-    const searchParams = new URLSearchParams(window.location.search);
-    const hashString = window.location.hash.startsWith("#")
-      ? window.location.hash.slice(1)
-      : window.location.hash;
-    const hashParams = new URLSearchParams(hashString);
-    const combinedParams = new URLSearchParams();
-
-    searchParams.forEach((value, key) => combinedParams.set(key, value));
-    hashParams.forEach((value, key) => combinedParams.set(key, value));
-
-    const hasAccessToken = combinedParams.has("access_token");
-    const isRecovery = combinedParams.get("type") === "recovery";
-    const errorDescription =
-      combinedParams.get("error_description") || combinedParams.get("error");
-
-    if (hasAccessToken || isRecovery) {
-      setMode("reset");
-      setError("");
-      setSuccess("");
-      return;
+    if (mode === "verify" || mode === "reset") {
+      // Keep state
     }
-
-    if (errorDescription) {
-      setMode("request");
-      setError(errorDescription.replace(/\+/g, " "));
-    }
-  }, []);
+  }, [mode]);
 
   const handleRequestSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -68,23 +47,55 @@ export default function ForgotPasswordPage() {
 
     try {
       setIsLoading(true);
+      const cleanEmail = email.trim().toLowerCase();
       const { error: resetError } = await supabase.auth.resetPasswordForEmail(
-        email,
-        {
-          redirectTo: `${window.location.origin}/forgot-password`,
-        },
+        cleanEmail
       );
 
       if (resetError) {
         setError(resetError.message || "Gagal mengirim email reset password");
       } else {
         setSuccess(
-          "Email reset password telah dikirim. Periksa kotak masuk Anda untuk melanjutkan.",
+          "Kode OTP telah dikirim ke email Anda. Silakan masukkan kode tersebut di bawah ini.",
         );
+        setMode("verify");
       }
     } catch (err) {
       console.error(err);
       setError("Terjadi kesalahan, coba lagi nanti");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleVerifySubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    setSuccess("");
+
+    if (!otp || otp.length < 6) {
+      setError("Masukkan 6 digit kode OTP");
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      const cleanEmail = email.trim().toLowerCase();
+      const { error: verifyError } = await supabase.auth.verifyOtp({
+        email: cleanEmail,
+        token: otp,
+        type: "recovery",
+      });
+
+      if (verifyError) {
+        setError(verifyError.message || "Kode OTP tidak valid atau kedaluwarsa");
+      } else {
+        setMode("reset");
+        setSuccess("Kode OTP berhasil diverifikasi. Silakan masukkan password baru Anda.");
+      }
+    } catch (err) {
+      console.error(err);
+      setError("Terjadi kesalahan saat verifikasi OTP");
     } finally {
       setIsLoading(false);
     }
@@ -121,9 +132,14 @@ export default function ForgotPasswordPage() {
         return;
       }
 
-      setSuccess("Password berhasil direset. Silakan masuk kembali.");
+      setSuccess("Password berhasil direset. Mengalihkan ke halaman login...");
       setNewPassword("");
       setConfirmPassword("");
+      
+      // Auto redirect after 2 seconds
+      setTimeout(() => {
+        router.push("/login");
+      }, 2000);
     } catch (err) {
       console.error(err);
       setError("Terjadi kesalahan, coba lagi nanti");
@@ -184,9 +200,11 @@ export default function ForgotPasswordPage() {
               {mode === "reset" ? "Reset Password" : "Lupa Password?"}
             </h2>
             <p className="text-gray-400 text-sm mt-1">
-              {mode === "reset"
-                ? "Masukkan password baru Anda untuk menyelesaikan reset."
-                : "Masukkan email Anda untuk menerima tautan reset password."}
+              {mode === "request"
+                ? "Masukkan email Anda untuk menerima kode OTP reset password."
+                : mode === "verify"
+                ? "Masukkan 6 digit kode yang kami kirimkan ke email Anda."
+                : "Masukkan password baru Anda untuk menyelesaikan reset."}
             </p>
           </div>
 
@@ -204,7 +222,11 @@ export default function ForgotPasswordPage() {
 
           <form
             onSubmit={
-              mode === "reset" ? handleResetSubmit : handleRequestSubmit
+              mode === "request" 
+                ? handleRequestSubmit 
+                : mode === "verify" 
+                ? handleVerifySubmit 
+                : handleResetSubmit
             }
             noValidate
             className="space-y-4"
@@ -240,6 +262,21 @@ export default function ForgotPasswordPage() {
                   />
                 </div>
               </div>
+            ) : mode === "verify" ? (
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                  Kode OTP
+                </label>
+                <p className="text-[10px] text-gray-400 mb-2">Dikirim ke: <span className="font-semibold">{email}</span></p>
+                <input
+                  type="text"
+                  value={otp}
+                  maxLength={6}
+                  onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
+                  placeholder="Masukkan 6 digit kode"
+                  className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:border-[#568EC5] focus:ring-2 focus:ring-blue-100 focus:bg-white text-center text-lg tracking-[0.5em] font-bold outline-none"
+                />
+              </div>
             ) : (
               <>
                 <div>
@@ -251,7 +288,7 @@ export default function ForgotPasswordPage() {
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
                     placeholder="Masukkan password baru"
-                    className="w-full pr-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:border-[#568EC5] focus:ring-2 focus:ring-blue-100 focus:bg-white text-xs sm:text-sm outline-none"
+                    className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:border-[#568EC5] focus:ring-2 focus:ring-blue-100 focus:bg-white text-xs sm:text-sm outline-none"
                   />
                 </div>
                 <div>
@@ -263,7 +300,7 @@ export default function ForgotPasswordPage() {
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     placeholder="Ulangi password baru"
-                    className="w-full pr-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:border-[#568EC5] focus:ring-2 focus:ring-blue-100 focus:bg-white text-xs sm:text-sm outline-none"
+                    className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:border-[#568EC5] focus:ring-2 focus:ring-blue-100 focus:bg-white text-xs sm:text-sm outline-none"
                   />
                 </div>
               </>
@@ -304,10 +341,12 @@ export default function ForgotPasswordPage() {
                       d="M4 12a8 8 0 018-8v8H4z"
                     />
                   </svg>
-                  {mode === "reset" ? "Memperbarui..." : "Mengirim..."}
+                  {mode === "reset" ? "Memperbarui..." : mode === "verify" ? "Verifikasi..." : "Mengirim..."}
                 </span>
               ) : mode === "reset" ? (
                 "Reset Password"
+              ) : mode === "verify" ? (
+                "Verifikasi OTP"
               ) : (
                 "Kirim Email Reset"
               )}

@@ -2,11 +2,13 @@ import Container from "@/components/Container";
 import { formatPrice } from "@/lib/data";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
-import { Pencil } from "lucide-react";
+import { Pencil, Trash } from "lucide-react";
 import { createClient } from "@/utils/supabase/server";
+import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import Image from "next/image";
+import DeleteProductButton from "@/components/DeleteProductButton";
 
 export default async function SellerProductsPage() {
   const supabase = createClient(cookies());
@@ -35,6 +37,17 @@ export default async function SellerProductsPage() {
     if (data) {
       myProducts = data;
     }
+  }
+
+  async function deleteProduct(formData: FormData) {
+    "use server";
+    const productId = formData.get("productId") as string;
+    if (!productId) return;
+    const supabaseAdmin = createClient(cookies());
+    // Hapus opsi harga dulu (atau andalkan CASCADE di supabase)
+    await supabaseAdmin.from("price_options").delete().eq("product_id", productId);
+    await supabaseAdmin.from("products").delete().eq("id", productId);
+    revalidatePath("/products");
   }
 
   return (
@@ -169,11 +182,18 @@ export default async function SellerProductsPage() {
                       </div>
 
                       {/* ACTION */}
-                      <div className="flex justify-end mt-2">
-                        <button className="flex items-center gap-1 text-xs text-gray-400 hover:text-primary">
+                      <div className="flex justify-end mt-2 gap-3">
+                        <Link 
+                          href={`/products/${product.id}/edit`}
+                          className="flex items-center gap-1 text-xs text-gray-400 hover:text-primary"
+                        >
                           <Pencil size={12} />
-                          edit
-                        </button>
+                          Edit
+                        </Link>
+                        <form action={deleteProduct}>
+                          <input type="hidden" name="productId" value={product.id} />
+                          <DeleteProductButton />
+                        </form>
                       </div>
                     </div>
 

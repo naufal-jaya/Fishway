@@ -6,7 +6,7 @@ type Role = "buyer" | "seller";
 const roleAccess: Record<string, Role[]> = {
   "/seller": ["seller"],
   "/products": ["seller"],
-  "/orders": ["seller"],
+  "/orders": ["buyer"],
   "/cart": ["buyer"],
 };
 

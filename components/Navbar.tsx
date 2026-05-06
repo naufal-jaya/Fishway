@@ -4,15 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import Image from "next/image";
-import { Home, LogOut, ShoppingCart, Tag, User } from "lucide-react";
+import { Home, LogOut, ShoppingCart, Tag, User, Search, Package, ClipboardList, Store } from "lucide-react";
 import { createClient } from "@/utils/supabase/supabaseClient";
-
-const navLinks = [
-  { href: "/", icon: Home },
-  { href: "/cart", icon: ShoppingCart },
-  { href: "/profile", icon: User },
-  { href: "/seller", icon: Tag },
-];
 
 export default function Navbar() {
   const pathname = usePathname();
@@ -22,6 +15,14 @@ export default function Navbar() {
     name: string;
     role: "Pembeli" | "Penjual" | null;
   }>({ name: "", role: null });
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      router.push(`/search?q=${encodeURIComponent(searchQuery)}`);
+    }
+  };
 
   useEffect(() => {
     const loadUserInfo = async () => {
@@ -83,30 +84,45 @@ export default function Navbar() {
           ></Image>
         </Link>
 
+        {/* Search Bar */}
+        <form onSubmit={handleSearch} className="hidden md:flex flex-1 max-w-md mx-4 relative">
+          <input
+            type="text"
+            placeholder="Cari produk..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full px-4 py-2 rounded-full text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-white/50"
+          />
+          <button type="submit" className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-[#407BB5]">
+            <Search size={18} />
+          </button>
+        </form>
+
         {/* Desktop Nav */}
         <div className="hidden md:flex items-center gap-1">
-          {navLinks.map(({ href, icon: Icon }) => (
-            <Link
-              key={href}
-              href={href}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                pathname === href
-                  ? "bg-white/20 text-white"
-                  : "hover:bg-white/10 text-white/90"
-              }`}
-            >
-              <Icon size={18} />
-            </Link>
-          ))}
+          {userInfo.role === "Penjual" ? (
+            <>
+              <Link href="/products" className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${pathname === "/products" ? "bg-white/20 text-white" : "hover:bg-white/10 text-white/90"}`}><Package size={18} /> <span className="hidden lg:inline">My Produk</span></Link>
+              <Link href="/seller/orders" className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${pathname === "/seller/orders" ? "bg-white/20 text-white" : "hover:bg-white/10 text-white/90"}`}><ClipboardList size={18} /> <span className="hidden lg:inline">Pesanan</span></Link>
+              <Link href="/seller" className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${pathname === "/seller" ? "bg-white/20 text-white" : "hover:bg-white/10 text-white/90"}`}><Store size={18} /> <span className="hidden lg:inline">Store</span></Link>
+            </>
+          ) : (
+            <>
+              <Link href="/" className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${pathname === "/" ? "bg-white/20 text-white" : "hover:bg-white/10 text-white/90"}`}><Home size={18} /> <span className="hidden lg:inline">Home</span></Link>
+              <Link href="/cart" className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${pathname === "/cart" ? "bg-white/20 text-white" : "hover:bg-white/10 text-white/90"}`}><ShoppingCart size={18} /> <span className="hidden lg:inline">Keranjang</span></Link>
+              <Link href="/orders" className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${pathname === "/orders" ? "bg-white/20 text-white" : "hover:bg-white/10 text-white/90"}`}><ClipboardList size={18} /> <span className="hidden lg:inline">Orders</span></Link>
+            </>
+          )}
+
           {userInfo.name && (
-            <div className="mx-2 text-right leading-tight">
+            <Link href="/profile" className="mx-2 text-right leading-tight hover:bg-white/10 p-2 rounded-lg transition-colors flex flex-col justify-center">
               <p className="max-w-[160px] truncate text-sm font-semibold">
                 {userInfo.name}
               </p>
-              <p className="text-xs text-white/75">
-                {userInfo.role || "Belum pilih role"}
+              <p className="text-[10px] text-white/75">
+                {userInfo.role || "Profil"}
               </p>
-            </div>
+            </Link>
           )}
           <button
             type="button"
@@ -120,22 +136,20 @@ export default function Navbar() {
 
         {/* Mobile Nav */}
         <div className="flex md:hidden items-center gap-1">
-          {userInfo.role && (
-            <span className="mr-1 rounded bg-white/15 px-2 py-1 text-[11px] font-semibold">
-              {userInfo.role}
-            </span>
+          {userInfo.role === "Penjual" ? (
+            <>
+              <Link href="/products" className={`px-2 py-1 rounded text-xs font-medium transition-colors ${pathname === "/products" ? "bg-white/20" : "hover:bg-white/10"}`}><Package size={22} /></Link>
+              <Link href="/seller/orders" className={`px-2 py-1 rounded text-xs font-medium transition-colors ${pathname === "/seller/orders" ? "bg-white/20" : "hover:bg-white/10"}`}><ClipboardList size={22} /></Link>
+              <Link href="/seller" className={`px-2 py-1 rounded text-xs font-medium transition-colors ${pathname === "/seller" ? "bg-white/20" : "hover:bg-white/10"}`}><Store size={22} /></Link>
+            </>
+          ) : (
+            <>
+              <Link href="/" className={`px-2 py-1 rounded text-xs font-medium transition-colors ${pathname === "/" ? "bg-white/20" : "hover:bg-white/10"}`}><Home size={22} /></Link>
+              <Link href="/cart" className={`px-2 py-1 rounded text-xs font-medium transition-colors ${pathname === "/cart" ? "bg-white/20" : "hover:bg-white/10"}`}><ShoppingCart size={22} /></Link>
+              <Link href="/orders" className={`px-2 py-1 rounded text-xs font-medium transition-colors ${pathname === "/orders" ? "bg-white/20" : "hover:bg-white/10"}`}><ClipboardList size={22} /></Link>
+            </>
           )}
-          {navLinks.map(({ href, icon: Icon }) => (
-            <Link
-              key={href}
-              href={href}
-              className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
-                pathname === href ? "bg-white/20" : "hover:bg-white/10"
-              }`}
-            >
-              <Icon size={22} />
-            </Link>
-          ))}
+          <Link href="/profile" className={`px-2 py-1 rounded text-xs font-medium transition-colors ${pathname === "/profile" ? "bg-white/20" : "hover:bg-white/10"}`}><User size={22} /></Link>
           <button
             type="button"
             onClick={handleLogout}
