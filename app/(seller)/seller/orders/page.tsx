@@ -115,8 +115,16 @@ export default async function SellerOrdersPage({ searchParams }: { searchParams:
             <div className="divide-y">
               {orders && orders.map((order: any) => {
                 const orderDate = new Date(order.created_at).toLocaleDateString('id-ID');
-                const productsStr = order.order_items.map((i: any) => `${i.products?.name} (${i.quantity})`).join(", ");
-                const buyerName = order.buyers?.accounts?.name || "Pembeli";
+                const productsStr = order.order_items.map((i: any) => {
+                  const productInfo = Array.isArray(i.products) ? i.products[0] : i.products;
+                  return `${productInfo?.name || "Produk"} (${i.quantity})`;
+                }).join(", ");
+                
+                const buyerData = Array.isArray(order.buyers) ? order.buyers[0] : order.buyers;
+                const accountData = buyerData && Array.isArray((buyerData as any).accounts) 
+                  ? (buyerData as any).accounts[0] 
+                  : (buyerData as any)?.accounts;
+                const buyerName = accountData?.name || "Pembeli";
 
                 return (
                   <div

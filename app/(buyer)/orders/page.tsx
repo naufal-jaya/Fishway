@@ -77,7 +77,7 @@ export default async function BuyerOrdersPage() {
                     <div className="flex justify-between items-start mb-4 border-b pb-4">
                       <div>
                         <p className="text-sm text-gray-500 mb-1">
-                          {orderDate} · {order.stores?.name}
+                          {orderDate} · {(Array.isArray(order.stores) ? order.stores[0]?.name : order.stores?.name) || "Toko"}
                         </p>
                         <p className="font-mono text-xs text-gray-400">ID: {order.id}</p>
                       </div>
@@ -87,15 +87,18 @@ export default async function BuyerOrdersPage() {
                     </div>
 
                     <div className="space-y-3">
-                      {order.order_items.map((item: any) => (
-                        <div key={item.id} className="flex justify-between text-sm">
-                          <div>
-                            <span className="font-semibold text-gray-800">{item.products?.name}</span>
-                            <span className="text-gray-500 ml-2">x {item.quantity}</span>
+                      {order.order_items.map((item: any) => {
+                        const productInfo = Array.isArray(item.products) ? item.products[0] : item.products;
+                        return (
+                          <div key={item.id} className="flex justify-between text-sm">
+                            <div>
+                              <span className="font-semibold text-gray-800">{productInfo?.name || "Produk"}</span>
+                              <span className="text-gray-500 ml-2">x {item.quantity}</span>
+                            </div>
+                            <span className="text-gray-800 font-medium">{formatPrice(item.price * item.quantity)}</span>
                           </div>
-                          <span className="text-gray-800 font-medium">{formatPrice(item.price * item.quantity)}</span>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
 
                     <div className="mt-4 pt-4 border-t flex justify-between items-center">

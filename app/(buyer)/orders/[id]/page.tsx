@@ -55,13 +55,16 @@ export default async function BuyerOrderDetailPage({ params }: { params: { id: s
   });
 
   // Siapkan pesan WA
-  const waNumber = order.stores?.phone || "6281234567890";
+  const sellerInfo = Array.isArray(order.stores) ? order.stores[0] : order.stores;
+  const waNumber = (sellerInfo as any)?.phone || "6281234567890";
+  const sellerName = (sellerInfo as any)?.name || "Penjual";
+  
   let itemsList = "";
   order.order_items.forEach((item: any, index: number) => {
     itemsList += `${index + 1}. ${item.products?.name} - ${item.quantity} x ${formatPrice(item.price)}\n`;
   });
   
-  const waMessage = `Halo ${order.stores?.name}, saya ingin konfirmasi pesanan saya:
+  const waMessage = `Halo ${sellerName}, saya ingin konfirmasi pesanan saya:
 ID Pesanan: ${order.id}
 Tanggal: ${orderDate}
 
@@ -99,9 +102,9 @@ Mohon diproses ya. Terima kasih!`;
             <div className="mb-8">
               <h2 className="text-lg font-bold text-gray-800 mb-4">Informasi Toko</h2>
               <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
-                <p className="font-semibold text-gray-800 text-lg">{order.stores?.name}</p>
+                <p className="font-semibold text-gray-800 text-lg">{sellerName}</p>
                 <p className="text-sm text-gray-500 mt-1 flex items-center gap-2">
-                  <span>📞</span> {order.stores?.phone || "Tidak ada nomor"}
+                  <span>📞</span> {waNumber}
                 </p>
               </div>
             </div>
@@ -109,25 +112,28 @@ Mohon diproses ya. Terima kasih!`;
             <div className="mb-8">
               <h2 className="text-lg font-bold text-gray-800 mb-4">Daftar Produk</h2>
               <div className="space-y-4">
-                {order.order_items.map((item: any) => (
-                  <div key={item.id} className="flex gap-4 items-center p-3 border border-gray-100 rounded-xl hover:bg-gray-50 transition-colors">
-                    <div className="w-16 h-16 bg-blue-50 rounded-lg overflow-hidden relative flex-shrink-0">
-                      <Image 
-                        src={item.products?.gambar || "/images/default.png"} 
-                        alt={item.products?.name || "Produk"}
-                        fill
-                        className="object-cover"
-                      />
+                {order.order_items.map((item: any) => {
+                  const productInfo = Array.isArray(item.products) ? item.products[0] : item.products;
+                  return (
+                    <div key={item.id} className="flex gap-4 items-center p-3 border border-gray-100 rounded-xl hover:bg-gray-50 transition-colors">
+                      <div className="w-16 h-16 bg-blue-50 rounded-lg overflow-hidden relative flex-shrink-0">
+                        <Image 
+                          src={productInfo?.gambar || "/images/default.png"} 
+                          alt={productInfo?.name || "Produk"}
+                          fill
+                          className="object-cover"
+                        />
+                      </div>
+                      <div className="flex-1">
+                        <p className="font-semibold text-gray-800">{productInfo?.name}</p>
+                        <p className="text-sm text-gray-500">{item.quantity} {productInfo?.unit || "Unit"} x {formatPrice(item.price)}</p>
+                      </div>
+                      <div className="text-right font-bold text-gray-800">
+                        {formatPrice(item.price * item.quantity)}
+                      </div>
                     </div>
-                    <div className="flex-1">
-                      <p className="font-semibold text-gray-800">{item.products?.name}</p>
-                      <p className="text-sm text-gray-500">{item.quantity} {item.products?.unit || "Unit"} x {formatPrice(item.price)}</p>
-                    </div>
-                    <div className="text-right font-bold text-gray-800">
-                      {formatPrice(item.price * item.quantity)}
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
 

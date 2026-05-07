@@ -54,9 +54,14 @@ export default async function SellerOrderDetailPage({ params }: { params: { id: 
     year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit'
   });
 
-  const buyerName = order.buyers?.accounts?.name || "Pembeli";
-  const buyerPhone = order.buyers?.phone || "Tidak ada nomor";
-  const buyerAddress = order.buyers?.accounts?.address || "Tidak ada alamat";
+  const buyerInfo = Array.isArray(order.buyers) ? order.buyers[0] : order.buyers;
+  const accountData = buyerInfo && Array.isArray((buyerInfo as any).accounts) 
+    ? (buyerInfo as any).accounts[0] 
+    : (buyerInfo as any)?.accounts;
+    
+  const buyerName = accountData?.name || "Pembeli";
+  const buyerPhone = (buyerInfo as any)?.phone || "Tidak ada nomor";
+  const buyerAddress = accountData?.address || "Tidak ada alamat";
 
   async function updateStatus(formData: FormData) {
     "use server";
@@ -133,25 +138,28 @@ export default async function SellerOrderDetailPage({ params }: { params: { id: 
             <div className="mb-8">
               <h2 className="text-lg font-bold text-gray-800 mb-4">Daftar Produk</h2>
               <div className="space-y-4">
-                {order.order_items.map((item: any) => (
-                  <div key={item.id} className="flex gap-4 items-center p-3 border border-gray-100 rounded-xl">
-                    <div className="w-16 h-16 bg-blue-50 rounded-lg overflow-hidden relative flex-shrink-0">
-                      <Image 
-                        src={item.products?.gambar || "/images/default.png"} 
-                        alt={item.products?.name || "Produk"}
-                        fill
-                        className="object-cover"
-                      />
+                {order.order_items.map((item: any) => {
+                  const productInfo = Array.isArray(item.products) ? item.products[0] : item.products;
+                  return (
+                    <div key={item.id} className="flex gap-4 items-center p-3 border border-gray-100 rounded-xl">
+                      <div className="w-16 h-16 bg-blue-50 rounded-lg overflow-hidden relative flex-shrink-0">
+                        <Image 
+                          src={productInfo?.gambar || "/images/default.png"} 
+                          alt={productInfo?.name || "Produk"}
+                          fill
+                          className="object-cover"
+                        />
+                      </div>
+                      <div className="flex-1">
+                        <p className="font-semibold text-gray-800">{productInfo?.name}</p>
+                        <p className="text-sm text-gray-500">{item.quantity} {productInfo?.unit || "Unit"} x {formatPrice(item.price)}</p>
+                      </div>
+                      <div className="text-right font-bold text-gray-800">
+                        {formatPrice(item.price * item.quantity)}
+                      </div>
                     </div>
-                    <div className="flex-1">
-                      <p className="font-semibold text-gray-800">{item.products?.name}</p>
-                      <p className="text-sm text-gray-500">{item.quantity} {item.products?.unit || "Unit"} x {formatPrice(item.price)}</p>
-                    </div>
-                    <div className="text-right font-bold text-gray-800">
-                      {formatPrice(item.price * item.quantity)}
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
 

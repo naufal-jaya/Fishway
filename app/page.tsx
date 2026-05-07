@@ -43,7 +43,7 @@ export default async function HomePage() {
       id: p.id,
       name: p.name,
       category: p.category || "",
-      seller: p.stores?.name || "Penjual",
+      seller: (Array.isArray(p.stores) ? p.stores[0]?.name : p.stores?.name) || "Penjual",
       location: p.location || "Lokasi tidak diketahui",
       description: p.description || "",
       gambar: p.gambar || "/images/default.png",
