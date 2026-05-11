@@ -3,6 +3,7 @@
 import { createClient } from "@/utils/supabase/server";
 import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
+import { formatPrice } from "@/lib/data";
 
 export async function addToCart(productId: string, quantity: number, variantId?: string) {
   const supabase = createClient(cookies());
@@ -238,6 +239,22 @@ export async function checkoutCart() {
     if (itemsError) {
       console.error(itemsError);
       return { error: `Gagal menambahkan item pesanan: ${itemsError?.message || 'Unknown'}` };
+    }
+
+    // Ambil seller_id dari store untuk kirim notifikasi
+    const { data: storeData } = await supabase
+      .from("stores")
+      .select("seller_id")
+      .eq("id", storeId)
+      .maybeSingle();
+
+    if (storeData && storeData.seller_id) {
+      await supabase.from("notifications").insert({
+        user_id: storeData.seller_id,
+        title: "Pesanan Baru!",
+        message: `Ada pesanan baru sejumlah ${formatPrice(totalAmount)}. Silakan periksa halaman pesanan.`,
+        link: `/seller/orders/${order.id}`
+      });
     }
   }
 

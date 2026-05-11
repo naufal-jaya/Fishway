@@ -74,6 +74,21 @@ export default async function SellerOrderDetailPage({ params }: { params: { id: 
       .update({ status: newStatus })
       .eq("id", params.id);
     
+    const { data: orderData } = await supabaseAdmin
+      .from("orders")
+      .select("buyer_id")
+      .eq("id", params.id)
+      .maybeSingle();
+
+    if (orderData && orderData.buyer_id) {
+      await supabaseAdmin.from("notifications").insert({
+        user_id: orderData.buyer_id,
+        title: "Status Pesanan Diperbarui",
+        message: `Pesanan Anda sekarang berstatus: ${newStatus}`,
+        link: `/orders/${params.id}`
+      });
+    }
+
     revalidatePath(`/seller/orders/${params.id}`);
   }
 

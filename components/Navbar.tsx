@@ -6,12 +6,14 @@ import { usePathname, useRouter } from "next/navigation";
 import Image from "next/image";
 import { Home, LogOut, LogIn, ShoppingCart, Tag, User, Search, Package, ClipboardList, Store } from "lucide-react";
 import { createClient } from "@/utils/supabase/supabaseClient";
+import NotificationDropdown from "./NotificationDropdown";
 
 export default function Navbar() {
   const pathname = usePathname();
   const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
   const [userInfo, setUserInfo] = useState<{
+    id?: string;
     name: string;
     role: "Pembeli" | "Penjual" | null;
   }>({ name: "", role: null });
@@ -52,6 +54,7 @@ export default function Navbar() {
         ]);
 
       setUserInfo({
+        id: session.user.id,
         name:
           account?.name ||
           session.user.user_metadata?.full_name ||
@@ -120,6 +123,7 @@ export default function Navbar() {
 
           {userInfo.name ? (
             <>
+              {userInfo.id && <NotificationDropdown userId={userInfo.id} />}
               <Link href="/profile" className="mx-2 text-right leading-tight hover:bg-white/10 p-2 rounded-lg transition-colors flex flex-col justify-center">
                 <p className="max-w-[160px] truncate text-sm font-semibold">
                   {userInfo.name}
@@ -171,6 +175,7 @@ export default function Navbar() {
           
           {userInfo.name ? (
             <>
+              {userInfo.id && <NotificationDropdown userId={userInfo.id} />}
               <Link href="/profile" className={`px-2 py-1 rounded text-xs font-medium transition-colors ${pathname === "/profile" ? "bg-white/20" : "hover:bg-white/10"}`}><User size={22} /></Link>
               <button
                 type="button"
