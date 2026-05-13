@@ -5,7 +5,9 @@ import Navbar from "@/components/Navbar";
 import Image from "next/image";
 import { createClient } from "@/utils/supabase/server";
 import { cookies } from "next/headers";
-import { MapPin } from "lucide-react";
+import { MapPin, ChevronLeft, ChevronRight, ShieldCheck, Tag, Scale, Box, Wind } from "lucide-react";
+import ProductActions from "@/components/ProductActions";
+import { notFound } from "next/navigation";
 
 const WA_NUMBER = "6281234567890";
 
@@ -99,6 +101,18 @@ export default async function ProductDetailPage({
   const sellerName = product.stores?.name || "Penjual";
   const waNumber = product.stores?.phone || WA_NUMBER;
   const waLink = `https://wa.me/${waNumber}?text=Halo, saya tertarik dengan ${product.name}`;
+
+  const attrs = [
+    { label: "Kondisi", value: product.condition || "Baru", icon: <ShieldCheck className="w-5 h-5 text-gray-400" /> },
+    { label: "Asal", value: product.origin || "Lokal", icon: <MapPin className="w-5 h-5 text-gray-400" /> },
+    { label: "Kategori", value: product.category || "Umum", icon: <Tag className="w-5 h-5 text-gray-400" /> },
+    { label: "Unit", value: product.unit || "Pcs", icon: <Scale className="w-5 h-5 text-gray-400" /> },
+  ];
+
+  const packaging = [
+    { label: "Plastik Berlapis", icon: <Box className="w-5 h-5 text-blue-500" /> },
+    { label: "Oksigen Ekstra", icon: <Wind className="w-5 h-5 text-blue-500" /> },
+  ];
 
   return (
     <div className="min-h-screen bg-gray-50">

@@ -13,7 +13,7 @@ export default function ProductGallery({ mainImage, extraImages, name }: Props) 
   const [selected, setSelected] = useState(mainImage);
 
   // Deduplicate images
-  const images = [...new Set([mainImage, ...extraImages])].filter(Boolean);
+  const images = [mainImage, ...extraImages].filter((item, index, self) => item && self.indexOf(item) === index);
 
   return (
     <div className="flex flex-col gap-3 p-4 w-full">
