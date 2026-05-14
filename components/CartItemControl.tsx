@@ -44,35 +44,32 @@ export default function CartItemControl({ itemId, initialQty }: CartItemControlP
   return (
     <>
       {/* Qty Control */}
-      <div className="flex items-center gap-2 flex-shrink-0">
-        <button 
+      <div className="flex items-center border border-gray-300 rounded-lg overflow-hidden flex-shrink-0">
+        <button
           onClick={handleDecrease}
           disabled={isUpdating || qty <= 1}
-          className="w-7 h-7 rounded-full border border-gray-300 flex items-center justify-center text-gray-600 hover:bg-gray-100 text-sm disabled:opacity-50"
+          className="w-8 h-8 flex items-center justify-center text-gray-500 hover:bg-gray-100 border-r border-gray-300 disabled:opacity-50"
         >
           −
         </button>
-        <span className="w-6 text-center font-medium">
+        <span className="w-8 h-8 flex items-center justify-center text-sm font-medium">
           {qty}
         </span>
-        <button 
+        <button
           onClick={handleIncrease}
           disabled={isUpdating}
-          className="w-7 h-7 rounded-full border border-gray-300 flex items-center justify-center text-gray-600 hover:bg-gray-100 text-sm disabled:opacity-50"
+          className="w-8 h-8 flex items-center justify-center text-gray-500 hover:bg-gray-100 border-l border-gray-300 disabled:opacity-50"
         >
           +
         </button>
       </div>
-
-      <div className="text-right flex-shrink-0 flex flex-col justify-end ml-4">
-        <button 
-          onClick={handleRemove}
-          disabled={isUpdating}
-          className="text-red-400 hover:text-red-600 text-xs disabled:opacity-50"
-        >
-          {isUpdating ? "..." : "Hapus"}
-        </button>
-      </div>
+        <button
+            onClick={handleRemove}
+            disabled={isUpdating}
+            className="absolute top-3 right-3 text-gray-400 hover:text-red-400 text-sm leading-none disabled:opacity-50"
+          >
+            {isUpdating ? "..." : "x"}
+          </button>
     </>
   );
 }
