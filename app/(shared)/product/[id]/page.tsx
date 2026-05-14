@@ -7,10 +7,9 @@ import { notFound } from "next/navigation";
 import Image from "next/image";
 import { createClient } from "@/utils/supabase/server";
 import { cookies } from "next/headers";
-
 import {
-  ChevronRight,
   ChevronLeft,
+  ChevronRight,
   Activity,
   Globe,
   Package,
@@ -115,7 +114,6 @@ export default async function ProductDetailPage({
   const sellerName = product.stores?.name || "Penjual";
   const waNumber = product.stores?.phone || WA_NUMBER;
   const waLink = `https://wa.me/${waNumber}?text=Halo, saya tertarik dengan ${product.name}`;
-
   const attrs = [
   { icon: <FishSymbol className="w-4 h-4" />, label: "Jenis", value: product.jenis || product.category },
   { icon: <Activity className="w-4 h-4" />, label: "Kondisi", value: product.condition },
@@ -123,9 +121,9 @@ export default async function ProductDetailPage({
   { icon: <HandPlatter className="w-4 h-4" />, label: "Pakan", value: product.food },
   { icon: <ThermometerSun className="w-4 h-4" />, label: "Suhu Ideal", value: product.suhu_ideal || "26–30°C" },
   { icon: <Droplets className="w-4 h-4" />, label: "pH Air Ideal", value: product.ph_ideal || "6,5–7,5" },
-  ].filter((a) => a.value);
+].filter((a) => a.value);
 
-  const packaging = [
+const packaging = [
   { icon: <Box className="w-5 h-5" />, label: "Plastik double + oksigen" },
   { icon: <Package className="w-5 h-5" />, label: "Dus styrofoam (opsional)" },
   { icon: <Truck className="w-5 h-5" />, label: "Dikirim setiap hari" },
