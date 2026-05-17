@@ -17,7 +17,7 @@ export type Notification = {
   created_at: string;
 };
 
-export default function NotificationDropdown({ userId }: { userId: string }) {
+export default function NotificationDropdown({ userId, label }: { userId: string; label?: string }) {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -98,18 +98,19 @@ export default function NotificationDropdown({ userId }: { userId: string }) {
 
   return (
     <div className="relative" ref={dropdownRef}>
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="px-2 py-1 md:px-4 md:py-2 rounded-lg text-sm font-medium transition-colors hover:bg-white/10 flex items-center relative"
-        aria-label="Notifications"
-      >
-        <Bell size={20} className="text-white/90" />
-        {unreadCount > 0 && (
-          <span className="absolute top-0 right-1 md:right-3 w-4 h-4 bg-red-500 text-white text-[10px] font-bold flex items-center justify-center rounded-full">
-            {unreadCount > 9 ? "9+" : unreadCount}
-          </span>
-        )}
-      </button>
+    <button
+      onClick={() => setIsOpen(!isOpen)}
+      className="px-3 py-2 rounded-lg text-sm font-medium transition-colors hover:bg-white/10 flex items-center gap-3 relative w-full"
+      aria-label="Notifications"
+    >
+      <Bell size={20} className="text-white/90" />
+      {label && <span className="text-sm font-medium">{label}</span>}
+      {unreadCount > 0 && (
+        <span className="absolute top-0 right-1 md:right-3 w-4 h-4 bg-red-500 text-white text-[10px] font-bold flex items-center justify-center rounded-full">
+          {unreadCount > 9 ? "9+" : unreadCount}
+        </span>
+      )}
+    </button>
 
       {isOpen && (
         <div className="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden z-50">

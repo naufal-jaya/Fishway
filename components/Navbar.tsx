@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import Image from "next/image";
-import { Home, LogOut, LogIn, ShoppingCart, Tag, User, Search, Package, ClipboardList, Store } from "lucide-react";
+import { Home, LogOut, LogIn, ShoppingCart, Tag, User, Search, Package, ClipboardList, Store, Menu, X } from "lucide-react";
 import { createClient } from "@/utils/supabase/supabaseClient";
 import NotificationDropdown from "./NotificationDropdown";
 
@@ -18,6 +18,7 @@ export default function Navbar() {
     role: "Pembeli" | "Penjual" | null;
   }>({ name: "", role: null });
   const [searchQuery, setSearchQuery] = useState("");
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -75,6 +76,7 @@ export default function Navbar() {
   };
 
   return (
+    <>
     <nav className=" bg-[#407BB5] text-white shadow-md sticky top-0 z-50">
       <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
         {/* Logo */}
@@ -88,7 +90,7 @@ export default function Navbar() {
         </Link>
 
         {/* Search Bar */}
-        <form onSubmit={handleSearch} className="hidden md:flex flex-1 max-w-md mx-4 relative">
+        <form onSubmit={handleSearch} className="flex flex-1 max-w-xs md:max-w-md mx-4 relative">
           <input
             type="text"
             placeholder="Cari produk..."
@@ -153,50 +155,74 @@ export default function Navbar() {
           )}
         </div>
 
-        {/* Mobile Nav */}
+        {/* Mobile: Notif + Hamburger */}
         <div className="flex md:hidden items-center gap-1">
-          {userInfo.role === "Penjual" ? (
-            <>
-              <Link href="/products" className={`px-2 py-1 rounded text-xs font-medium transition-colors ${pathname === "/products" ? "bg-white/20" : "hover:bg-white/10"}`}><Package size={22} /></Link>
-              <Link href="/seller/orders" className={`px-2 py-1 rounded text-xs font-medium transition-colors ${pathname === "/seller/orders" ? "bg-white/20" : "hover:bg-white/10"}`}><ClipboardList size={22} /></Link>
-              <Link href="/seller" className={`px-2 py-1 rounded text-xs font-medium transition-colors ${pathname === "/seller" ? "bg-white/20" : "hover:bg-white/10"}`}><Store size={22} /></Link>
-            </>
-          ) : userInfo.role === "Pembeli" ? (
-            <>
-              <Link href="/" className={`px-2 py-1 rounded text-xs font-medium transition-colors ${pathname === "/" ? "bg-white/20" : "hover:bg-white/10"}`}><Home size={22} /></Link>
-              <Link href="/cart" className={`px-2 py-1 rounded text-xs font-medium transition-colors ${pathname === "/cart" ? "bg-white/20" : "hover:bg-white/10"}`}><ShoppingCart size={22} /></Link>
-              <Link href="/orders" className={`px-2 py-1 rounded text-xs font-medium transition-colors ${pathname === "/orders" ? "bg-white/20" : "hover:bg-white/10"}`}><ClipboardList size={22} /></Link>
-            </>
-          ) : (
-            <>
-              <Link href="/" className={`px-2 py-1 rounded text-xs font-medium transition-colors ${pathname === "/" ? "bg-white/20" : "hover:bg-white/10"}`}><Home size={22} /></Link>
-            </>
-          )}
-          
-          {userInfo.name ? (
-            <>
-              {userInfo.id && <NotificationDropdown userId={userInfo.id} />}
-              <Link href="/profile" className={`px-2 py-1 rounded text-xs font-medium transition-colors ${pathname === "/profile" ? "bg-white/20" : "hover:bg-white/10"}`}><User size={22} /></Link>
-              <button
-                type="button"
-                onClick={handleLogout}
-                className="px-2 py-1 rounded text-xs font-medium transition-colors hover:bg-white/10"
-                aria-label="Logout"
-              >
-                <LogOut size={22} />
-              </button>
-            </>
-          ) : (
-            <Link
-              href="/login"
-              className="px-2 py-1 rounded text-xs font-medium transition-colors hover:bg-white/10"
-              aria-label="Login"
-            >
-              <LogIn size={22} />
-            </Link>
-          )}
+          {userInfo.id && <NotificationDropdown userId={userInfo.id} />}
+          <button
+            className="items-center p-2 rounded hover:bg-white/10 transition"
+            onClick={() => setDrawerOpen(true)}
+          >
+            <Menu size={24} />
+          </button>
         </div>
-      </div>
+       </div>
     </nav>
+    {/* Mobile Drawer */}
+{drawerOpen && (
+  <div className="fixed inset-0 z-50 flex md:hidden">
+    {/* Overlay */}
+    <div
+      className="absolute inset-0 bg-black/40"
+      onClick={() => setDrawerOpen(false)}
+    />
+    {/* Drawer */}
+    <div className="relative ml-auto w-64 h-full bg-[#407BB5] text-white flex flex-col p-6 shadow-xl justify-between">
+    <div className="flex flex-col">
+    {/* Close */}
+      <button
+        className="self-end mb-6 hover:bg-white/10 p-1 rounded"
+        onClick={() => setDrawerOpen(false)}
+      >
+        <X size={22} />
+      </button>
+
+      {/* Label PAGES */}
+      <p className="text-xs font-bold text-white/50 tracking-widest mb-3">PAGES</p>
+      <div className="flex flex-col gap-1 mb-6">
+        {userInfo.role === "Penjual" ? (
+          <>
+            <Link href="/products" onClick={() => setDrawerOpen(false)} className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/10 text-sm font-medium"><Package size={18} /> My Produk</Link>
+            <Link href="/seller/orders" onClick={() => setDrawerOpen(false)} className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/10 text-sm font-medium"><ClipboardList size={18} /> Pesanan</Link>
+            <Link href="/seller" onClick={() => setDrawerOpen(false)} className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/10 text-sm font-medium"><Store size={18} /> Store</Link>
+          </>
+        ) : userInfo.role === "Pembeli" ? (
+          <>
+            <Link href="/" onClick={() => setDrawerOpen(false)} className={`flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/10 text-sm font-medium ${pathname === "/" ? "bg-white/20" : ""}`}><Home size={18} /> Home</Link>
+            <Link href="/cart" onClick={() => setDrawerOpen(false)} className={`flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/10 text-sm font-medium ${pathname === "/cart" ? "bg-white/20" : ""}`}><ShoppingCart size={18} /> Keranjang</Link>
+<Link href="/orders" onClick={() => setDrawerOpen(false)} className={`flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/10 text-sm font-medium ${pathname === "/orders" ? "bg-white/20" : ""}`}><ClipboardList size={18} /> Orders</Link>
+          </>
+        ) : (
+          <Link href="/" onClick={() => setDrawerOpen(false)} className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/10 text-sm font-medium"><Home size={18} /> Home</Link>
+        )}
+      </div>
+    
+    </div>
+    
+      <div className="flex flex-col gap-1">
+        {userInfo.name ? (
+          <>
+            <div className="border-t border-white/20 mb-2 pt-2">
+              <Link href="/profile" onClick={() => setDrawerOpen(false)} className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/10 text-sm font-medium"><User size={18} /> {userInfo.name}</Link>
+            </div>
+            <button onClick={handleLogout} className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/10 text-sm font-medium text-left w-full"><LogOut size={18} /> Logout</button>
+          </>
+        ) : (
+          <Link href="/login" onClick={() => setDrawerOpen(false)} className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/10 text-sm font-medium"><LogIn size={18} /> Masuk</Link>
+        )}
+      </div>
+    </div>
+  </div>
+)}
+</>
   );
 }
