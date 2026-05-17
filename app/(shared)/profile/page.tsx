@@ -4,6 +4,7 @@ import Navbar from "@/components/Navbar";
 import { createClient } from "@/utils/supabase/server";
 import { cookies } from "next/headers";
 import { formatPrice } from "@/lib/data";
+import { LogOut, Package, Truck, Check, ClipboardList, MapPin } from "lucide-react";
 
 const STATUS_COLOR: Record<string, string> = {
   "Menunggu Konfirmasi": "bg-gray-100 text-gray-700",
@@ -89,9 +90,21 @@ export default async function ProfilePage() {
           {/* Stats */}
           <div className="grid grid-cols-3 gap-3">
             {[
-              { label: "Total Pesanan", value: totalOrders, icon: "📦" },
-              { label: "Selesai", value: completedOrders, icon: "✅" },
-              { label: "Diproses", value: processingOrders, icon: "⏳" },
+              { label: "Dikemas",
+                value: totalOrders,
+                icon: <Package size={36} className="text-blue-500 mx-auto" />,
+              },
+
+              { label: "Diantar",
+                value: processingOrders,
+                icon: <Truck size={36} className="text-yellow-500 mx-auto" />,
+              },
+
+              { 
+                label: "Selesai",
+                value: completedOrders,
+                icon: <Check size={36} className="text-green-500 mx-auto" />,
+              },
             ].map((stat) => (
               <div key={stat.label} className="card p-4 text-center">
                 <p className="text-2xl mb-1">{stat.icon}</p>
@@ -104,7 +117,10 @@ export default async function ProfilePage() {
           {/* Address */}
           <div className="card p-5">
             <div className="flex justify-between items-center mb-3">
-              <h2 className="font-bold text-gray-800">📍 Alamat Utama</h2>
+              <h2 className="font-bold text-gray-800 flex items-center gap-2">
+                <MapPin size={20} className="text-primary" />
+                Alamat Utama
+              </h2>
             </div>
             <p className="text-sm text-gray-600">
               {account?.address || "Belum ada alamat. Silakan edit profil untuk menambahkan alamat."}
@@ -114,7 +130,10 @@ export default async function ProfilePage() {
           {/* Order History */}
           <div className="card p-5">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="font-bold text-gray-800">📋 Pesanan Terakhir</h2>
+              <h2 className="font-bold text-gray-800 flex items-center gap-2">
+                <ClipboardList size={20} className="text-primary" />
+                Pesanan Terakhir
+              </h2>
               <Link href="/orders" className="text-sm text-primary hover:underline">
                 Lihat Semua
               </Link>
@@ -152,24 +171,14 @@ export default async function ProfilePage() {
                   );
                 })
               )}
-            </div>
+            </div> 
           </div>
 
           {/* Quick Links */}
-          <div className="grid grid-cols-2 gap-3">
-            <Link
-              href="/seller"
-              className="card p-4 flex items-center gap-3 hover:border-primary/30 transition-colors"
-            >
-              <span className="text-2xl">🏪</span>
-              <div>
-                <p className="font-semibold text-gray-800 text-sm">Toko Saya</p>
-                <p className="text-xs text-gray-400">Kelola produk & pesanan</p>
-              </div>
-            </Link>
-            <form action="/auth/signout" method="POST" className="w-full">
-              <button type="submit" className="card w-full p-4 flex items-center gap-3 text-left hover:border-red-200 transition-colors">
-                <span className="text-2xl">🚪</span>
+          <div className="pt-8 flex justify-center">
+            <form action="/auth/signout" method="POST" className="inline-block">
+              <button type="submit" className="card px-5 py-4 flex items-center gap-3 text-left hover:border-red-200 transition-colors">
+                <LogOut size={22} className="text-red-500" />
                 <div>
                   <p className="font-semibold text-red-500 text-sm">Keluar</p>
                   <p className="text-xs text-gray-400">Logout akun</p>
