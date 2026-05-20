@@ -86,11 +86,12 @@ export default function Navbar() {
             alt="logo"
             width={100}
             height={100}
+            className="w-16 md:w-24"
           ></Image>
         </Link>
 
         {/* Search Bar */}
-        <form onSubmit={handleSearch} className="flex flex-1 max-w-xs md:max-w-md mx-4 relative">
+        <form onSubmit={handleSearch} className="flex flex-1 mx-2 md:mx-4 md:max-w-md relative">
           <input
             type="text"
             placeholder="Cari produk..."
