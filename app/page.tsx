@@ -2,7 +2,7 @@ import Container from "@/components/Container";
 import ProductCard from "@/components/ProductCard";
 import { Product } from "@/lib/data";
 import Navbar from "@/components/Navbar";
-
+import CategoryFilter from "@/components/CategoryFilter";
 import { createClient } from "@/utils/supabase/server";
 import { cookies } from "next/headers";
 
@@ -98,26 +98,7 @@ export default async function HomePage() {
           </span>
         </div>
 
-        <div className="flex gap-2 overflow-x-auto pb-2 px-0 sm:px-4 mb-2 mt-4">
-          {CATEGORIES.map((cat) => (
-            <button
-              key={cat}
-              className={`px-4 py-1.5 rounded-xl text-sm whitespace-nowrap border transition-all duration-300 ${
-                cat === "Semua"
-                  ? "bg-primary text-white border-primary hover:bg-gradient-to-t hover:from-white/10 hover:to-primary"
-                  : "border-gray-300 text-gray-600 hover:border-primary hover:text-primary hover:bg-gradient-to-t hover:from-primary/20 hover:to-white"
-              }`}
-            >
-              {cat}
-            </button>
-          ))}
-        </div>
-
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          {products.map((product) => (
-            <ProductCard key={product.id} product={product} />
-          ))}
-        </div>
+        <CategoryFilter products={products} />
       </Container>
     </div>
   );

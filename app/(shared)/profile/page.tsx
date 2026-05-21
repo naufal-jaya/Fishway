@@ -5,6 +5,7 @@ import { createClient } from "@/utils/supabase/server";
 import { cookies } from "next/headers";
 import { formatPrice } from "@/lib/data";
 import { LogOut, Package, Truck, Check, ClipboardList, MapPin } from "lucide-react";
+import LogoutButton from "@/components/LogoutButton";
 
 const STATUS_COLOR: Record<string, string> = {
   "Menunggu Konfirmasi": "bg-gray-100 text-gray-700",
@@ -14,7 +15,7 @@ const STATUS_COLOR: Record<string, string> = {
 };
 
 export default async function ProfilePage() {
-  const supabase = createClient(cookies());
+  const supabase = createClient(cookies()); 
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {
@@ -176,16 +177,9 @@ export default async function ProfilePage() {
 
           {/* Quick Links */}
           <div className="pt-8 flex justify-center">
-            <form action="/auth/signout" method="POST" className="inline-block">
-              <button type="submit" className="card px-5 py-4 flex items-center gap-3 text-left hover:border-red-200 transition-colors">
-                <LogOut size={22} className="text-red-500" />
-                <div>
-                  <p className="font-semibold text-red-500 text-sm">Keluar</p>
-                  <p className="text-xs text-gray-400">Logout akun</p>
-                </div>
-              </button>
-            </form>
+            <LogoutButton />
           </div>
+
         </div>
       </Container>
     </div>
