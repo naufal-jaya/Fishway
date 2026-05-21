@@ -5,6 +5,17 @@ import { useRouter } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import Container from "@/components/Container";
 import { createClient } from "@/utils/supabase/supabaseClient";
+import AddressList from "@/components/AddressList";
+import { getAddresses } from "@/lib/addresses";
+
+type Address = {
+  id: string;
+  label: string;
+  recipient_name: string;
+  phone: string;
+  address: string;
+  is_primary: boolean;
+};
 
 export default function EditProfilePage() {
   const router = useRouter();
@@ -12,6 +23,7 @@ export default function EditProfilePage() {
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
   const [userId, setUserId] = useState("");
+  const [addresses, setAddresses] = useState<Address[]>([]);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -32,6 +44,9 @@ export default function EditProfilePage() {
         supabase.from("accounts").select("name, address").eq("id", user.id).maybeSingle(),
         supabase.from("buyers").select("phone").eq("id", user.id).maybeSingle(),
       ]);
+
+      const fetchedAddresses = await getAddresses();
+      setAddresses(fetchedAddresses || []);
 
       setFormData({
         name: account?.name || user.email?.split("@")[0] || "",
@@ -94,34 +109,40 @@ export default function EditProfilePage() {
     <div>
       <Navbar />
       <Container>
-        <div className="max-w-xl mx-auto py-8">
+        <div className="max-w-4xl mx-auto py-8">
           <h1 className="text-2xl font-bold text-gray-800 mb-6">Edit Profil</h1>
-          
-          <form onSubmit={handleSubmit} className="card p-6 space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Nama Lengkap</label>
-              <input required type="text" name="name" value={formData.name} onChange={handleChange} className="w-full border rounded-lg p-2" />
+
+          <div className="grid md:grid-cols-2 gap-6 items-start">
+
+            {/* KIRI — Form Edit Profil (tanpa tombol) */}
+            <form onSubmit={handleSubmit} className="card p-6 space-y-4">
+              <h2 className="font-bold text-gray-800 text-lg border-b pb-3">👤 Informasi Akun</h2>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Nama Lengkap</label>
+                <input required type="text" name="name" value={formData.name} onChange={handleChange} className="w-full border rounded-lg p-2" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Nomor Telepon</label>
+                <input type="text" name="phone" value={formData.phone} onChange={handleChange} className="w-full border rounded-lg p-2" placeholder="08..." />
+              </div>
+            </form>
+
+            {/* KANAN — Alamat Saya + tombol di bawahnya */}
+            <div className="space-y-4">
+              <AddressList initialAddresses={addresses} />
+
+              {/* Tombol di bawah card kanan */}
+              <div className="flex gap-3">
+                <button type="button" onClick={() => router.push("/profile")} className="flex-1 btn-outline py-2.5 rounded-xl">
+                  Batal
+                </button>
+                <button disabled={loading} onClick={handleSubmit} className="flex-1 btn-primary py-2.5 rounded-xl">
+                  {loading ? "Menyimpan..." : "Simpan Perubahan"}
+                </button>
+              </div>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Nomor Telepon</label>
-              <input type="text" name="phone" value={formData.phone} onChange={handleChange} className="w-full border rounded-lg p-2" placeholder="08..." />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Alamat Lengkap</label>
-              <textarea name="address" value={formData.address} onChange={handleChange} rows={4} className="w-full border rounded-lg p-2"></textarea>
-            </div>
-
-            <div className="flex gap-3 pt-4">
-              <button disabled={loading} type="submit" className="flex-1 btn-primary py-2.5 rounded-xl">
-                {loading ? "Menyimpan..." : "Simpan Perubahan"}
-              </button>
-              <button type="button" onClick={() => router.push("/profile")} className="flex-1 btn-outline py-2.5 rounded-xl">
-                Batal
-              </button>
-            </div>
-          </form>
+          </div>
         </div>
       </Container>
     </div>

@@ -132,35 +132,54 @@ export default function NotificationDropdown({ userId, label }: { userId: string
                 Belum ada notifikasi
               </div>
             ) : (
-              notifications.map((notif) => (
-                <div
-                  key={notif.id}
-                  onClick={() => handleNotificationClick(notif)}
-                  className={`p-4 border-b last:border-b-0 cursor-pointer hover:bg-gray-50 transition-colors ${
-                    !notif.is_read ? "bg-blue-50/30" : ""
-                  }`}
-                >
-                  <div className="flex justify-between items-start mb-1">
-                    <h4 className={`text-sm ${!notif.is_read ? "font-bold text-gray-900" : "font-medium text-gray-700"}`}>
-                      {notif.title}
-                    </h4>
-                    {!notif.is_read && (
-                      <span className="w-2 h-2 rounded-full bg-primary flex-shrink-0 mt-1"></span>
-                    )}
+              notifications.map((notif) => {
+                // Deteksi status dari message/title
+                const STATUS_BADGE: Record<string, { label: string; color: string }> = {
+                  "menunggu konfirmasi": { label: "Menunggu Konfirmasi", color: "bg-gray-100 text-gray-700" },
+                  "diproses": { label: "Diproses", color: "bg-yellow-100 text-yellow-700" },
+                  "dikirim": { label: "Dikirim", color: "bg-blue-100 text-blue-700" },
+                  "selesai": { label: "Selesai", color: "bg-green-100 text-green-700" },
+                  "dibatalkan": { label: "Dibatalkan", color: "bg-red-100 text-red-700" },
+                };
+
+                const combinedText = (notif.title + " " + notif.message).toLowerCase();
+                const matchedStatus = Object.entries(STATUS_BADGE).find(([key]) =>
+                  combinedText.includes(key)
+                );
+
+                return (
+                  <div
+                    key={notif.id}
+                    onClick={() => handleNotificationClick(notif)}
+                    className={`p-4 border-b last:border-b-0 cursor-pointer hover:bg-gray-50 transition-colors ${
+                      !notif.is_read ? "bg-blue-50/30" : ""
+                    }`}
+                  >
+                    <div className="flex justify-between items-start mb-1">
+                      <h4 className={`text-sm ${!notif.is_read ? "font-bold text-gray-900" : "font-medium text-gray-700"}`}>
+                        {notif.title}
+                      </h4>
+                      {!notif.is_read && (
+                        <span className="w-2 h-2 rounded-full bg-primary flex-shrink-0 mt-1"></span>
+                      )}
+                    </div>
+                    <p className="text-xs text-gray-600 line-clamp-2">
+                      {notif.message.split(/:(.+)/).map((part, i) =>
+                        i === 1 ? <strong key={i}>{part}</strong> : part
+                      )}
+                    </p>
+
+                    <p className="text-[10px] text-gray-400 mt-2">
+                      {new Date(notif.created_at).toLocaleString("id-ID", {
+                        day: "numeric",
+                        month: "short",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </p>
                   </div>
-                  <p className="text-xs text-gray-600 line-clamp-2">
-                    {notif.message}
-                  </p>
-                  <p className="text-[10px] text-gray-400 mt-2">
-                    {new Date(notif.created_at).toLocaleString("id-ID", {
-                      day: "numeric",
-                      month: "short",
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
-                  </p>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
         </div>
