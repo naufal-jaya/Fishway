@@ -99,11 +99,29 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
     }
   };
 
+  const parseStock = (value: string) => {
+    const stock = Number(value);
+    return Number.isInteger(stock) && stock >= 0 ? stock : null;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
+      const stockValue = productType === 0 ? parseStock(formData.stock) : null;
+      const variantStockValues = productType === 1
+        ? variants.map((variant) => parseStock(variant.stock))
+        : [];
+
+      if (productType === 0 && stockValue === null) {
+        throw new Error("Stok harus berupa angka bulat minimal 0");
+      }
+
+      if (productType === 1 && variantStockValues.some((stock) => stock === null)) {
+        throw new Error("Stok varian harus berupa angka bulat minimal 0");
+      }
+
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
@@ -142,7 +160,7 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
         ...(productType === 0 ? {
           price: parseInt(formData.price) || 0,
           unit: formData.unit,
-          stock: parseInt(formData.stock) || 0,
+          stock: stockValue,
         } : {
           price: null,
           unit: null,
@@ -161,19 +179,19 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
       if (productType === 1) {
         // To keep it simple, we could delete existing and insert new, or upsert.
         // Let's use delete and insert if no ID, or just upsert
-        for (const v of variants) {
+        for (const [index, v] of variants.entries()) {
           if (v.id) {
             await supabase.from("price_options").update({
               label: v.label,
               price: parseInt(v.price) || 0,
-              stock: parseInt(v.stock) || 0,
+              stock: variantStockValues[index],
             }).eq("id", v.id);
           } else {
             await supabase.from("price_options").insert({
               product_id: params.id,
               label: v.label,
               price: parseInt(v.price) || 0,
-              stock: parseInt(v.stock) || 0,
+              stock: variantStockValues[index],
             });
           }
         }
@@ -268,7 +286,7 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Stok Total</label>
-                  <input required type="number" name="stock" value={formData.stock} onChange={handleChange} className="w-full border rounded-lg p-2" />
+                  <input required type="number" min="0" step="1" name="stock" value={formData.stock} onChange={handleChange} className="w-full border rounded-lg p-2" />
                 </div>
               </>
             ) : (
@@ -286,7 +304,7 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
                     </div>
                     <div className="w-24">
                       <label className="block text-xs font-medium text-gray-500 mb-1">Stok</label>
-                      <input required type="number" value={variant.stock} onChange={(e) => handleVariantChange(index, 'stock', e.target.value)} className="w-full border rounded-lg p-2 text-sm" />
+                      <input required type="number" min="0" step="1" value={variant.stock} onChange={(e) => handleVariantChange(index, 'stock', e.target.value)} className="w-full border rounded-lg p-2 text-sm" />
                     </div>
                     {variants.length > 1 && (
                       <button type="button" onClick={() => removeVariant(index)} className="mt-6 text-red-500 p-2 hover:bg-red-50 rounded-lg">

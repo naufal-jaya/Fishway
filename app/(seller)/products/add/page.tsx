@@ -55,11 +55,29 @@ export default function AddProductPage() {
     }
   };
 
+  const parseStock = (value: string) => {
+    const stock = Number(value);
+    return Number.isInteger(stock) && stock >= 0 ? stock : null;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
+      const stockValue = productType === 0 ? parseStock(formData.stock) : null;
+      const variantStockValues = productType === 1
+        ? variants.map((variant) => parseStock(variant.stock))
+        : [];
+
+      if (productType === 0 && stockValue === null) {
+        throw new Error("Stok harus berupa angka bulat minimal 0");
+      }
+
+      if (productType === 1 && variantStockValues.some((stock) => stock === null)) {
+        throw new Error("Stok varian harus berupa angka bulat minimal 0");
+      }
+
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
@@ -109,7 +127,7 @@ export default function AddProductPage() {
         ...(productType === 0 ? {
           price: parseInt(formData.price) || 0,
           unit: formData.unit,
-          stock: parseInt(formData.stock) || 0,
+          stock: stockValue,
         } : {
           price: null,
           unit: null,
@@ -127,11 +145,11 @@ export default function AddProductPage() {
 
       // 4. Insert variants if type === 1
       if (productType === 1 && newProduct) {
-        const variantsPayload = variants.map(v => ({
+        const variantsPayload = variants.map((v, index) => ({
           product_id: newProduct.id,
           label: v.label,
           price: parseInt(v.price) || 0,
-          stock: parseInt(v.stock) || 0,
+          stock: variantStockValues[index],
         }));
         
         const { error: variantError } = await supabase
@@ -223,7 +241,7 @@ export default function AddProductPage() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Stok Total</label>
-                  <input required type="number" name="stock" value={formData.stock} onChange={handleChange} className="w-full border rounded-lg p-2" />
+                  <input required type="number" min="0" step="1" name="stock" value={formData.stock} onChange={handleChange} className="w-full border rounded-lg p-2" />
                 </div>
               </>
             ) : (
@@ -241,7 +259,7 @@ export default function AddProductPage() {
                     </div>
                     <div className="w-24">
                       <label className="block text-xs font-medium text-gray-500 mb-1">Stok</label>
-                      <input required type="number" value={variant.stock} onChange={(e) => handleVariantChange(index, 'stock', e.target.value)} className="w-full border rounded-lg p-2 text-sm" />
+                      <input required type="number" min="0" step="1" value={variant.stock} onChange={(e) => handleVariantChange(index, 'stock', e.target.value)} className="w-full border rounded-lg p-2 text-sm" />
                     </div>
                     {variants.length > 1 && (
                       <button type="button" onClick={() => removeVariant(index)} className="mt-6 text-red-500 p-2 hover:bg-red-50 rounded-lg">
