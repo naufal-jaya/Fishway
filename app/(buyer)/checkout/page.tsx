@@ -79,6 +79,7 @@ export default async function CheckoutPage() {
   });
 
   const shipping = 15000;
+  const biayaAdmin = 5000;
   const total = subtotal + shipping;
 
   return (
@@ -126,6 +127,10 @@ export default async function CheckoutPage() {
                 <div className="flex justify-between text-sm text-gray-500 pt-2">
                   <span>Ongkos Kirim</span>
                   <span>{formatPrice(shipping)}</span>
+                </div>
+                <div className="flex justify-between text-sm text-gray-500">
+                  <span>Biaya Admin</span>
+                  <span>{formatPrice(biayaAdmin)}</span>
                 </div>
                 <div className="border-t pt-2 mt-2 flex justify-between font-bold text-primary text-base">
                   <span>Total Bayar</span>

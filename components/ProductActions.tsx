@@ -26,7 +26,7 @@ export default function ProductActions({
   waNumber,
   sellerName,
 }: ProductActionsProps) {
-  const [quantity, setQuantity] = useState(1);
+  const [quantity, setQuantity] = useState("1");
   const [selectedVariant, setSelectedVariant] = useState<PriceOption | null>(
     priceOptions.length > 0 ? priceOptions[0] : null
   );
@@ -36,14 +36,27 @@ export default function ProductActions({
   const currentStock = product.type === 1 ? selectedVariant?.stock || 0 : product.stock || 0;
   const currentUnit  = product.type === 1 ? selectedVariant?.label || "Unit" : product.unit || "Unit";
 
-  const handleIncrease = () => { if (quantity < currentStock) setQuantity((q) => q + 1); };
-  const handleDecrease = () => { if (quantity > 1) setQuantity((q) => q - 1); };
+  const handleIncrease = () => {
+    const currentQty = Number(quantity);
+
+    if (currentQty < currentStock) {
+      setQuantity((currentQty + 1).toString());
+    }
+  };
+
+  const handleDecrease = () => {
+    const currentQty = Number(quantity);
+
+    if (currentQty > 1) {
+      setQuantity((currentQty - 1).toString());
+    }
+  };
 
   const handleAddToCart = async () => {
     setIsAdding(true);
     try {
       const variantId = product.type === 1 ? (selectedVariant as any)?.id : undefined;
-      const res = await addToCart(product.id, quantity, variantId);
+      const res = await addToCart(product.id, Number(quantity), variantId);
       
       await new Promise((r) => setTimeout(r, 500));
       
@@ -57,10 +70,12 @@ export default function ProductActions({
   };
 
   const variantText = product.type === 1 && selectedVariant ? ` Varian: ${selectedVariant.label}` : "";
-  const totalHarga  = formatPrice(currentPrice * quantity);
+  const totalHarga = formatPrice(currentPrice * Number(quantity));
   const message = `Halo ${sellerName}, saya ingin membeli produk ini:\nNama Produk: ${product.name}${variantText}\nJumlah: ${quantity} ${currentUnit}\nTotal Harga: ${totalHarga}\n\nApakah stok masih tersedia?`;
   const waLink  = `https://wa.me/${waNumber}?text=${encodeURIComponent(message)}`;
-  const buyLink = `/checkout?product=${product.id}&qty=${quantity}${selectedVariant ? `&variant=${(selectedVariant as any).id}` : ""}`;
+  const buyLink = `/checkout?product=${product.id}&qty=${Number(quantity)}${
+    selectedVariant ? `&variant=${(selectedVariant as any).id}` : ""
+  }`;
 
   return (
     <div className="space-y-5">
@@ -106,15 +121,50 @@ export default function ProductActions({
           <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden">
             <button
               onClick={handleDecrease}
-              disabled={quantity <= 1}
+              disabled={Number(quantity) <= 1}
               className="w-9 h-9 flex items-center justify-center text-gray-500 hover:bg-gray-50 disabled:opacity-40"
             >
               <Minus className="w-3.5 h-3.5" />
             </button>
-            <span className="w-10 text-center text-sm font-semibold text-gray-800">{quantity}</span>
+            <input
+              type="text"
+              inputMode="numeric"
+              value={quantity}
+              onChange={(e) => {
+                const raw = e.target.value.replace(/[^0-9]/g, "");
+
+                // boleh kosong saat backspace
+                if (raw === "") {
+                  setQuantity("");
+                  return;
+                }
+
+                const val = Number(raw);
+
+                // max stok
+                if (val > currentStock) return;
+
+                setQuantity(raw);
+              }}
+              onBlur={() => {
+                // kalau kosong balikin ke 1
+                if (quantity === "") {
+                  setQuantity("1");
+                  return;
+                }
+
+                const finalQty = Number(quantity);
+
+                // minimal 1
+                if (finalQty < 1) {
+                  setQuantity("1");
+                }
+              }}
+              className="w-10 text-center text-sm font-semibold text-gray-800 outline-none bg-transparent"
+            />
             <button
               onClick={handleIncrease}
-              disabled={quantity >= currentStock}
+              disabled={Number(quantity) >= currentStock}
               className="w-9 h-9 flex items-center justify-center text-gray-500 hover:bg-gray-50 disabled:opacity-40"
             >
               <Plus className="w-3.5 h-3.5" />

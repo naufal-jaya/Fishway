@@ -3,12 +3,13 @@ import { cookies } from "next/headers";
 import Container from "@/components/Container";
 import { createClient } from "@/utils/supabase/server";
 import { formatPrice } from "@/lib/data";
-import { ChevronLeft } from "lucide-react";
+import { ChevronLeft, ShoppingCart } from "lucide-react";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import Image from "next/image";
 import CartItemControl from "@/components/CartItemControl";
 import CartCheckbox from "@/components/CartCheckbox";
+
 
 export default async function CartPage() {
   const supabase = createClient(cookies());
@@ -27,13 +28,13 @@ export default async function CartPage() {
       cart_items (
         id,
         quantity,
-        products (
-          id, name, type, price, unit, gambar, location,
-          stores (name)
-        ),
-        price_options (
-          id, label, price
-        )
+          products (
+            id, name, type, price, unit, stock, gambar, location,
+            stores (name)
+          ),
+          price_options (
+            id, label, price, stock
+          )
       )
     `)
     .eq("buyer_id", user.id)
@@ -52,6 +53,10 @@ export default async function CartPage() {
     
     subtotal += itemPrice * item.quantity;
 
+    const itemStock = product?.type === 0
+      ? (product?.stock ?? 99)
+      : (variant?.stock ?? 99);
+
     return {
       id: item.id,
       productId: product?.id,
@@ -62,10 +67,11 @@ export default async function CartPage() {
       qty: item.quantity,
       price: itemPrice,
       unit: itemUnit,
+      stock: itemStock,
     };
   });
 
-  const biayaAdmin = 2000;
+  const biayaAdmin = 5000;
   const total = subtotal + biayaAdmin;
 
   return (
@@ -82,7 +88,9 @@ export default async function CartPage() {
 
         {formattedItems.length === 0 ? (
           <div className="card p-12 text-center">
-            <p className="text-5xl mb-4">🛒</p>
+            <div className="flex justify-center mb-4">
+              <ShoppingCart className="w-16 h-16 text-gray-300" strokeWidth={1.5} />
+            </div>
             <p className="text-gray-500 mb-4">Keranjang kamu kosong</p>
             <Link href="/" className="btn-primary inline-block">
               Mulai Belanja
@@ -114,7 +122,7 @@ export default async function CartPage() {
                     </p>
                   </div>
                   {/* Qty Control and Remove */}
-                  <CartItemControl itemId={item.id} initialQty={item.qty} />
+                 <CartItemControl itemId={item.id} initialQty={item.qty} maxQty={item.stock} />
                 </div>
               </CartCheckbox>
               ))}

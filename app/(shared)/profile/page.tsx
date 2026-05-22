@@ -4,7 +4,7 @@ import Navbar from "@/components/Navbar";
 import { createClient } from "@/utils/supabase/server";
 import { cookies } from "next/headers";
 import { formatPrice } from "@/lib/data";
-import { LogOut, Package, Truck, Check, ClipboardList, MapPin } from "lucide-react";
+import { LogOut, Package, Truck, Check, ClipboardList, MapPin, User } from "lucide-react";
 import LogoutButton from "@/components/LogoutButton";
 
 const STATUS_COLOR: Record<string, string> = {
@@ -87,8 +87,8 @@ const addresses = (addressesData || []) as Address[];
           {/* Profile Card */}
           <div className="card p-6">
             <div className="flex flex-col md:flex-row items-center md:items-start gap-5">
-              <div className="bg-primary/10 w-20 h-20 rounded-full flex items-center justify-center text-4xl flex-shrink-0">
-                🧑‍💼
+              <div className="bg-primary/10 w-20 h-20 rounded-full flex items-center justify-center flex-shrink-0">
+                <User size={40} className="text-primary" />
               </div>
               <div className="flex-1 text-center md:text-left">
                 <h1 className="text-2xl font-bold text-gray-800">

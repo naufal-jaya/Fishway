@@ -90,19 +90,21 @@ export default function Navbar() {
           ></Image>
         </Link>
 
-        {/* Search Bar */}
-        <form onSubmit={handleSearch} className="flex flex-1 mx-2 md:mx-4 md:max-w-md relative">
-          <input
-            type="text"
-            placeholder="Cari produk..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full px-4 py-2 rounded-full text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-white/50"
-          />
-          <button type="submit" className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-[#407BB5]">
-            <Search size={18} />
-          </button>
-        </form>
+        {/* Search Bar — hanya tampil untuk non-Penjual */}
+        {userInfo.role !== "Penjual" && (
+          <form onSubmit={handleSearch} className="flex flex-1 mx-2 md:mx-4 md:max-w-md relative">
+            <input
+              type="text"
+              placeholder="Cari produk..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full px-4 py-2 rounded-full text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-white/50"
+            />
+            <button type="submit" className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-[#407BB5]">
+              <Search size={18} />
+            </button>
+          </form>
+        )}
 
         {/* Desktop Nav */}
         <div className="hidden md:flex items-center gap-1">
