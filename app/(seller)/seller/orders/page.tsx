@@ -6,6 +6,8 @@ import { createClient } from "@/utils/supabase/server";
 import { cookies } from "next/headers";
 import { Pencil, Trash, ChevronLeft, ChevronRight, PackageOpen } from "lucide-react";
 import OrderTableHeader from "@/components/OrderTableHeader";
+import OrderPagination from "@/components/OrderPagination";
+import { Suspense } from "react";
 
 const STATUS_TABS = ["Semua", "Menunggu Konfirmasi", "Diproses", "Dikirim", "Selesai"];
 
@@ -16,7 +18,7 @@ const STATUS_COLOR: Record<string, string> = {
   "Selesai": "bg-green-100 text-green-500",
 };
 
-export default async function SellerOrdersPage({ searchParams }: { searchParams: { status?: string; q?: string; date?: string } }) {
+export default async function SellerOrdersPage({ searchParams }: { searchParams: { status?: string; q?: string; date?: string; page?: string } }) {
   const supabase = createClient(cookies());
   const { data: { user } } = await supabase.auth.getUser();
 
@@ -49,6 +51,9 @@ export default async function SellerOrdersPage({ searchParams }: { searchParams:
   const searchQuery = searchParams.q || "";
 
   const dateFilter = searchParams.date || "";
+
+  const perPage = 2;
+  const currentPage = Number(searchParams.page || 1);
 
   let query = supabase
     .from("orders")
@@ -112,6 +117,11 @@ const filteredOrders = (orders || []).filter((order: any) => {
   return matchSearch && matchDate;
 });
 
+const paginatedOrders = filteredOrders.slice(
+  (currentPage - 1) * perPage,
+  currentPage * perPage
+);
+
 
   return (
     <div>
@@ -147,7 +157,7 @@ const filteredOrders = (orders || []).filter((order: any) => {
 
             {/* Table Rows */}
             <div>
-              {filteredOrders.map((order: any) => {
+              {paginatedOrders.map((order: any) => {
                 const orderDate = new Date(order.created_at).toLocaleDateString("id-ID", {
                   day: "2-digit",
                   month: "short",
@@ -161,61 +171,87 @@ const filteredOrders = (orders || []).filter((order: any) => {
                 const buyerName = buyerMap.get(order.buyer_id) || "Pembeli";
 
                 return (
-                <div
-                  key={order.id}
-                  className="relative p-5 md:grid md:grid-cols-8 gap-4 items-center hover:bg-gray-50 transition-colors"
-                >
-                    <div className="col-span-2 mb-2 md:mb-0">
-                      <p className="text-sm font-medium text-gray-800">{orderDate}</p>
-                      <p className="text-xs text-gray-400">
-                        {new Date(order.created_at).toLocaleTimeString("id-ID", {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                            hour12: false,
-                          })
-                          .replace(".", ":")}
-                        </p>
-                    </div>
-                    <div className="mb-2 md:mb-0 text-center">
-                      <p className="text-sm text-gray-600 font-mono">#{order.id.split("-")[0].toUpperCase()}</p>
-                    </div>
-                    <div className="mb-2 md:mb-0">
-                      <p className="text-sm text-gray-600 truncate">{buyerName}</p>
-                    </div>
-                    <div className="mb-2 md:mb-0 text-center">
-                      <p className="text-sm text-gray-600">{order.order_items.length} item</p>
-                    </div>
-                    <div className="mb-2 md:mb-0 text-right">
-                      <p className="text-sm font-bold text-gray-800">
-                        {formatPrice(order.total_amount + order.shipping_cost)}
-                      </p>
-                    </div>
-                    <div className="flex justify-center">
-                      <span
-                        className={`text-xs px-3 py-1 rounded-full font-medium ${STATUS_COLOR[order.status] || "bg-gray-100 text-gray-700"}`}
-                      >
-                        • {order.status}
-                      </span>
-                    </div>
-                  <div className="flex justify-center">
-                    <Link 
-                      href={`/seller/orders/${order.id}`}
-                      className="text-gray-400 hover:text-primary transition-colors"
-                    >
-                      <ChevronRight className="w-4 h-4" />
-                    </Link>
-                  </div>
+<div key={order.id} className="relative hover:bg-gray-50 transition-colors">
+  
+  {/* Mobile view */}
+  <div className="md:hidden p-4">
+    <div className="flex items-start justify-between mb-2">
+      <div>
+        <p className="text-sm font-medium text-gray-800">{orderDate}</p>
+        <p className="text-xs text-gray-400 font-mono">#{order.id.split("-")[0].toUpperCase()}</p>
+      </div>
+      <span className={`text-xs px-2 py-1 rounded-full font-medium ${STATUS_COLOR[order.status] || "bg-gray-100 text-gray-700"}`}>
+        • {order.status}
+      </span>
+    </div>
+    <div className="flex items-center justify-between">
+      <div>
+        <p className="text-sm text-gray-600">{buyerName}</p>
+        <p className="text-xs text-gray-400">{order.order_items.length} item</p>
+      </div>
+      <div className="flex items-center gap-2">
+        <p className="text-sm font-bold text-gray-800">
+          {formatPrice(order.total_amount + order.shipping_cost)}
+        </p>
+        <Link href={`/seller/orders/${order.id}`} className="text-gray-400 hover:text-primary transition-colors">
+          <ChevronRight className="w-4 h-4" />
+        </Link>
+      </div>
+    </div>
+  </div>
 
-                  {/* Divider */}
-                  {filteredOrders.indexOf(order) !== filteredOrders.length - 1 && (
-                  <div className="absolute bottom-0 left-5 right-5 h-px bg-gray-200"></div>
-                  )}
+  {/* Desktop view */}
+  <div className="hidden md:grid md:grid-cols-8 gap-4 items-center p-5">
+    <div className="col-span-2">
+      <p className="text-sm font-medium text-gray-800">{orderDate}</p>
+      <p className="text-xs text-gray-400">
+        {new Date(order.created_at).toLocaleTimeString("id-ID", {
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: false,
+        }).replace(".", ":")}
+      </p>
+    </div>
+    <div className="text-center">
+      <p className="text-sm text-gray-600 font-mono">#{order.id.split("-")[0].toUpperCase()}</p>
+    </div>
+    <div>
+      <p className="text-sm text-gray-600 truncate">{buyerName}</p>
+    </div>
+    <div className="text-center">
+      <p className="text-sm text-gray-600">{order.order_items.length} item</p>
+    </div>
+    <div className="text-right">
+      <p className="text-sm font-bold text-gray-800">
+        {formatPrice(order.total_amount + order.shipping_cost)}
+      </p>
+    </div>
+    <div className="flex justify-center">
+      <span className={`text-xs px-3 py-1 rounded-full font-medium ${STATUS_COLOR[order.status] || "bg-gray-100 text-gray-700"}`}>
+        • {order.status}
+      </span>
+    </div>
+    <div className="flex justify-center">
+      <Link href={`/seller/orders/${order.id}`} className="text-gray-400 hover:text-primary transition-colors">
+        <ChevronRight className="w-4 h-4" />
+      </Link>
+    </div>
+  </div>
 
-                  </div>
+  {/* Divider */}
+  {paginatedOrders.indexOf(order) !== paginatedOrders.length - 1 && (
+    <div className="absolute bottom-0 left-5 right-5 h-px bg-gray-200"></div>
+  )}
+</div>
                   
                 );
               })}
             </div>
+
+          <Suspense fallback={null}>
+            <OrderPagination total={filteredOrders.length} perPage={perPage} />
+          </Suspense>
+
           </div>
 
         {/* Empty State */}

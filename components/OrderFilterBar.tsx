@@ -34,19 +34,19 @@ export default function OrderFilterBar({ currentStatus, currentDate }: { current
     <div className="flex items-center gap-2 relative z-50">
       {/* Active filter chips */}
       {currentStatus !== "Semua" && (
-        <span className="flex items-center gap-1 px-3 py-1 bg-primary/10 text-primary text-xs rounded-full">
+        <span className="hidden md:flex items-center gap-1 px-3 py-1 bg-primary/10 text-primary text-xs rounded-full">
           {currentStatus}
           <button onClick={() => setFilter("status", "")} className="ml-1 hover:text-red-400">×</button>
         </span>
       )}
       {currentDate && (
-        <span className="flex items-center gap-1 px-3 py-1 bg-primary/10 text-primary text-xs rounded-full">
+        <span className="hidden md:flex items-center gap-1 px-3 py-1 bg-primary/10 text-primary text-xs rounded-full">
           {DATE_OPTIONS.find(d => d.value === currentDate)?.label}
           <button onClick={() => setFilter("date", "")} className="ml-1 hover:text-red-400">×</button>
         </span>
       )}
       {!hasFilter && (
-        <span className="text-xs text-gray-400">Belum ada filter aktif</span>
+        <span className="hidden md:inline text-xs text-gray-400">Belum ada filter aktif</span>
       )}
 
       {/* Filter button */}
@@ -55,7 +55,8 @@ export default function OrderFilterBar({ currentStatus, currentDate }: { current
         className={`ml-auto flex items-center gap-1.5 px-3 py-1.5 text-sm border rounded-lg transition-colors font-medium ${hasFilter ? "border-primary text-primary" : "border-gray-200 text-gray-600 hover:border-primary hover:text-primary"}`}
       >
         <SlidersHorizontal size={14} />
-        Filter {hasFilter && "•"}
+        <span className="hidden md:inline">Filter</span>
+        {hasFilter && "•"}
       </button>
 
       {/* Dropdown */}

@@ -77,7 +77,7 @@ export default function Navbar() {
 
   return (
     <>
-    <nav className=" bg-[#407BB5] text-white shadow-md sticky top-0 z-50">
+    <nav className="bg-[#407BB5] text-white shadow-md sticky top-0 z-[100]">
       <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
         {/* Logo */}
         <Link href="/">
@@ -170,7 +170,7 @@ export default function Navbar() {
     </nav>
     {/* Mobile Drawer */}
 {drawerOpen && (
-  <div className="fixed inset-0 z-50 flex md:hidden">
+  <div className="fixed inset-0 z-[100] flex md:hidden">
     {/* Overlay */}
     <div
       className="absolute inset-0 bg-black/40"
