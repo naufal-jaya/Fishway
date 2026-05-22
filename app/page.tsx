@@ -8,11 +8,9 @@ import { cookies } from "next/headers";
 
 const CATEGORIES = [
   "Semua",
-  "Ikan Laut",
-  "Udang",
-  "Cumi",
-  "Kepiting",
+  "Ikan Air Asin",
   "Ikan Air Tawar",
+  "Ikan Hias",
 ];
 
 export default async function HomePage() {

@@ -18,6 +18,23 @@ export default async function CheckoutPage() {
     supabase.from("buyers").select("phone").eq("id", user.id).maybeSingle()
   ]);
 
+  // Fetch addresses
+  const { data: addressesData } = await supabase
+    .from("addresses")
+    .select("*")
+    .eq("user_id", user.id)
+    .order("is_primary", { ascending: false })
+    .order("created_at", { ascending: false });
+
+  const addresses = (addressesData || []) as {
+    id: string;
+    label: string;
+    recipient_name: string;
+    phone: string;
+    address: string;
+    is_primary: boolean;
+  }[];
+
   // Fetch Cart
   const { data: cart } = await supabase
     .from("carts")
@@ -70,57 +87,29 @@ export default async function CheckoutPage() {
       <Container>
         <h1 className="text-2xl font-bold text-gray-800 mb-6">Checkout</h1>
 
-        <div className="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto">
-          {/* Delivery Form */}
-          <div className="card p-6 space-y-4 h-fit">
+        <div className="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto items-start">
+
+          {/* KIRI — Detail Pemesan (memanjang sejajar kanan) */}
+          <div className="card p-6 space-y-4">
             <h2 className="font-bold text-gray-800 text-lg border-b pb-3">
-              📦 Alamat Pengiriman
+              👤 Detail Pemesan
             </h2>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Nama Penerima
-              </label>
-              <input
-                type="text"
-                defaultValue={account?.name || ""}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none focus:border-primary"
+            {addresses.length === 0 ? (
+              <p className="text-sm text-gray-500">
+                Belum ada alamat tersimpan.{" "}
+                <a href="/profile/edit" className="text-primary hover:underline">Tambah alamat</a>
+              </p>
+            ) : (
+              <CheckoutClient
+                addresses={addresses}
+                defaultName={account?.name || ""}
+                defaultPhone={buyer?.phone || ""}
               />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Nomor HP
-              </label>
-              <input
-                type="tel"
-                defaultValue={buyer?.phone || ""}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none focus:border-primary"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Alamat Lengkap
-              </label>
-              <textarea
-                defaultValue={account?.address || ""}
-                placeholder="Masukkan alamat pengiriman lengkap..."
-                rows={3}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none focus:border-primary resize-none"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Catatan (opsional)
-              </label>
-              <input
-                type="text"
-                placeholder="Misal: taruh di depan pintu"
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none focus:border-primary"
-              />
-            </div>
+            )}
           </div>
 
-          {/* Payment & Summary */}
+          {/* KANAN — Pesanan + QRIS + Tombol Konfirmasi */}
           <div className="space-y-4">
             {/* Order Summary */}
             <div className="card p-5">
@@ -130,12 +119,8 @@ export default async function CheckoutPage() {
               <div className="space-y-2">
                 {formattedItems.map((item: any) => (
                   <div key={item.id} className="flex justify-between text-sm">
-                    <span className="text-gray-600">
-                      {item.name} x{item.qty}
-                    </span>
-                    <span className="font-medium">
-                      {formatPrice(item.price * item.qty)}
-                    </span>
+                    <span className="text-gray-600">{item.name} x{item.qty}</span>
+                    <span className="font-medium">{formatPrice(item.price * item.qty)}</span>
                   </div>
                 ))}
                 <div className="flex justify-between text-sm text-gray-500 pt-2">
@@ -151,25 +136,21 @@ export default async function CheckoutPage() {
 
             {/* QRIS Payment */}
             <div className="card p-5 text-center">
-              <h2 className="font-bold text-gray-800 mb-3">
-                💳 Pembayaran QRIS
-              </h2>
-              {/* QR Placeholder */}
+              <h2 className="font-bold text-gray-800 mb-3">💳 Pembayaran QRIS</h2>
               <div className="bg-gray-100 rounded-xl w-40 h-40 mx-auto flex items-center justify-center mb-3 border-2 border-dashed border-gray-300">
                 <span className="text-4xl">📱</span>
               </div>
               <p className="text-sm text-gray-500 mb-1">
                 Scan QR Code dengan e-wallet atau mobile banking
               </p>
-              <p className="font-bold text-primary text-lg">
-                {formatPrice(total)}
-              </p>
+              <p className="font-bold text-primary text-lg">{formatPrice(total)}</p>
               <p className="text-xs text-gray-400 mt-1">Berlaku 15 menit</p>
             </div>
 
-            {/* Confirm Button Client Component */}
-            <CheckoutClient />
+            {/* Tombol konfirmasi di bawah QRIS */}
+            <CheckoutClient confirmOnly />
           </div>
+
         </div>
       </Container>
     </div>

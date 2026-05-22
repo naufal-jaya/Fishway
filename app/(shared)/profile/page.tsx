@@ -14,6 +14,15 @@ const STATUS_COLOR: Record<string, string> = {
   "Selesai": "bg-green-100 text-green-700",
 };
 
+type Address = {
+  id: string;
+  label: string;
+  recipient_name: string;
+  phone: string;
+  address: string;
+  is_primary: boolean;
+};
+
 export default async function ProfilePage() {
   const supabase = createClient(cookies()); 
   const { data: { user } } = await supabase.auth.getUser();
@@ -45,6 +54,15 @@ export default async function ProfilePage() {
     .select("phone")
     .eq("id", user.id)
     .maybeSingle();
+
+const { data: addressesData } = await supabase
+  .from("addresses")
+  .select("*")
+  .eq("user_id", user.id)
+  .order("is_primary", { ascending: false })
+  .order("created_at", { ascending: false });
+
+const addresses = (addressesData || []) as Address[];
 
   // Fetch orders for summary
   const { data: orders } = await supabase
@@ -123,9 +141,14 @@ export default async function ProfilePage() {
                 Alamat Utama
               </h2>
             </div>
-            <p className="text-sm text-gray-600">
-              {account?.address || "Belum ada alamat. Silakan edit profil untuk menambahkan alamat."}
-            </p>
+            {addresses.find(a => a.is_primary) ? (
+              <div className="text-sm text-gray-700 space-y-1">
+                <p className="font-medium">{addresses.find(a => a.is_primary)?.recipient_name} · {addresses.find(a => a.is_primary)?.phone}</p>
+                <p className="text-gray-500">{addresses.find(a => a.is_primary)?.address}</p>
+              </div>
+            ) : (
+              <p className="text-sm text-gray-500">Belum ada alamat utama. <Link href="/profile/edit" className="text-primary hover:underline">Tambah sekarang</Link></p>
+            )}
           </div>
 
           {/* Order History */}

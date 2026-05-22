@@ -74,7 +74,7 @@ export default async function SellerProductsPage() {
               <ChevronLeft className="w-5 h-5" />
             </Link>
               <h1 className="text-2xl font-bold text-gray-800 mt-1">
-                Produk Saya
+                Produk Gua
               </h1>
             </div>
 
