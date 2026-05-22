@@ -1,10 +1,15 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import Container from "@/components/Container";
+import ProductImageManager, { MAX_PRODUCT_IMAGE_SIZE_BYTES, ProductImageItem } from "@/components/ProductImageManager";
 import { createClient } from "@/utils/supabase/supabaseClient";
+import { ChevronLeft } from "lucide-react";
+
+const MAX_PRODUCT_IMAGES = 10;
 
 export default function EditProductPage({ params }: { params: { id: string } }) {
   const router = useRouter();
@@ -27,14 +32,29 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
   
   const [productType, setProductType] = useState<0 | 1>(0);
   const [variants, setVariants] = useState([{ id: "", label: "", price: "", stock: "" }]);
-  const [file, setFile] = useState<File | null>(null);
   const [existingImage, setExistingImage] = useState("");
+  const [images, setImages] = useState<ProductImageItem[]>([]);
+  const imagesRef = useRef<ProductImageItem[]>([]);
+
+  useEffect(() => {
+    imagesRef.current = images;
+  }, [images]);
+
+  useEffect(() => {
+    return () => {
+      imagesRef.current.forEach((image) => {
+        if (image.file) {
+          URL.revokeObjectURL(image.previewUrl);
+        }
+      });
+    };
+  }, []);
 
   useEffect(() => {
     async function fetchProduct() {
       const { data, error } = await supabase
         .from("products")
-        .select("*, price_options(*)")
+        .select("*, price_options(*), product_images(*)")
         .eq("id", params.id)
         .single();
 
@@ -53,6 +73,27 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
         });
         setProductType(data.type as 0 | 1);
         setExistingImage(data.gambar || "");
+
+        const productImages = Array.isArray(data.product_images)
+          ? [...data.product_images].sort((a: any, b: any) => (a.sort_order || 0) - (b.sort_order || 0))
+          : [];
+
+        if (productImages.length > 0) {
+          setImages(productImages.map((image: any) => ({
+            id: image.id,
+            url: image.url,
+            previewUrl: image.url,
+            caption: image.caption || "",
+            sortOrder: image.sort_order || 0,
+          })));
+        } else if (data.gambar && data.gambar !== "/images/default.png") {
+          setImages([{
+            url: data.gambar,
+            previewUrl: data.gambar,
+            caption: "",
+            sortOrder: 0,
+          }]);
+        }
 
         if (data.type === 1 && data.price_options?.length > 0) {
           setVariants(data.price_options.map((v: any) => ({
@@ -93,10 +134,46 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
     }
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      setFile(e.target.files[0]);
-    }
+  const handleAddImages = (files: File[]) => {
+    if (files.length === 0) return;
+
+    setImages((currentImages) => {
+      const remainingSlots = MAX_PRODUCT_IMAGES - currentImages.length;
+      if (remainingSlots <= 0) {
+        alert("Maksimal 10 foto produk");
+        return currentImages;
+      }
+
+      if (files.length > remainingSlots) {
+        alert(`Maksimal 10 foto produk. Hanya ${remainingSlots} foto yang ditambahkan.`);
+      }
+
+      const nextImages = files.slice(0, remainingSlots).map((file) => ({
+        file,
+        previewUrl: URL.createObjectURL(file),
+        caption: "",
+      }));
+
+      return [...currentImages, ...nextImages];
+    });
+  };
+
+  const handleCaptionChange = (index: number, caption: string) => {
+    setImages((currentImages) =>
+      currentImages.map((image, imageIndex) =>
+        imageIndex === index ? { ...image, caption } : image
+      )
+    );
+  };
+
+  const handleRemoveImage = (index: number) => {
+    setImages((currentImages) => {
+      const image = currentImages[index];
+      if (image?.file) {
+        URL.revokeObjectURL(image.previewUrl);
+      }
+      return currentImages.filter((_, imageIndex) => imageIndex !== index);
+    });
   };
 
   const parseStock = (value: string) => {
@@ -122,28 +199,46 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
         throw new Error("Stok varian harus berupa angka bulat minimal 0");
       }
 
+      if (images.some((image) => image.file && image.file.size > MAX_PRODUCT_IMAGE_SIZE_BYTES)) {
+        throw new Error("Ukuran setiap foto maksimal 10 MB");
+      }
+
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      let imageUrl = existingImage;
-      
-      if (file) {
-        const fileExt = file.name.split('.').pop();
-        const fileName = `${Math.random()}.${fileExt}`;
-        const filePath = `${user.id}/${fileName}`;
+      const savedImages = [];
 
-        const { error: uploadError } = await supabase.storage
-          .from("product-images")
-          .upload(filePath, file);
+      for (const [index, image] of images.entries()) {
+        if (image.file) {
+          const fileExt = image.file.name.split(".").pop();
+          const fileName = `${crypto.randomUUID()}.${fileExt}`;
+          const filePath = `${user.id}/${fileName}`;
 
-        if (uploadError) throw uploadError;
+          const { error: uploadError } = await supabase.storage
+            .from("product-images")
+            .upload(filePath, image.file);
 
-        const { data: { publicUrl } } = supabase.storage
-          .from("product-images")
-          .getPublicUrl(filePath);
-          
-        imageUrl = publicUrl;
+          if (uploadError) throw uploadError;
+
+          const { data: { publicUrl } } = supabase.storage
+            .from("product-images")
+            .getPublicUrl(filePath);
+
+          savedImages.push({
+            url: publicUrl,
+            caption: image.caption.trim() || null,
+            sort_order: index,
+          });
+        } else if (image.url) {
+          savedImages.push({
+            url: image.url,
+            caption: image.caption.trim() || null,
+            sort_order: index,
+          });
+        }
       }
+
+      const imageUrl = savedImages[0]?.url || "/images/default.png";
 
       // Update product
       const productPayload = {
@@ -174,6 +269,19 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
         .eq("id", params.id);
 
       if (updateError) throw updateError;
+
+      await supabase.from("product_images").delete().eq("product_id", params.id);
+
+      if (savedImages.length > 0) {
+        const { error: imageError } = await supabase
+          .from("product_images")
+          .insert(savedImages.map((image) => ({
+            product_id: params.id,
+            ...image,
+          })));
+
+        if (imageError) throw imageError;
+      }
 
       // Update/Insert variants if type === 1
       if (productType === 1) {
@@ -220,10 +328,36 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
     <div>
       <Navbar />
       <Container>
-        <div className="max-w-2xl mx-auto py-8">
-          <h1 className="text-2xl font-bold text-gray-800 mb-6">Edit Produk</h1>
+        <div className="max-w-6xl mx-auto relative min-h-screen">
+          <div
+            className="fixed top-0 left-0 h-full pointer-events-none z-0"
+            style={{
+              backgroundImage: "url('/images/latar.png')",
+              backgroundRepeat: "no-repeat",
+              backgroundSize: "contain",
+              backgroundPosition: "left center",
+              width: "1300px",
+              opacity: 1,
+            }}
+          />
+          <div className="relative z-10">
+            <div className="mb-6">
+              <Link href="/products" className="inline-flex items-center text-gray-400 hover:text-[#407BB5]">
+                <ChevronLeft className="w-5 h-5" />
+              </Link>
+              <h1 className="text-2xl font-bold text-gray-800 mt-1">Edit Produk</h1>
+            </div>
           
-          <form onSubmit={handleSubmit} className="card p-6 space-y-4">
+          <form onSubmit={handleSubmit} className="grid gap-6 lg:grid-cols-[minmax(280px,360px)_1fr] items-start">
+            <ProductImageManager
+              images={images}
+              onAdd={handleAddImages}
+              onCaptionChange={handleCaptionChange}
+              onRemove={handleRemoveImage}
+              maxImages={MAX_PRODUCT_IMAGES}
+            />
+
+            <div className="card p-6 space-y-4">
             
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Nama Produk</label>
@@ -241,14 +375,9 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
               </select>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Foto Produk Baru (opsional)</label>
-              <input type="file" accept="image/*" onChange={handleFileChange} className="w-full border rounded-lg p-2" />
-            </div>
-
             <div className="border-b pb-4 mb-4">
               <label className="block text-sm font-medium text-gray-700 mb-2">Tipe Produk</label>
-              <div className="flex gap-4">
+              <div className="flex flex-col gap-3 sm:flex-row sm:gap-4">
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input 
                     type="radio" 
@@ -274,7 +403,7 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
 
             {productType === 0 ? (
               <>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-4 sm:grid-cols-2">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Harga (Rp)</label>
                     <input required type="number" name="price" value={formData.price} onChange={handleChange} className="w-full border rounded-lg p-2" />
@@ -293,7 +422,7 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
               <div className="space-y-4 bg-gray-50 p-4 rounded-xl border">
                 <h3 className="font-semibold text-gray-800">Varian Produk</h3>
                 {variants.map((variant, index) => (
-                  <div key={index} className="flex gap-2 items-start">
+                  <div key={index} className="grid gap-2 sm:grid-cols-[1fr_1fr_6rem_auto] sm:items-start">
                     <div className="flex-1">
                       <label className="block text-xs font-medium text-gray-500 mb-1">Nama Varian (mis. 1 Ons)</label>
                       <input required type="text" value={variant.label} onChange={(e) => handleVariantChange(index, 'label', e.target.value)} className="w-full border rounded-lg p-2 text-sm" />
@@ -319,7 +448,7 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
               </div>
             )}
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid gap-4 sm:grid-cols-2">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Jenis</label>
                 <input type="text" name="jenis" value={formData.jenis} onChange={handleChange} className="w-full border rounded-lg p-2" />
@@ -330,7 +459,7 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid gap-4 sm:grid-cols-2">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Asal</label>
                 <input type="text" name="origin" value={formData.origin} onChange={handleChange} className="w-full border rounded-lg p-2" />
@@ -349,7 +478,9 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
             <button disabled={loading} type="submit" className="w-full btn-primary py-3 rounded-xl mt-4">
               {loading ? "Menyimpan..." : "Simpan Perubahan"}
             </button>
+            </div>
           </form>
+          </div>
         </div>
       </Container>
     </div>
