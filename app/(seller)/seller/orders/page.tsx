@@ -81,7 +81,9 @@ export default async function SellerOrdersPage({ searchParams }: { searchParams:
   const { data: orders } = await query;
 
 // Ambil semua buyer_id unik dari orders
-const buyerIds = [...new Set((orders || []).map((o: any) => o.buyer_id))];
+const buyerIds = (orders || []).reduce<string[]>((ids, order: any) => {
+  return ids.includes(order.buyer_id) ? ids : [...ids, order.buyer_id];
+}, []);
 
 // Fetch nama pembeli dari tabel accounts
 const { data: accountsData } = await supabase

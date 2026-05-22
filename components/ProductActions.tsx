@@ -98,7 +98,7 @@ export default function ProductActions({
             {priceOptions.map((opt) => (
               <button
                 key={(opt as any).id || opt.label}
-                onClick={() => { setSelectedVariant(opt); setQuantity(1); }}
+                onClick={() => { setSelectedVariant(opt); setQuantity("1"); }}
                 className={`px-4 py-1.5 border rounded-lg text-sm transition-all ${
                   selectedVariant?.label === opt.label
                     ? "border-blue-500 bg-blue-50 text-blue-600 font-medium"

@@ -153,7 +153,8 @@ export default function AddProductPage() {
       // 2. Upload images to Supabase Storage
       const uploadedImages = [];
 
-      for (const [index, image] of images.entries()) {
+      for (let index = 0; index < images.length; index += 1) {
+        const image = images[index];
         if (!image.file) continue;
 
         const fileExt = image.file.name.split(".").pop();

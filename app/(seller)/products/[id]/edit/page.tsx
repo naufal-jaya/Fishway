@@ -208,7 +208,8 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
 
       const savedImages = [];
 
-      for (const [index, image] of images.entries()) {
+      for (let index = 0; index < images.length; index += 1) {
+        const image = images[index];
         if (image.file) {
           const fileExt = image.file.name.split(".").pop();
           const fileName = `${crypto.randomUUID()}.${fileExt}`;
@@ -287,7 +288,8 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
       if (productType === 1) {
         // To keep it simple, we could delete existing and insert new, or upsert.
         // Let's use delete and insert if no ID, or just upsert
-        for (const [index, v] of variants.entries()) {
+        for (let index = 0; index < variants.length; index += 1) {
+          const v = variants[index];
           if (v.id) {
             await supabase.from("price_options").update({
               label: v.label,
