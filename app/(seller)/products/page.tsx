@@ -2,11 +2,11 @@ import Container from "@/components/Container";
 import { formatPrice } from "@/lib/data";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
-import { Pencil, Trash } from "lucide-react";
 import { createClient } from "@/utils/supabase/server";
 import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { Pencil, Trash, ChevronLeft } from "lucide-react";
 import Image from "next/image";
 import DeleteProductButton from "@/components/DeleteProductButton";
 
@@ -70,12 +70,9 @@ export default async function SellerProductsPage() {
           <div className="relative z-10">
             {/* HEADER */}
             <div className="mb-6">
-              <Link
-                href="/seller"
-                className="text-sm text-gray-400 hover:text-primary"
-              >
-                ← Dashboard
-              </Link>
+            <Link href="/seller" className="inline-flex items-center text-gray-400 hover:text-[#407BB5]">
+              <ChevronLeft className="w-5 h-5" />
+            </Link>
               <h1 className="text-2xl font-bold text-gray-800 mt-1">
                 Produk Saya
               </h1>
