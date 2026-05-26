@@ -52,7 +52,7 @@ export default async function SellerOrdersPage({ searchParams }: { searchParams:
 
   const dateFilter = searchParams.date || "";
 
-  const perPage = 2;
+  const perPage 10;
   const currentPage = Number(searchParams.page || 1);
 
   let query = supabase

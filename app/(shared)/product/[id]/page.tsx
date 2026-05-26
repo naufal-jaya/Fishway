@@ -131,7 +131,7 @@ const packaging = [
 ];
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 overflow-x-hidden">
 
       <div
           className="fixed top-0 left-0 h-full pointer-events-none z-0"
@@ -166,19 +166,19 @@ const packaging = [
             <div className="flex flex-col md:flex-row gap-6">
 
               {/* Gallery — handled client side */}
-              <div className="md:w-1/2">
-                  <ProductGallery
-                    mainImage={product.gambar || "/images/default.png"}
-                    extraImages={[product.image, product.gambar].filter(Boolean) as string[]}
-                    name={product.name}
-                  />
+              <div className="w-full md:w-1/2">
+                <ProductGallery
+                  mainImage={product.gambar || "/images/default.png"}
+                  extraImages={[product.image, product.gambar].filter(Boolean) as string[]}
+                  name={product.name}
+                />
               </div>
               
               
 
               {/* Right: Info + Actions */}
-              <div className="md:w-1/2 p-6 border-t md:border-t-0 md:border-l border-gray-100">
-                <h1 className="text-4xl font-bold text-gray-900 mb-2">{product.name}</h1>
+              <div className="w-full md:w-1/2 p-4 md:p-6 border-t md:border-t-0 md:border-l border-gray-100">
+                <h1 className="text-2xl md:text-4xl font-bold text-gray-900 mb-2 break-words">{product.name}</h1>
 
                 {/* Rating */}
                 <div className="flex items-center gap-2 mb-4">
@@ -231,10 +231,10 @@ const packaging = [
               {/* Deskripsi */}
               <div>
                 <h3 className="font-semibold text-gray-800 mb-2">Deskripsi Produk</h3>
-                <p className="text-sm text-gray-500 leading-relaxed">
+                <p className="text-sm text-gray-500 leading-relaxed break-words">
                   {product.description || "Produk segar berkualitas, dibudidayakan secara higienis."}
                 </p>
-              </div>
+                 </div>
 
               {/* Attributes */}
               <div className="flex gap-3 overflow-x-auto scrollbar-hide">
