@@ -52,7 +52,7 @@ export default async function SellerOrdersPage({ searchParams }: { searchParams:
 
   const dateFilter = searchParams.date || "";
 
-  const perPage 10;
+  const perPage = 10;
   const currentPage = Number(searchParams.page || 1);
 
   let query = supabase
@@ -182,8 +182,8 @@ const paginatedOrders = filteredOrders.slice(
         <p className="text-sm font-medium text-gray-800">{orderDate}</p>
         <p className="text-xs text-gray-400 font-mono">#{order.id.split("-")[0].toUpperCase()}</p>
       </div>
-      <span className={`text-xs px-2 py-1 rounded-full font-medium ${STATUS_COLOR[order.status] || "bg-gray-100 text-gray-700"}`}>
-        • {order.status}
+      <span className={`inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full font-medium ${STATUS_COLOR[order.status] || "bg-gray-100 text-gray-700"}`}>
+        <span>•</span><span>{order.status}</span>
       </span>
     </div>
     <div className="flex items-center justify-between">
@@ -229,9 +229,9 @@ const paginatedOrders = filteredOrders.slice(
       </p>
     </div>
     <div className="flex justify-center">
-      <span className={`text-xs px-3 py-1 rounded-full font-medium ${STATUS_COLOR[order.status] || "bg-gray-100 text-gray-700"}`}>
-        • {order.status}
-      </span>
+    <span className={`inline-flex items-center gap-1 text-xs px-3 py-1 rounded-full font-medium ${STATUS_COLOR[order.status] || "bg-gray-100 text-gray-700"}`}>
+      <span>•</span><span>{order.status}</span>
+    </span>
     </div>
     <div className="flex justify-center">
       <Link href={`/seller/orders/${order.id}`} className="text-gray-400 hover:text-primary transition-colors">
