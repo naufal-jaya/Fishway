@@ -4,7 +4,6 @@ import ProductActions from "@/components/ProductActions";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import { notFound } from "next/navigation";
-import Image from "next/image";
 import { createClient } from "@/utils/supabase/server";
 import { cookies } from "next/headers";
 import {
@@ -30,6 +29,12 @@ type PriceOption = {
   stock: number;
 };
 
+type ProductImage = {
+  url: string;
+  caption: string | null;
+  sort_order: number;
+};
+
 type ProductRow = {
   id: string;
   store_id: string;
@@ -50,6 +55,7 @@ type ProductRow = {
   suhu_ideal?: string | null;
   ph_ideal?: string | null;
   price_options?: PriceOption[] | string | null;
+  product_images?: ProductImage[] | null;
   stores?: { name: string; phone: string } | null;
 };
 
@@ -92,7 +98,7 @@ export default async function ProductDetailPage({
   const supabase = createClient(cookies());
   const { data: product, error } = await supabase
     .from("products")
-    .select("*, stores(name, phone), price_options(*)")
+    .select("*, stores(name, phone), price_options(*), product_images(*)")
     .eq("id", params.id)
     .maybeSingle<ProductRow>();
 
@@ -114,6 +120,11 @@ export default async function ProductDetailPage({
   const sellerName = product.stores?.name || "Penjual";
   const waNumber = product.stores?.phone || WA_NUMBER;
   const waLink = `https://wa.me/${waNumber}?text=Halo, saya tertarik dengan ${product.name}`;
+  const galleryImages = Array.isArray(product.product_images) && product.product_images.length > 0
+    ? [...product.product_images]
+        .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0))
+        .map((image) => ({ url: image.url, caption: image.caption }))
+    : [{ url: product.gambar || "/images/default.png", caption: null }];
   const attrs = [
   { icon: <FishSymbol className="w-4 h-4" />, label: "Jenis", value: product.jenis || product.category },
   { icon: <Activity className="w-4 h-4" />, label: "Kondisi", value: product.condition },
