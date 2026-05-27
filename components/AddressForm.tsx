@@ -24,12 +24,35 @@ export default function AddressForm({
   );
   const [loading, setLoading] = useState(false);
 
+  const [errors, setErrors] = useState<{ phone?: string; recipient_name?: string }>({});
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    const newErrors: { phone?: string; recipient_name?: string } = {};
+
+    if (!form.recipient_name.trim()) {
+      newErrors.recipient_name = "Nama penerima tidak boleh kosong.";
+    } else if (/\d/.test(form.recipient_name)) {
+      newErrors.recipient_name = "Nama tidak boleh mengandung angka.";
+    }
+
+    if (!form.phone.trim()) {
+      newErrors.phone = "Nomor telepon tidak boleh kosong.";
+    } else if (!/^(\+62|62|0)[0-9]{8,12}$/.test(form.phone.replace(/\s/g, ""))) {
+      newErrors.phone = "Nomor tidak valid. Contoh: 08123456789";
+    }
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      return;
+    }
+
+    setErrors({});
     setLoading(true);
     if (existing?.id) {
       await updateAddress(existing.id, form);
@@ -52,11 +75,34 @@ export default function AddressForm({
           </div>
           <div>
             <label className="text-sm font-medium text-gray-700">Nama Penerima</label>
-            <input required name="recipient_name" value={form.recipient_name} onChange={handleChange} className="w-full border rounded-lg p-2 mt-1 text-sm" />
+            <input
+              required
+              name="recipient_name"
+              value={form.recipient_name}
+              onChange={(e) => {
+                handleChange(e);
+                setErrors((prev) => ({ ...prev, recipient_name: undefined }));
+              }}
+              className={`w-full border rounded-lg p-2 mt-1 text-sm ${errors.recipient_name ? "border-red-400" : ""}`}
+            />
+            {errors.recipient_name && <p className="text-xs text-red-500 mt-1">{errors.recipient_name}</p>}
           </div>
           <div>
             <label className="text-sm font-medium text-gray-700">Nomor Telepon</label>
-            <input required name="phone" value={form.phone} onChange={handleChange} className="w-full border rounded-lg p-2 mt-1 text-sm" placeholder="08..." />
+            <input
+              required
+              name="phone"
+              inputMode="numeric"
+              value={form.phone}
+              onChange={(e) => {
+                const val = e.target.value.replace(/[^0-9+]/g, "");
+                setForm({ ...form, phone: val });
+                setErrors((prev) => ({ ...prev, phone: undefined }));
+              }}
+              className={`w-full border rounded-lg p-2 mt-1 text-sm ${errors.phone ? "border-red-400" : ""}`}
+              placeholder="08123456789"
+            />
+            {errors.phone && <p className="text-xs text-red-500 mt-1">{errors.phone}</p>}
           </div>
           <div>
             <label className="text-sm font-medium text-gray-700">Alamat Lengkap</label>

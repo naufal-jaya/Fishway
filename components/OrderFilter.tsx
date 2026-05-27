@@ -1,20 +1,33 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { Package, Truck, Check, Clock, PackageOpen } from "lucide-react";
 import Link from "next/link";
 import { formatPrice } from "@/lib/data";
 
+
 const STATUS_COLOR: Record<string, string> = {
-  "Menunggu Konfirmasi": "bg-gray-100 text-gray-700",
-  "Diproses": "bg-yellow-100 text-yellow-700",
-  "Dikirim": "bg-blue-100 text-blue-700",
-  "Selesai": "bg-green-100 text-green-700",
+  "Menunggu Konfirmasi": "bg-orange-100 text-orange-500",
+  "Diproses": "bg-blue-100 text-blue-500",
+  "Dikirim": "bg-purple-100 text-purple-500",
+  "Selesai": "bg-green-100 text-green-500",
 };
 
 const STATUSES = ["Semua", "Menunggu Konfirmasi", "Diproses", "Dikirim", "Selesai"];
 
-export default function OrderFilter({ orders }: { orders: any[] }) {
-  const [selected, setSelected] = useState("Semua");
+const STATUS_ICON: Record<string, React.ReactNode> = {
+  "Menunggu Konfirmasi": <Clock size={14} className="text-orange-400" />,
+  "Diproses": <Package size={14} className="text-blue-500" />,
+  "Dikirim": <Truck size={14} className="text-purple-500" />,
+  "Selesai": <Check size={14} className="text-green-500" />,
+};
+
+export default function OrderFilter({ orders, initialStatus }: { orders: any[], initialStatus?: string }) {
+  const [selected, setSelected] = useState(initialStatus || "Semua");
+
+  useEffect(() => {
+    setSelected(initialStatus || "Semua");
+  }, [initialStatus]);
 
   const filtered = selected === "Semua"
     ? orders
@@ -41,8 +54,8 @@ export default function OrderFilter({ orders }: { orders: any[] }) {
 
       {/* Orders List */}
       {filtered.length === 0 ? (
-        <div className="card p-12 text-center">
-          <p className="text-4xl mb-3">📭</p>
+        <div className="card p-12 text-center flex flex-col items-center">
+          <PackageOpen size={48} className="text-gray-300 mb-3" />
           <p className="text-gray-500">Tidak ada pesanan dengan status ini</p>
         </div>
       ) : (
@@ -63,9 +76,10 @@ export default function OrderFilter({ orders }: { orders: any[] }) {
                     </p>
                     <p className="font-mono text-xs text-gray-400">ID: {order.id}</p>
                   </div>
-                  <span className={`text-xs px-3 py-1 rounded-full font-medium ${STATUS_COLOR[order.status] || "bg-gray-100 text-gray-700"}`}>
-                    {order.status}
-                  </span>
+                <span className={`text-xs px-3 py-1 rounded-full font-medium flex items-center gap-1 ${STATUS_COLOR[order.status] || "bg-gray-100 text-gray-700"}`}>
+                  {STATUS_ICON[order.status] || null}
+                  {order.status}
+                </span>
                 </div>
 
                 <div className="space-y-3">

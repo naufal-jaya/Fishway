@@ -4,8 +4,9 @@ import Navbar from "@/components/Navbar";
 import { createClient } from "@/utils/supabase/server";
 import { cookies } from "next/headers";
 import OrderFilter from "@/components/OrderFilter";
+import { PackageOpen } from "lucide-react";
 
-export default async function BuyerOrdersPage() {
+export default async function BuyerOrdersPage({ searchParams }: { searchParams: { status?: string } }) {
   const supabase = createClient(cookies());
   const { data: { user } } = await supabase.auth.getUser();
 
@@ -50,12 +51,16 @@ export default async function BuyerOrdersPage() {
 
           {!orders || orders.length === 0 ? (
             <div className="card p-12 text-center">
-              <p className="text-4xl mb-3">📭</p>
+              <div className="card p-12 text-center flex flex-col items-center">
+                <PackageOpen size={48} className="text-gray-300 mb-3" />
+                <p className="text-gray-500 mb-4">Belum ada pesanan</p>
+                <Link href="/" className="btn-primary inline-block">Mulai Belanja</Link>
+              </div>
               <p className="text-gray-500 mb-4">Belum ada pesanan</p>
               <Link href="/" className="btn-primary inline-block">Mulai Belanja</Link>
             </div>
           ) : (
-            <OrderFilter orders={orders} />
+            <OrderFilter orders={orders} initialStatus={searchParams.status} />
           )}
         </div>
       </Container>

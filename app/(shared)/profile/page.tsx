@@ -4,7 +4,7 @@ import Navbar from "@/components/Navbar";
 import { createClient } from "@/utils/supabase/server";
 import { cookies } from "next/headers";
 import { formatPrice } from "@/lib/data";
-import { LogOut, Package, Truck, Check, ClipboardList, MapPin, User } from "lucide-react";
+import { LogOut, Package, Truck, Check, ClipboardList, MapPin, User, Clock } from "lucide-react";
 import LogoutButton from "@/components/LogoutButton";
 
 const STATUS_COLOR: Record<string, string> = {
@@ -71,9 +71,10 @@ const addresses = (addressesData || []) as Address[];
     .eq("buyer_id", user.id)
     .order("created_at", { ascending: false });
 
-  const totalOrders = orders?.length || 0;
-  const completedOrders = orders?.filter(o => o.status === "Selesai").length || 0;
-  const processingOrders = orders?.filter(o => o.status === "Diproses" || o.status === "Menunggu Konfirmasi").length || 0;
+  const menungguOrders = orders?.filter(o => o.status === "Menunggu Konfirmasi").length || 0;
+  const diprosesOrders = orders?.filter(o => o.status === "Diproses").length || 0;
+  const dikirimOrders = orders?.filter(o => o.status === "Dikirim").length || 0;
+  const selesaiOrders = orders?.filter(o => o.status === "Selesai").length || 0;
   
   const recentOrders = orders?.slice(0, 3) || [];
 
@@ -107,29 +108,38 @@ const addresses = (addressesData || []) as Address[];
           </div>
 
           {/* Stats */}
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {[
-              { label: "Dikemas",
-                value: totalOrders,
-                icon: <Package size={36} className="text-blue-500 mx-auto" />,
+              {
+                label: "Menunggu",
+                value: menungguOrders,
+                icon: <Clock size={28} className="text-orange-400 mx-auto" />,
+                href: "/orders?status=Menunggu%20Konfirmasi",
               },
-
-              { label: "Diantar",
-                value: processingOrders,
-                icon: <Truck size={36} className="text-yellow-500 mx-auto" />,
+              {
+                label: "Diproses",
+                value: diprosesOrders,
+                icon: <Package size={28} className="text-blue-500 mx-auto" />,
+                href: "/orders?status=Diproses",
               },
-
-              { 
+              {
+                label: "Dikirim",
+                value: dikirimOrders,
+                icon: <Truck size={28} className="text-indigo-500 mx-auto" />,
+                href: "/orders?status=Dikirim",
+              },
+              {
                 label: "Selesai",
-                value: completedOrders,
-                icon: <Check size={36} className="text-green-500 mx-auto" />,
+                value: selesaiOrders,
+                icon: <Check size={28} className="text-green-500 mx-auto" />,
+                href: "/orders?status=Selesai",
               },
             ].map((stat) => (
-              <div key={stat.label} className="card p-4 text-center">
+              <Link key={stat.label} href={stat.href} className="card p-4 text-center hover:shadow-md transition-shadow">
                 <p className="text-2xl mb-1">{stat.icon}</p>
                 <p className="text-2xl font-bold text-primary">{stat.value}</p>
                 <p className="text-xs text-gray-500">{stat.label}</p>
-              </div>
+              </Link>
             ))}
           </div>
 

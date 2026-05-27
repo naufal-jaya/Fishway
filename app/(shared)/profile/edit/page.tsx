@@ -25,6 +25,8 @@ export default function EditProfilePage() {
   const [userId, setUserId] = useState("");
   const [addresses, setAddresses] = useState<Address[]>([]);
 
+  const [errors, setErrors] = useState<{ name?: string; phone?: string }>({});
+
   const [formData, setFormData] = useState({
     name: "",
     phone: "",
@@ -64,6 +66,29 @@ export default function EditProfilePage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    const newErrors: { name?: string; phone?: string } = {};
+
+    if (!formData.name.trim()) {
+      newErrors.name = "Nama tidak boleh kosong.";
+    } else if (formData.name.trim().length < 2) {
+      newErrors.name = "Nama minimal 2 karakter.";
+    } else if (/\d/.test(formData.name)) {
+      newErrors.name = "Nama tidak boleh mengandung angka.";
+    }
+
+    if (!formData.phone.trim()) {
+      newErrors.phone = "Nomor telepon tidak boleh kosong.";
+    } else if (!/^(\+62|62|0)[0-9]{8,12}$/.test(formData.phone.replace(/\s/g, ""))) {
+      newErrors.phone = "Nomor telepon tidak valid. Contoh: 08123456789";
+    }
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      return;
+    }
+
+    setErrors({});
     setLoading(true);
 
     try {
@@ -117,14 +142,37 @@ export default function EditProfilePage() {
             {/* KIRI — Form Edit Profil (tanpa tombol) */}
             <form onSubmit={handleSubmit} className="card p-6 space-y-4">
               <h2 className="font-bold text-gray-800 text-lg border-b pb-3">👤 Informasi Akun</h2>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Nama Lengkap</label>
-                <input required type="text" name="name" value={formData.name} onChange={handleChange} className="w-full border rounded-lg p-2" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Nomor Telepon</label>
-                <input type="text" name="phone" value={formData.phone} onChange={handleChange} className="w-full border rounded-lg p-2" placeholder="08..." />
-              </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Nama Lengkap</label>
+          <input
+            type="text"
+            name="name"
+            value={formData.name}
+            onChange={(e) => {
+              handleChange(e);
+              setErrors((prev) => ({ ...prev, name: undefined }));
+            }}
+            className={`w-full border rounded-lg p-2 ${errors.name ? "border-red-400 focus:outline-red-400" : ""}`}
+          />
+          {errors.name && <p className="text-xs text-red-500 mt-1">{errors.name}</p>}
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Nomor Telepon</label>
+          <input
+            type="text"
+            inputMode="numeric"
+            name="phone"
+            value={formData.phone}
+            onChange={(e) => {
+              const val = e.target.value.replace(/[^0-9+]/g, "");
+              setFormData({ ...formData, phone: val });
+              setErrors((prev) => ({ ...prev, phone: undefined }));
+            }}
+            className={`w-full border rounded-lg p-2 ${errors.phone ? "border-red-400 focus:outline-red-400" : ""}`}
+            placeholder="08123456789"
+          />
+          {errors.phone && <p className="text-xs text-red-500 mt-1">{errors.phone}</p>}
+        </div>
             </form>
 
             {/* KANAN — Alamat Saya + tombol di bawahnya */}
