@@ -26,14 +26,14 @@ export default async function SellerProductsPage() {
     .maybeSingle();
 
   let myProducts: any[] = [];
-  
+
   if (store) {
     const { data } = await supabase
       .from("products")
       .select("*, price_options(*)")
       .eq("store_id", store.id)
       .order("created_at", { ascending: false });
-      
+
     if (data) {
       myProducts = data;
     }
@@ -70,11 +70,11 @@ export default async function SellerProductsPage() {
           <div className="relative z-10">
             {/* HEADER */}
             <div className="mb-6">
-            <Link href="/seller" className="inline-flex items-center text-gray-400 hover:text-[#407BB5]">
-              <ChevronLeft className="w-5 h-5" />
-            </Link>
+              <Link href="/seller" className="inline-flex items-center text-gray-400 hover:text-[#407BB5]">
+                <ChevronLeft className="w-5 h-5" />
+              </Link>
               <h1 className="text-2xl font-bold text-gray-800 mt-1">
-                Produk Gua
+                Produk Saya
               </h1>
             </div>
 
@@ -102,7 +102,7 @@ export default async function SellerProductsPage() {
                       <h2 className="font-semibold text-gray-800">
                         {product.name}
                       </h2>
-                      <p className="text-sm text-gray-400 mt-1">
+                      <p className="text-sm text-gray-400 mt-1 line-clamp-3">
                         {product.description || "Deskripsi produk..."}
                       </p>
 
@@ -180,7 +180,7 @@ export default async function SellerProductsPage() {
 
                       {/* ACTION */}
                       <div className="flex justify-end mt-2 gap-3">
-                        <Link 
+                        <Link
                           href={`/products/${product.id}/edit`}
                           className="flex items-center gap-1 text-xs text-gray-400 hover:text-primary"
                         >
