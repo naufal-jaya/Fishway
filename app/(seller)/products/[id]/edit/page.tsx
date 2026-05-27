@@ -473,8 +473,20 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Deskripsi</label>
-              <textarea name="description" value={formData.description} onChange={handleChange} rows={4} className="w-full border rounded-lg p-2"></textarea>
+              <div className="flex justify-between items-center mb-1">
+                <label className="block text-sm font-medium text-gray-700">Deskripsi</label>
+                <span className={`text-xs ${formData.description.length > 800 ? "text-red-800" : "text-gray-700"}`}>
+                  {formData.description.length}/1000
+                </span>
+              </div>
+              <textarea
+                name="description"
+                value={formData.description}
+                onChange={handleChange}
+                rows={4}
+                maxLength={1000}
+                className="w-full border rounded-lg p-2"
+              />
             </div>
 
             <button disabled={loading} type="submit" className="w-full btn-primary py-3 rounded-xl mt-4">
