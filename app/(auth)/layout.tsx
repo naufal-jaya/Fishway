@@ -1,7 +1,4 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
-
-const inter = Inter({ subsets: ["latin"], variable: "--font-inter-sans" });
 
 export const metadata: Metadata = {
   title: "Fishway – Jual Beli Ikan Segar",
@@ -13,5 +10,5 @@ export default function AuthLayout({
 }: {
   children: React.ReactNode;
 }) {
-  return <div className="min-h-screen">{children}</div>;
+  return <div className="min-h-screen font-sans">{children}</div>;
 }

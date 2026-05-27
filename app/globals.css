@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -6,6 +8,7 @@
   --primary: #407BB5;
   --primary-dark: #2f5d8a;
   --bg: #F9F9F9;
+  --font-inter-sans: 'Inter';
 }
 
 body {
