@@ -4,7 +4,8 @@ import { useState } from "react";
 import Link from "next/link";
 import { ShoppingCart, Zap, MessageCircle, Minus, Plus, Store } from "lucide-react";
 import { formatPrice, PriceOption } from "@/lib/data";
-import { addToCart } from "@/lib/cart";
+import { useRouter } from "next/navigation";
+import { addToCart, buyNow } from "@/lib/cart";
 
 type ProductActionsProps = {
   product: {
@@ -32,7 +33,26 @@ export default function ProductActions({
   const [selectedVariant, setSelectedVariant] = useState<PriceOption | null>(
     priceOptions.length > 0 ? priceOptions[0] : null
   );
-  const [isAdding, setIsAdding] = useState(false);
+const [isBuying, setIsBuying] = useState(false);
+const [isAdding, setIsAdding] = useState(false);
+const router = useRouter();
+
+const handleBuyNow = async () => {
+  setIsBuying(true);
+  try {
+    const variantId = product.type === 1 ? (selectedVariant as any)?.id : undefined;
+    const res = await buyNow(product.id, Number(quantity), variantId);
+    if (res.error) {
+      alert(res.error);
+    } else {
+      router.push("/checkout");
+    }
+  } catch {
+    alert("Terjadi kesalahan sistem.");
+  } finally {
+    setIsBuying(false);
+  }
+};
 
   const currentPrice = product.type === 1 ? selectedVariant?.price || 0 : product.price || 0;
   const currentStock = product.type === 1 ? selectedVariant?.stock || 0 : product.stock || 0;
@@ -196,13 +216,18 @@ export default function ProductActions({
         </button>
 
         {/* Beli Sekarang */}
-        <Link
-          href={buyLink}
+        <button
+          onClick={handleBuyNow}
+          disabled={isBuying || currentStock === 0}
           style={{ backgroundColor: "#407BB5" }}
-          className="w-full sm:flex-1 flex items-center justify-center gap-2 h-11 px-5 text-white rounded-xl text-sm font-semibold hover:opacity-90 transition"
+          className="w-full sm:flex-1 flex items-center justify-center gap-2 h-11 px-5 text-white rounded-xl text-sm font-semibold hover:opacity-90 transition disabled:opacity-50"
         >
-          Beli Sekarang
-        </Link>
+          {isBuying ? (
+            <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+          ) : (
+            "Beli Sekarang"
+          )}
+        </button>
 
         {/* Hubungi WA */}
         <Link

@@ -375,15 +375,13 @@ export default function AddProductPage() {
               </div>
             )}
 
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Jenis</label>
-                <input type="text" name="jenis" value={formData.jenis} onChange={handleChange} className="w-full border rounded-lg p-2" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Kondisi (mis. Segar, Hidup)</label>
-                <input type="text" name="condition" value={formData.condition} onChange={handleChange} className="w-full border rounded-lg p-2" />
-              </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Kondisi</label>
+              <select name="condition" value={formData.condition} onChange={handleChange} className="w-full border rounded-lg p-2">
+                <option value="">Pilih Kondisi...</option>
+                <option value="Segar">Segar</option>
+                <option value="Hidup">Hidup</option>
+              </select>
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2">
@@ -398,8 +396,20 @@ export default function AddProductPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Deskripsi</label>
-              <textarea name="description" value={formData.description} onChange={handleChange} rows={4} className="w-full border rounded-lg p-2"></textarea>
+              <div className="flex justify-between items-center mb-1">
+                <label className="block text-sm font-medium text-gray-700">Deskripsi</label>
+                <span className={`text-xs ${formData.description.length > 500 ? "text-red-500" : "text-gray-400"}`}>
+                  {formData.description.length}/1000
+                </span>
+              </div>
+              <textarea
+                name="description"
+                value={formData.description}
+                onChange={handleChange}
+                rows={4}
+                maxLength={1000}
+                className="w-full border rounded-lg p-2"
+              />
             </div>
 
             <button disabled={loading} type="submit" className="w-full btn-primary py-3 rounded-xl mt-4">

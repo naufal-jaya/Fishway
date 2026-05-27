@@ -19,6 +19,14 @@ const STATUS_COLOR: Record<string, string> = {
 
 const ALL_STATUSES = ["Menunggu Konfirmasi", "Diproses", "Dikirim", "Selesai"];
 
+// Map urutan status — hanya boleh maju, tidak boleh mundur
+const STATUS_ORDER: Record<string, number> = {
+  "Menunggu Konfirmasi": 0,
+  "Diproses": 1,
+  "Dikirim": 2,
+  "Selesai": 3,
+};
+
 export default async function SellerOrderDetailPage({ params }: { params: { id: string } }) {
   const supabase = createClient(cookies());
   const { data: { user } } = await supabase.auth.getUser();
@@ -66,33 +74,40 @@ export default async function SellerOrderDetailPage({ params }: { params: { id: 
 
   // ✅ Server action: update status
   async function updateStatus(formData: FormData) {
-    "use server";
-    const newStatus = formData.get("status") as string;
-    if (!newStatus || !ALL_STATUSES.includes(newStatus)) return;
+  "use server";
+  const newStatus = formData.get("status") as string;
+  if (!newStatus || !ALL_STATUSES.includes(newStatus)) return;
 
-    const supabaseAdmin = createClient(cookies());
-    await supabaseAdmin
-      .from("orders")
-      .update({ status: newStatus })
-      .eq("id", params.id);
+  const supabaseAdmin = createClient(cookies());
 
-    const { data: orderData } = await supabaseAdmin
-      .from("orders")
-      .select("buyer_id")
-      .eq("id", params.id)
-      .maybeSingle();
+  // Ambil status saat ini dulu
+  const { data: currentOrder } = await supabaseAdmin
+    .from("orders")
+    .select("status, buyer_id")
+    .eq("id", params.id)
+    .maybeSingle();
 
-    if (orderData?.buyer_id) {
-      await supabaseAdmin.from("notifications").insert({
-        user_id: orderData.buyer_id,
-        title: "Status Pesanan Diperbarui",
-        message: `Pesanan Anda sekarang berstatus: ${newStatus}`,
-        link: `/orders/${params.id}`,
-      });
-    }
+  if (!currentOrder) return;
 
-    revalidatePath(`/seller/orders/${params.id}`);
+  // ✅ Constraint: status tidak boleh mundur
+  if (STATUS_ORDER[newStatus] <= STATUS_ORDER[currentOrder.status]) return;
+
+  await supabaseAdmin
+    .from("orders")
+    .update({ status: newStatus })
+    .eq("id", params.id);
+
+  if (currentOrder?.buyer_id) {
+    await supabaseAdmin.from("notifications").insert({
+      user_id: currentOrder.buyer_id,
+      title: "Status Pesanan Diperbarui",
+      message: `Pesanan Anda sekarang berstatus: ${newStatus}`,
+      link: `/orders/${params.id}`,
+    });
   }
+
+  revalidatePath(`/seller/orders/${params.id}`);
+}
 
   // ✅ Server action: cancel order (hanya Menunggu Konfirmasi atau Dikirim)
   async function cancelOrder(formData: FormData) {
@@ -158,7 +173,13 @@ export default async function SellerOrderDetailPage({ params }: { params: { id: 
                       className="border-gray-300 rounded-lg text-sm bg-white focus:ring-primary focus:border-primary"
                     >
                       {ALL_STATUSES.map(s => (
-                        <option key={s} value={s}>{s}</option>
+                        <option
+                          key={s}
+                          value={s}
+                          disabled={STATUS_ORDER[s] <= STATUS_ORDER[order.status]}
+                        >
+                          {s}
+                        </option>
                       ))}
                     </select>
                     <button type="submit" className="btn-primary py-1.5 px-3 text-xs rounded-lg">Update</button>

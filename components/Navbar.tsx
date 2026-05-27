@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import Image from "next/image";
-import { Home, LogOut, LogIn, ShoppingCart, User, Search, Package, ClipboardList, Store, Menu, X } from "lucide-react";
+import { Home, LogOut, LogIn, ShoppingCart, User, Search, Package, ClipboardList, Menu, X } from "lucide-react";
 import { createClient } from "@/utils/supabase/supabaseClient";
 import NotificationDropdown from "./NotificationDropdown";
 
@@ -87,7 +87,7 @@ export default function Navbar() {
       <nav className="bg-[#407BB5] text-white shadow-md fixed top-0 w-full z-[100]">
         <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
           {/* Logo */}
-          <Link href="/">
+          <Link href={userInfo.role === "Penjual" ? "/seller" : "/"}>
             <Image
               src="/images/logotemp.png"
               alt="logo"
@@ -121,7 +121,7 @@ export default function Navbar() {
                   <>
                     <Link href="/products" className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${pathname === "/products" ? "bg-white/20 text-white" : "hover:bg-white/10 text-white/90"}`}><Package size={18} /> <span className="hidden lg:inline">Produk Saya</span></Link>
                     <Link href="/seller/orders" className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${pathname === "/seller/orders" ? "bg-white/20 text-white" : "hover:bg-white/10 text-white/90"}`}><ClipboardList size={18} /> <span className="hidden lg:inline">Pesanan</span></Link>
-                    <Link href="/seller" className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${pathname === "/seller" ? "bg-white/20 text-white" : "hover:bg-white/10 text-white/90"}`}><Store size={18} /> <span className="hidden lg:inline">Toko</span></Link>
+
                   </>
                 ) : userInfo.role === "Pembeli" ? (
                   <>
@@ -208,7 +208,6 @@ export default function Navbar() {
                   <>
                     <Link href="/products" onClick={() => setDrawerOpen(false)} className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/10 text-sm font-medium"><Package size={18} />Produk Saya</Link>
                     <Link href="/seller/orders" onClick={() => setDrawerOpen(false)} className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/10 text-sm font-medium"><ClipboardList size={18} /> Pesanan</Link>
-                    <Link href="/seller" onClick={() => setDrawerOpen(false)} className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/10 text-sm font-medium"><Store size={18} /> Toko</Link>
                   </>
                 ) : userInfo.role === "Pembeli" ? (
                   <>

@@ -241,6 +241,23 @@ export async function checkoutCart() {
       return { error: `Gagal menambahkan item pesanan: ${itemsError?.message || 'Unknown'}` };
     }
 
+    // ✅ Kurangi stok produk setelah order berhasil dibuat
+    for (const i of items) {
+      const { data: productStock } = await supabase
+        .from("products")
+        .select("stock")
+        .eq("id", i.product_id)
+        .maybeSingle();
+
+      if (productStock && productStock.stock !== null) {
+        const newStock = Math.max(0, productStock.stock - i.quantity);
+        await supabase
+          .from("products")
+          .update({ stock: newStock })
+          .eq("id", i.product_id);
+      }
+    }
+
     // Ambil seller_id dari store untuk kirim notifikasi
     const { data: storeData } = await supabase
       .from("stores")
@@ -261,4 +278,12 @@ export async function checkoutCart() {
   await clearCart();
 
   return { success: true, orderIds: createdOrderIds };
+}
+
+export async function buyNow(productId: string, quantity: number, variantId?: string) {
+  // Kosongkan cart dulu, lalu tambah item ini saja
+  await clearCart();
+  const result = await addToCart(productId, quantity, variantId);
+  if (result.error) return { error: result.error };
+  return { success: true };
 }
