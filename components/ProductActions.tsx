@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ShoppingCart, Zap, MessageCircle, Minus, Plus } from "lucide-react";
+import { ShoppingCart, Zap, MessageCircle, Minus, Plus, Store } from "lucide-react";
 import { formatPrice, PriceOption } from "@/lib/data";
 import { addToCart } from "@/lib/cart";
 
@@ -18,6 +18,7 @@ type ProductActionsProps = {
   priceOptions: PriceOption[];
   waNumber: string;
   sellerName: string;
+  storeId: string;
 };
 
 export default function ProductActions({
@@ -25,6 +26,7 @@ export default function ProductActions({
   priceOptions,
   waNumber,
   sellerName,
+  storeId,
 }: ProductActionsProps) {
   const [quantity, setQuantity] = useState("1");
   const [selectedVariant, setSelectedVariant] = useState<PriceOption | null>(
@@ -34,7 +36,7 @@ export default function ProductActions({
 
   const currentPrice = product.type === 1 ? selectedVariant?.price || 0 : product.price || 0;
   const currentStock = product.type === 1 ? selectedVariant?.stock || 0 : product.stock || 0;
-  const currentUnit  = product.type === 1 ? selectedVariant?.label || "Unit" : product.unit || "Unit";
+  const currentUnit = product.type === 1 ? selectedVariant?.label || "Unit" : product.unit || "Unit";
 
   const handleIncrease = () => {
     const currentQty = Number(quantity);
@@ -57,9 +59,9 @@ export default function ProductActions({
     try {
       const variantId = product.type === 1 ? (selectedVariant as any)?.id : undefined;
       const res = await addToCart(product.id, Number(quantity), variantId);
-      
+
       await new Promise((r) => setTimeout(r, 500));
-      
+
       if (res.error) alert(res.error);
       else alert("Berhasil ditambahkan ke keranjang!");
     } catch {
@@ -72,14 +74,13 @@ export default function ProductActions({
   const variantText = product.type === 1 && selectedVariant ? ` Varian: ${selectedVariant.label}` : "";
   const totalHarga = formatPrice(currentPrice * Number(quantity));
   const message = `Halo ${sellerName}, saya ingin membeli produk ini:\nNama Produk: ${product.name}${variantText}\nJumlah: ${quantity} ${currentUnit}\nTotal Harga: ${totalHarga}\n\nApakah stok masih tersedia?`;
-  const waLink  = `https://wa.me/${waNumber}?text=${encodeURIComponent(message)}`;
-  const buyLink = `/checkout?product=${product.id}&qty=${Number(quantity)}${
-    selectedVariant ? `&variant=${(selectedVariant as any).id}` : ""
-  }`;
+  const waLink = `https://wa.me/${waNumber}?text=${encodeURIComponent(message)}`;
+  const buyLink = `/checkout?product=${product.id}&qty=${Number(quantity)}${selectedVariant ? `&variant=${(selectedVariant as any).id}` : ""
+    }`;
 
   return (
     <div className="space-y-5">
-       <hr className="border-gray-300" />
+      <hr className="border-gray-300" />
       {/* Harga */}
       <div>
         <p className="text-2xl font-bold text-gray-900">
@@ -99,11 +100,10 @@ export default function ProductActions({
               <button
                 key={(opt as any).id || opt.label}
                 onClick={() => { setSelectedVariant(opt); setQuantity("1"); }}
-                className={`px-4 py-1.5 border rounded-lg text-sm transition-all ${
-                  selectedVariant?.label === opt.label
+                className={`px-4 py-1.5 border rounded-lg text-sm transition-all ${selectedVariant?.label === opt.label
                     ? "border-blue-500 bg-blue-50 text-blue-600 font-medium"
                     : "border-gray-200 text-gray-600 hover:border-gray-300"
-                }`}
+                  }`}
               >
                 {opt.label}
               </button>
@@ -112,7 +112,7 @@ export default function ProductActions({
         </div>
       )}
 
-      
+
 
       {/* Jumlah + Stok */}
       <div className="space-y-2">
@@ -174,7 +174,7 @@ export default function ProductActions({
         </div>
       </div>
 
-     
+
 
       {/* Tombol Aksi */}
       <div className="flex flex-col sm:flex-row gap-3 pt-2">
@@ -182,9 +182,9 @@ export default function ProductActions({
         <button
           onClick={handleAddToCart}
           disabled={isAdding || currentStock === 0}
-          style={{ borderColor: "#407BB5", color:"#407BB5"}}
+          style={{ borderColor: "#407BB5", color: "#407BB5" }}
           className="w-full sm:flex-1 flex items-center justify-center gap-2 h-11 px-5 border-2 rounded-xl text-sm font-semibold transition hover:bg-blue-50"
-          >
+        >
           {isAdding ? (
             <span className="w-4 h-4 border-2 border-[#407BB5] border-t-transparent rounded-full animate-spin"></span>
           ) : (
@@ -198,9 +198,9 @@ export default function ProductActions({
         {/* Beli Sekarang */}
         <Link
           href={buyLink}
-          style={{backgroundColor: "#407BB5"}}
+          style={{ backgroundColor: "#407BB5" }}
           className="w-full sm:flex-1 flex items-center justify-center gap-2 h-11 px-5 text-white rounded-xl text-sm font-semibold hover:opacity-90 transition"
-          >
+        >
           Beli Sekarang
         </Link>
 
@@ -209,14 +209,24 @@ export default function ProductActions({
           href={waLink}
           target="_blank"
           rel="noopener noreferrer"
-        className="w-full sm:flex-1 flex items-center justify-center gap-2 h-11 px-5 bg-green-500 text-white rounded-xl text-sm font-semibold hover:bg-green-600 transition"
+          className="w-full sm:flex-1 flex items-center justify-center gap-2 h-11 px-5 bg-green-500 text-white rounded-xl text-sm font-semibold hover:bg-green-600 transition"
         >
           <svg className="w-4 h-4 fill-white" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
-            <path d="M12 0C5.373 0 0 5.373 0 12c0 2.124.558 4.17 1.541 5.943L.057 23.571a.5.5 0 00.6.633l5.782-1.457A11.944 11.944 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.894a9.877 9.877 0 01-5.031-1.378l-.36-.214-3.733.941.993-3.608-.235-.372A9.833 9.833 0 012.106 12C2.106 6.533 6.533 2.106 12 2.106S21.894 6.533 21.894 12 17.467 21.894 12 21.894z"/>
+            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z" />
+            <path d="M12 0C5.373 0 0 5.373 0 12c0 2.124.558 4.17 1.541 5.943L.057 23.571a.5.5 0 00.6.633l5.782-1.457A11.944 11.944 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.894a9.877 9.877 0 01-5.031-1.378l-.36-.214-3.733.941.993-3.608-.235-.372A9.833 9.833 0 012.106 12C2.106 6.533 6.533 2.106 12 2.106S21.894 6.533 21.894 12 17.467 21.894 12 21.894z" />
           </svg>
           Hubungi
-      </Link>
+        </Link>
+      </div>
+
+      <div className="flex justify-end mt-2">
+        <Link
+          href={`/store/${storeId}`}
+          className="flex items-center gap-2 text-gray-700 hover:text-gray-900 transition-colors"
+        >
+          <Store className="w-5 h-5" />
+          <span className="font-semibold">{sellerName}</span>
+        </Link>
       </div>
     </div>
   );
