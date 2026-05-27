@@ -6,12 +6,13 @@ import { cookies } from "next/headers";
 import { formatPrice } from "@/lib/data";
 import { notFound } from "next/navigation";
 import Image from "next/image";
+import { Phone, MessageCircle, ChevronLeft} from "lucide-react";
 
 const STATUS_COLOR: Record<string, string> = {
-  "Menunggu Konfirmasi": "bg-gray-100 text-gray-700",
-  "Diproses": "bg-yellow-100 text-yellow-700",
-  "Dikirim": "bg-blue-100 text-blue-700",
-  "Selesai": "bg-green-100 text-green-700",
+  "Menunggu Konfirmasi": "bg-orange-100 text-orange-500",
+  "Diproses": "bg-blue-100 text-blue-500",
+  "Dikirim": "bg-indigo-100 text-indigo-500",
+  "Selesai": "bg-green-100 text-green-500",
 };
 
 export default async function BuyerOrderDetailPage({ params }: { params: { id: string } }) {
@@ -81,8 +82,8 @@ Mohon diproses ya. Terima kasih!`;
       <Navbar />
       <Container>
         <div className="max-w-3xl mx-auto py-8">
-          <Link href="/orders" className="text-sm text-gray-500 hover:text-primary mb-6 inline-block">
-            ← Kembali ke Daftar Pesanan
+          <Link href="/orders" className="inline-flex items-center text-gray-400 hover:text-[#407BB5] mb-6">
+            <ChevronLeft className="w-5 h-5" />
           </Link>
           
           <div className="card p-6 md:p-8">
@@ -103,9 +104,9 @@ Mohon diproses ya. Terima kasih!`;
               <h2 className="text-lg font-bold text-gray-800 mb-4">Informasi Toko</h2>
               <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
                 <p className="font-semibold text-gray-800 text-lg">{sellerName}</p>
-                <p className="text-sm text-gray-500 mt-1 flex items-center gap-2">
-                  <span>📞</span> {waNumber}
-                </p>
+                  <p className="text-sm text-gray-500 mt-1 flex items-center gap-2">
+                    <Phone size={14} /> {waNumber}
+                  </p>
               </div>
             </div>
 
@@ -144,12 +145,16 @@ Mohon diproses ya. Terima kasih!`;
                   <span>{formatPrice(order.total_amount)}</span>
                 </div>
                 <div className="flex justify-between text-gray-600">
+                  <span>Biaya Admin</span>
+                  <span>{formatPrice(5000)}</span>
+                </div>
+                <div className="flex justify-between text-gray-600">
                   <span>Ongkos Kirim</span>
                   <span>{formatPrice(order.shipping_cost)}</span>
                 </div>
                 <div className="flex justify-between font-bold text-lg text-gray-800 pt-3 border-t">
                   <span>Total Pesanan</span>
-                  <span className="text-primary">{formatPrice(order.total_amount + order.shipping_cost)}</span>
+                  <span className="text-primary">{formatPrice(order.total_amount + order.shipping_cost + 5000)}</span>
                 </div>
               </div>
             </div>
@@ -159,14 +164,18 @@ Mohon diproses ya. Terima kasih!`;
                 <p className="font-semibold text-gray-800 mb-1">Butuh bantuan pesanan?</p>
                 <p className="text-sm text-gray-600">Hubungi penjual melalui WhatsApp untuk konfirmasi pembayaran atau pengiriman.</p>
               </div>
-              <Link 
-                href={waLink}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="btn-primary whitespace-nowrap px-6 py-3 rounded-xl flex items-center gap-2 w-full md:w-auto justify-center"
-              >
-                <span>💬</span> Hubungi Penjual
-              </Link>
+                <Link 
+                  href={waLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="bg-green-500 hover:bg-green-600 text-white whitespace-nowrap px-6 py-3 rounded-xl flex items-center gap-2 w-full md:w-auto justify-center font-medium transition"
+                >
+                  <svg className="w-5 h-5 fill-white" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
+                    <path d="M12 0C5.373 0 0 5.373 0 12c0 2.124.558 4.17 1.541 5.943L.057 23.571a.5.5 0 00.6.633l5.782-1.457A11.944 11.944 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.894a9.877 9.877 0 01-5.031-1.378l-.36-.214-3.733.941.993-3.608-.235-.372A9.833 9.833 0 012.106 12C2.106 6.533 6.533 2.106 12 2.106S21.894 6.533 21.894 12 17.467 21.894 12 21.894z"/>
+                  </svg>
+                  Hubungi Penjual
+                </Link>
             </div>
           </div>
         </div>

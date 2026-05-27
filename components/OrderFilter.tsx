@@ -99,8 +99,8 @@ export default function OrderFilter({ orders, initialStatus }: { orders: any[], 
 
                 <div className="mt-4 pt-4 border-t flex justify-between items-center">
                   <div>
-                    <p className="text-sm text-gray-500">Total Belanja (termasuk ongkir)</p>
-                    <p className="text-lg font-bold text-primary">{formatPrice(order.total_amount + order.shipping_cost)}</p>
+                    <p className="text-sm text-gray-500">Total Belanja (termasuk ongkir & admin)</p>
+                    <p className="text-lg font-bold text-primary">{formatPrice(order.total_amount + order.shipping_cost + 5000)}</p>
                   </div>
                   <Link href={`/orders/${order.id}`} className="btn-outline px-4 py-2 text-sm rounded-xl">
                     Lihat Detail
