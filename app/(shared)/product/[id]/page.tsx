@@ -19,6 +19,8 @@ import {
   CheckCircle2,
   FishSymbol,
   HandPlatter,
+  Store,
+  MapPin,
 } from "lucide-react";
 
 const WA_NUMBER = "6281234567890";
@@ -56,7 +58,7 @@ type ProductRow = {
   ph_ideal?: string | null;
   price_options?: PriceOption[] | string | null;
   product_images?: ProductImage[] | null;
-  stores?: { name: string; phone: string } | null;
+  stores?: { name: string; phone: string; address?: string | null; location?: string | null } | null;
 };
 
 function normalizePriceOptions(value: unknown): PriceOption[] {
@@ -98,11 +100,12 @@ export default async function ProductDetailPage({
   const supabase = createClient(cookies());
   const { data: product, error } = await supabase
     .from("products")
-    .select("*, stores(name, phone), price_options(*), product_images(*)")
+    .select("*, stores(*), price_options(*), product_images(*)")
     .eq("id", params.id)
     .maybeSingle<ProductRow>();
 
   if (error || !product) {
+    if (error) console.error("Error fetching product:", error);
     notFound();
   }
 
@@ -208,6 +211,22 @@ export default async function ProductDetailPage({
                     storeId={product.store_id}
                   />
                 </div>
+              </div>
+            </div>
+
+            {/* Store Info */}
+            <div className="rounded-2xl width-auto border border-gray-100 shadow-sm p-4 sm:p-6 mb-6 flex flex-col sm:flex-row items-center sm:items-start gap-4">
+              <Store className="w-8 h-8  text-[#407BB5] self-center" />
+              <div className="flex-1 text-center sm:text-left">
+                <Link href={`/store/${product.store_id}`} className="text-xl font-bold text-gray-900 hover:text-[#407BB5] transition-colors">
+                  {sellerName}
+                </Link>
+                {(product.stores?.address || product.stores?.location) && (
+                  <div className="flex items-center justify-start gap-1.5 text-gray-500 mt-2 text-sm">
+                    <MapPin className="w-6 h-6 sm:w-4 sm:h-4 flex-shrink-0" />
+                    <span className="text-left">{product.stores.address || product.stores.location}</span>
+                  </div>
+                )}
               </div>
             </div>
 

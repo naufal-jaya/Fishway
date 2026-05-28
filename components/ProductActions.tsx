@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ShoppingCart, Zap, MessageCircle, Minus, Plus, Store } from "lucide-react";
+import { ShoppingCart, Zap, MessageCircle, Minus, Plus } from "lucide-react";
 import { formatPrice, PriceOption } from "@/lib/data";
 import { useRouter } from "next/navigation";
 import { addToCart, buyNow } from "@/lib/cart";
@@ -244,15 +244,7 @@ const handleBuyNow = async () => {
         </Link>
       </div>
 
-      <div className="flex justify-end mt-2">
-        <Link
-          href={`/store/${storeId}`}
-          className="flex items-center gap-2 text-gray-700 hover:text-gray-900 transition-colors"
-        >
-          <Store className="w-5 h-5" />
-          <span className="font-semibold">{sellerName}</span>
-        </Link>
-      </div>
+
     </div>
   );
 }
