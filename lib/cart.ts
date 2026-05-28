@@ -13,16 +13,12 @@ export async function addToCart(productId: string, quantity: number, variantId?:
     return { error: "Anda harus login untuk menambahkan ke keranjang." };
   }
 
-  // Cari cart aktif untuk user ini (lewat relasi accounts -> buyers -> carts)
-  // Tapi struktur yang di ERD carts punya buyer_id foreign key ke buyers.
-  // Untuk amannya, asumsikan auth.uid() == buyers.id (karena id buyers references accounts.id references auth.users.id)
   let { data: cart } = await supabase
     .from("carts")
     .select("id")
     .eq("buyer_id", user.id)
     .maybeSingle();
 
-  // Jika tidak ada cart, buat baru
   if (!cart) {
     const { data: newCart, error: cartError } = await supabase
       .from("carts")
@@ -37,9 +33,6 @@ export async function addToCart(productId: string, quantity: number, variantId?:
     cart = newCart;
   }
 
-  // Cek apakah item sudah ada di keranjang
-  // PENTING: gunakan .is() untuk NULL — .eq("col", null) menghasilkan "col = NULL"
-  // yang selalu false di SQL; harus "col IS NULL" agar duplikat terdeteksi.
   let existingQuery = supabase
     .from("cart_items")
     .select("id, quantity")
@@ -53,7 +46,6 @@ export async function addToCart(productId: string, quantity: number, variantId?:
   const { data: existingItem } = await existingQuery.maybeSingle();
 
   if (existingItem) {
-    // Update quantity
     const { error } = await supabase
       .from("cart_items")
       .update({ quantity: existingItem.quantity + quantity })
@@ -61,7 +53,6 @@ export async function addToCart(productId: string, quantity: number, variantId?:
       
     if (error) return { error: "Gagal update keranjang." };
   } else {
-    // Insert item baru
     const { error } = await supabase
       .from("cart_items")
       .insert({
@@ -144,7 +135,8 @@ export async function clearCart() {
 export async function checkoutCart(
   shippingCosts?: Record<string, number>,
   storeNotes?: Record<string, string>,
-  selectedItemIds?: string[]
+  selectedItemIds?: string[],
+  addressId?: string
 ) {
   const supabase = createClient(cookies());
   const { data: { user } } = await supabase.auth.getUser();
@@ -187,6 +179,30 @@ export async function checkoutCart(
     await supabase.from("buyers").insert({ id: user.id });
   }
 
+  // Fetch address snapshot (simpan ke order agar tidak berubah jika user edit alamat nanti)
+  let shippingName = "";
+  let shippingPhone = "";
+  let shippingAddressStr = "";
+
+  if (addressId) {
+    const { data: addr } = await supabase.from("addresses").select("*").eq("id", addressId).maybeSingle();
+    if (addr) {
+      shippingName = addr.recipient_name || "";
+      shippingPhone = addr.phone || "";
+      shippingAddressStr = addr.address || "";
+    }
+  }
+
+  if (!shippingName || !shippingPhone || !shippingAddressStr) {
+    const [{ data: acc }, { data: buy }] = await Promise.all([
+      supabase.from("accounts").select("name, address").eq("id", user.id).maybeSingle(),
+      supabase.from("buyers").select("phone").eq("id", user.id).maybeSingle()
+    ]);
+    if (!shippingName) shippingName = acc?.name || "";
+    if (!shippingPhone) shippingPhone = buy?.phone || "";
+    if (!shippingAddressStr) shippingAddressStr = acc?.address || "";
+  }
+
   const storeOrders: Record<string, any[]> = {};
   // Track which cart_item IDs were successfully processed
   const processedCartItemIds: string[] = [];
@@ -227,7 +243,7 @@ export async function checkoutCart(
     const items = storeOrders[storeId];
     const totalAmount = items.reduce((sum, i) => sum + (i.price * i.quantity), 0);
     const shippingCost = shippingCosts?.[storeId] ?? 15000;
-    const note = storeNotes?.[storeId] || null;
+    const noteForStore = storeNotes?.[storeId] || null;
     
     const { data: order, error: orderError } = await supabase
       .from("orders")
@@ -237,7 +253,10 @@ export async function checkoutCart(
         status: "Menunggu Konfirmasi",
         total_amount: totalAmount,
         shipping_cost: shippingCost,
-        notes: note
+        notes: noteForStore,
+        shipping_name: shippingName,
+        shipping_phone: shippingPhone,
+        shipping_address: shippingAddressStr,
       })
       .select("id")
       .single();
@@ -266,6 +285,23 @@ export async function checkoutCart(
       return { error: `Gagal menambahkan item pesanan: ${itemsError?.message || 'Unknown'}` };
     }
 
+    // Kurangi stok produk setelah order berhasil dibuat
+    for (const i of items) {
+      const { data: productStock } = await supabase
+        .from("products")
+        .select("stock")
+        .eq("id", i.product_id)
+        .maybeSingle();
+
+      if (productStock && productStock.stock !== null) {
+        const newStock = Math.max(0, productStock.stock - i.quantity);
+        await supabase
+          .from("products")
+          .update({ stock: newStock })
+          .eq("id", i.product_id);
+      }
+    }
+
     // Ambil seller_id dari store untuk kirim notifikasi
     const { data: storeData } = await supabase
       .from("stores")
@@ -278,7 +314,7 @@ export async function checkoutCart(
         user_id: storeData.seller_id,
         title: "Pesanan Baru!",
         message: `Ada pesanan baru sejumlah ${formatPrice(totalAmount)}. Silakan periksa halaman pesanan.`,
-        link: `/seller/orders/${order.id}`
+        link: `/dashboard/orders/${order.id}`
       });
     }
   }
@@ -292,7 +328,6 @@ export async function checkoutCart(
 
     if (deleteError) {
       console.error("Gagal menghapus cart items:", deleteError);
-      // Pesanan sudah dibuat, jangan return error — cukup log
     }
   }
 
@@ -300,4 +335,11 @@ export async function checkoutCart(
   revalidatePath("/checkout");
 
   return { success: true, orderIds: createdOrderIds };
+}
+
+export async function buyNow(productId: string, quantity: number, variantId?: string) {
+  await clearCart();
+  const result = await addToCart(productId, quantity, variantId);
+  if (result.error) return { error: result.error };
+  return { success: true };
 }

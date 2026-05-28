@@ -74,7 +74,7 @@ export default async function SellerDashboardPage() {
                 Toko: <span className="font-semibold text-gray-700">{store.name}</span> | 📞 {store.phone || "Tidak ada nomor telp"}
               </p>
             </div>
-            <Link href="/products/add" className="btn-primary text-sm whitespace-nowrap">
+            <Link href="/dashboard/products/add" className="btn-primary text-sm whitespace-nowrap">
               + Tambah Produk
             </Link>
           </div>
@@ -124,7 +124,7 @@ export default async function SellerDashboardPage() {
           {/* Menu Cards */}
           <div className="grid md:grid-cols-2 gap-4 mb-8">
             <Link
-              href="/products"
+              href="/dashboard/products"
               className="card p-6 hover:shadow-md transition-shadow group"
             >
               <div className="flex items-center gap-4">
@@ -145,7 +145,7 @@ export default async function SellerDashboardPage() {
               </div>
             </Link>
             <Link
-              href="/seller/orders"
+              href="/dashboard/orders"
               className="card p-6 hover:shadow-md transition-shadow group"
             >
               <div className="flex items-center gap-4">
@@ -172,7 +172,7 @@ export default async function SellerDashboardPage() {
             <div className="flex justify-between items-center mb-4">
               <h2 className="font-bold text-gray-800">Pesanan Terbaru</h2>
               <Link
-                href="/seller/orders"
+                href="/dashboard/orders"
                 className="text-sm text-primary hover:underline"
               >
                 Lihat semua

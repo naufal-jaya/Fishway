@@ -17,7 +17,7 @@ export default function OrderSearchBar() {
     } else {
       params.delete("q");
     }
-    router.push(`/seller/orders?${params.toString()}`);
+    router.push(`/dashboard/orders?${params.toString()}`);
   };
 
   return (

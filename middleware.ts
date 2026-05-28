@@ -4,8 +4,8 @@ import { createClient } from "@/utils/supabase/middleware";
 type Role = "buyer" | "seller";
 
 const roleAccess: Record<string, Role[]> = {
-  "/seller": ["seller"],
-  "/products": ["seller"],
+  "/dashboard": ["seller"],
+  "/dashboard/products": ["seller"],
   "/orders": ["buyer"],
   "/cart": ["buyer"],
 };
@@ -34,13 +34,19 @@ export async function middleware(request: NextRequest) {
   const role: Role | null = seller ? "seller" : buyer ? "buyer" : null;
 
   if (path === "/login") {
-    return NextResponse.redirect(new URL(role ? "/" : "/signup", request.url));
+    return NextResponse.redirect(new URL(role === "seller" ? "/dashboard" : (role ? "/" : "/signup"), request.url));
   }
 
   if (path === "/signup") {
     return role
-      ? NextResponse.redirect(new URL("/", request.url))
+      ? NextResponse.redirect(new URL(role === "seller" ? "/dashboard" : "/", request.url))
       : getResponse();
+  }
+
+  if (path === "/") {
+    if (role === "seller") {
+      return NextResponse.redirect(new URL("/dashboard", request.url));
+    }
   }
 
   const allowedRoles = roleAccess[path];
@@ -57,5 +63,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/login", "/signup", "/cart", "/seller", "/products", "/orders"],
+  matcher: ["/", "/login", "/signup", "/cart", "/dashboard", "/dashboard/products", "/orders"],
 };

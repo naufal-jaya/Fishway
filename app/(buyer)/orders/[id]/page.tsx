@@ -30,6 +30,10 @@ export default async function BuyerOrderDetailPage({ params }: { params: { id: s
       status,
       total_amount,
       shipping_cost,
+      shipping_name,
+      shipping_phone,
+      shipping_address,
+      buyer_note,
       created_at,
       notes,
       stores ( name, phone ),
@@ -93,6 +97,12 @@ Mohon diproses ya. Terima kasih!`;
                 <h1 className="text-2xl font-bold text-gray-800 mb-1">Detail Pesanan</h1>
                 <p className="text-sm text-gray-500 font-mono">ID: {order.id}</p>
                 <p className="text-sm text-gray-500 mt-1">Dibuat pada: {orderDate}</p>
+                {order.buyer_note && (
+                  <div className="mt-3 p-3 bg-blue-50/50 rounded-lg border border-blue-100">
+                    <p className="text-xs font-semibold text-gray-600 mb-1">Catatan Anda:</p>
+                    <p className="text-sm text-gray-800 italic">"{order.buyer_note}"</p>
+                  </div>
+                )}
               </div>
               <div className="text-right">
                 <span className={`px-4 py-2 rounded-full font-semibold text-sm inline-block ${STATUS_COLOR[order.status] || "bg-gray-100 text-gray-700"}`}>
@@ -120,6 +130,19 @@ Mohon diproses ya. Terima kasih!`;
                 </div>
               </div>
             )}
+
+            <div className="mb-8">
+              <h2 className="text-lg font-bold text-gray-800 mb-4">Informasi Pengiriman</h2>
+              <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
+                <p className="font-semibold text-gray-800 text-lg">{order.shipping_name || "Pemesan"}</p>
+                <p className="text-sm text-gray-500 mt-1 flex items-center gap-2">
+                  <Phone size={14} /> {order.shipping_phone || "-"}
+                </p>
+                <p className="text-sm text-gray-500 mt-1">
+                  {order.shipping_address || "-"}
+                </p>
+              </div>
+            </div>
 
             <div className="mb-8">
               <h2 className="text-lg font-bold text-gray-800 mb-4">Daftar Produk</h2>

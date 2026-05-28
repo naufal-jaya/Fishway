@@ -9,13 +9,14 @@ import OrderTableHeader from "@/components/OrderTableHeader";
 import OrderPagination from "@/components/OrderPagination";
 import { Suspense } from "react";
 
-const STATUS_TABS = ["Semua", "Menunggu Konfirmasi", "Diproses", "Dikirim", "Selesai"];
+const STATUS_TABS = ["Semua", "Menunggu Konfirmasi", "Diproses", "Dikirim", "Selesai", "Dibatalkan"];
 
 const STATUS_COLOR: Record<string, string> = {
   "Menunggu Konfirmasi": "bg-orange-100 text-orange-500",
   "Diproses": "bg-blue-100 text-blue-500",
   "Dikirim": "bg-purple-100 text-purple-500",
   "Selesai": "bg-green-100 text-green-500",
+  "Dibatalkan": "bg-red-100 text-red-500", 
 };
 
 export default async function SellerOrdersPage({ searchParams }: { searchParams: { status?: string; q?: string; date?: string; page?: string } }) {
@@ -132,7 +133,7 @@ const paginatedOrders = filteredOrders.slice(
         <div className="max-w-5xl mx-auto py-8">
           {/* Header */}
           <div className="mb-6">
-          <Link href="/seller" className="inline-flex items-center text-gray-400 hover:text-[#407BB5]">
+          <Link href="/dashboard" className="inline-flex items-center text-gray-400 hover:text-[#407BB5]">
             <ChevronLeft className="w-5 h-5" />
           </Link>
             <h1 className="text-2xl font-bold text-gray-800 mt-1">
@@ -195,7 +196,7 @@ const paginatedOrders = filteredOrders.slice(
         <p className="text-sm font-bold text-gray-800">
           {formatPrice(order.total_amount + order.shipping_cost)}
         </p>
-        <Link href={`/seller/orders/${order.id}`} className="text-gray-400 hover:text-primary transition-colors">
+        <Link href={`/dashboard/orders/${order.id}`} className="text-gray-400 hover:text-primary transition-colors">
           <ChevronRight className="w-4 h-4" />
         </Link>
       </div>
@@ -234,7 +235,7 @@ const paginatedOrders = filteredOrders.slice(
     </span>
     </div>
     <div className="flex justify-center">
-      <Link href={`/seller/orders/${order.id}`} className="text-gray-400 hover:text-primary transition-colors">
+      <Link href={`/dashboard/orders/${order.id}`} className="text-gray-400 hover:text-primary transition-colors">
         <ChevronRight className="w-4 h-4" />
       </Link>
     </div>

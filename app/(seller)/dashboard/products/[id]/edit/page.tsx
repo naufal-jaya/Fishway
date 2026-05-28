@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
@@ -11,10 +11,11 @@ import { ChevronLeft } from "lucide-react";
 
 const MAX_PRODUCT_IMAGES = 10;
 
-export default function AddProductPage() {
+export default function EditProductPage({ params }: { params: { id: string } }) {
   const router = useRouter();
   const supabase = createClient();
   const [loading, setLoading] = useState(false);
+  const [fetching, setFetching] = useState(true);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -30,8 +31,8 @@ export default function AddProductPage() {
   });
   
   const [productType, setProductType] = useState<0 | 1>(0);
-  const [variants, setVariants] = useState([{ label: "", price: "", stock: "" }]);
-
+  const [variants, setVariants] = useState([{ id: "", label: "", price: "", stock: "" }]);
+  const [existingImage, setExistingImage] = useState("");
   const [images, setImages] = useState<ProductImageItem[]>([]);
   const imagesRef = useRef<ProductImageItem[]>([]);
 
@@ -49,6 +50,65 @@ export default function AddProductPage() {
     };
   }, []);
 
+  useEffect(() => {
+    async function fetchProduct() {
+      const { data, error } = await supabase
+        .from("products")
+        .select("*, price_options(*), product_images(*)")
+        .eq("id", params.id)
+        .single();
+
+      if (data && !error) {
+        setFormData({
+          name: data.name || "",
+          category: data.category || "",
+          description: data.description || "",
+          jenis: data.jenis || "",
+          condition: data.condition || "",
+          origin: data.origin || "",
+          food: data.food || "",
+          price: data.price?.toString() || "",
+          unit: data.unit || "",
+          stock: data.stock?.toString() || "",
+        });
+        setProductType(data.type as 0 | 1);
+        setExistingImage(data.gambar || "");
+
+        const productImages = Array.isArray(data.product_images)
+          ? [...data.product_images].sort((a: any, b: any) => (a.sort_order || 0) - (b.sort_order || 0))
+          : [];
+
+        if (productImages.length > 0) {
+          setImages(productImages.map((image: any) => ({
+            id: image.id,
+            url: image.url,
+            previewUrl: image.url,
+            caption: image.caption || "",
+            sortOrder: image.sort_order || 0,
+          })));
+        } else if (data.gambar && data.gambar !== "/images/default.png") {
+          setImages([{
+            url: data.gambar,
+            previewUrl: data.gambar,
+            caption: "",
+            sortOrder: 0,
+          }]);
+        }
+
+        if (data.type === 1 && data.price_options?.length > 0) {
+          setVariants(data.price_options.map((v: any) => ({
+            id: v.id,
+            label: v.label,
+            price: v.price?.toString() || "",
+            stock: v.stock?.toString() || ""
+          })));
+        }
+      }
+      setFetching(false);
+    }
+    fetchProduct();
+  }, [params.id, supabase]);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
@@ -60,11 +120,16 @@ export default function AddProductPage() {
   };
 
   const addVariant = () => {
-    setVariants([...variants, { label: "", price: "", stock: "" }]);
+    setVariants([...variants, { id: "", label: "", price: "", stock: "" }]);
   };
 
-  const removeVariant = (index: number) => {
+  const removeVariant = async (index: number) => {
     if (variants.length > 1) {
+      const variantToRemove = variants[index];
+      if (variantToRemove.id) {
+        // Hapus dari database jika sudah ada
+        await supabase.from("price_options").delete().eq("id", variantToRemove.id);
+      }
       setVariants(variants.filter((_, i) => i !== index));
     }
   };
@@ -141,48 +206,43 @@ export default function AddProductPage() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      // 1. Get the store_id for the user
-      const { data: store } = await supabase
-        .from("stores")
-        .select("id")
-        .eq("seller_id", user.id)
-        .single();
-        
-      if (!store) throw new Error("Store not found for this user");
-
-      // 2. Upload images to Supabase Storage
-      const uploadedImages = [];
+      const savedImages = [];
 
       for (let index = 0; index < images.length; index += 1) {
         const image = images[index];
-        if (!image.file) continue;
+        if (image.file) {
+          const fileExt = image.file.name.split(".").pop();
+          const fileName = `${crypto.randomUUID()}.${fileExt}`;
+          const filePath = `${user.id}/${fileName}`;
 
-        const fileExt = image.file.name.split(".").pop();
-        const fileName = `${crypto.randomUUID()}.${fileExt}`;
-        const filePath = `${user.id}/${fileName}`;
+          const { error: uploadError } = await supabase.storage
+            .from("product-images")
+            .upload(filePath, image.file);
 
-        const { error: uploadError } = await supabase.storage
-          .from("product-images")
-          .upload(filePath, image.file);
+          if (uploadError) throw uploadError;
 
-        if (uploadError) throw uploadError;
+          const { data: { publicUrl } } = supabase.storage
+            .from("product-images")
+            .getPublicUrl(filePath);
 
-        const { data: { publicUrl } } = supabase.storage
-          .from("product-images")
-          .getPublicUrl(filePath);
-
-        uploadedImages.push({
-          url: publicUrl,
-          caption: image.caption.trim() || null,
-          sort_order: index,
-        });
+          savedImages.push({
+            url: publicUrl,
+            caption: image.caption.trim() || null,
+            sort_order: index,
+          });
+        } else if (image.url) {
+          savedImages.push({
+            url: image.url,
+            caption: image.caption.trim() || null,
+            sort_order: index,
+          });
+        }
       }
 
-      const imageUrl = uploadedImages[0]?.url || "/images/default.png";
+      const imageUrl = savedImages[0]?.url || "/images/default.png";
 
-      // 3. Insert product into database
+      // Update product
       const productPayload = {
-        store_id: store.id,
         name: formData.name,
         category: formData.category,
         description: formData.description,
@@ -204,52 +264,67 @@ export default function AddProductPage() {
         })
       };
 
-      const { data: newProduct, error: insertError } = await supabase
+      const { error: updateError } = await supabase
         .from("products")
-        .insert(productPayload)
-        .select()
-        .single();
+        .update(productPayload)
+        .eq("id", params.id);
 
-      if (insertError) throw insertError;
+      if (updateError) throw updateError;
 
-      if (newProduct && uploadedImages.length > 0) {
+      await supabase.from("product_images").delete().eq("product_id", params.id);
+
+      if (savedImages.length > 0) {
         const { error: imageError } = await supabase
           .from("product_images")
-          .insert(uploadedImages.map((image) => ({
-            product_id: newProduct.id,
+          .insert(savedImages.map((image) => ({
+            product_id: params.id,
             ...image,
           })));
 
         if (imageError) throw imageError;
       }
 
-      // 5. Insert variants if type === 1
-      if (productType === 1 && newProduct) {
-        const variantsPayload = variants.map((v, index) => ({
-          product_id: newProduct.id,
-          label: v.label,
-          price: parseInt(v.price) || 0,
-          stock: variantStockValues[index],
-        }));
-        
-        const { error: variantError } = await supabase
-          .from("price_options")
-          .insert(variantsPayload);
-          
-        if (variantError) throw variantError;
+      // Update/Insert variants if type === 1
+      if (productType === 1) {
+        // To keep it simple, we could delete existing and insert new, or upsert.
+        // Let's use delete and insert if no ID, or just upsert
+        for (let index = 0; index < variants.length; index += 1) {
+          const v = variants[index];
+          if (v.id) {
+            await supabase.from("price_options").update({
+              label: v.label,
+              price: parseInt(v.price) || 0,
+              stock: variantStockValues[index],
+            }).eq("id", v.id);
+          } else {
+            await supabase.from("price_options").insert({
+              product_id: params.id,
+              label: v.label,
+              price: parseInt(v.price) || 0,
+              stock: variantStockValues[index],
+            });
+          }
+        }
+      } else {
+        // If changed to type 0, delete all price options
+        await supabase.from("price_options").delete().eq("product_id", params.id);
       }
 
-      alert("Produk berhasil ditambahkan!");
-      router.push("/products");
+      alert("Produk berhasil diperbarui!");
+      router.push("/dashboard/products");
       router.refresh();
       
     } catch (error: any) {
       console.error(error);
-      alert(error.message || "Terjadi kesalahan saat menambahkan produk");
+      alert(error.message || "Terjadi kesalahan saat memperbarui produk");
     } finally {
       setLoading(false);
     }
   };
+
+  if (fetching) {
+    return <div className="text-center py-20">Memuat data produk...</div>;
+  }
 
   return (
     <div>
@@ -267,40 +342,40 @@ export default function AddProductPage() {
               opacity: 1,
             }}
           />
-
           <div className="relative z-10">
             <div className="mb-6">
-              <Link href="/products" className="inline-flex items-center text-gray-400 hover:text-[#407BB5]">
+              <Link href="/dashboard/products" className="inline-flex items-center text-gray-400 hover:text-[#407BB5]">
                 <ChevronLeft className="w-5 h-5" />
               </Link>
-              <h1 className="text-2xl font-bold text-gray-800 mt-1">Tambah Produk Baru</h1>
+              <h1 className="text-2xl font-bold text-gray-800 mt-1">Edit Produk</h1>
+            </div>
+          
+          <form onSubmit={handleSubmit} className="grid gap-6 lg:grid-cols-[minmax(280px,360px)_1fr] items-start">
+            <ProductImageManager
+              images={images}
+              onAdd={handleAddImages}
+              onCaptionChange={handleCaptionChange}
+              onRemove={handleRemoveImage}
+              maxImages={MAX_PRODUCT_IMAGES}
+            />
+
+            <div className="card p-6 space-y-4">
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Nama Produk</label>
+              <input required type="text" name="name" value={formData.name} onChange={handleChange} className="w-full border rounded-lg p-2" />
             </div>
 
-            <form onSubmit={handleSubmit} className="grid gap-6 lg:grid-cols-[minmax(280px,360px)_1fr] items-start">
-              <ProductImageManager
-                images={images}
-                onAdd={handleAddImages}
-                onCaptionChange={handleCaptionChange}
-                onRemove={handleRemoveImage}
-                maxImages={MAX_PRODUCT_IMAGES}
-              />
-
-              <div className="card p-6 space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Nama Produk</label>
-                  <input required type="text" name="name" value={formData.name} onChange={handleChange} className="w-full border rounded-lg p-2" />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Kategori</label>
-                  <select name="category" value={formData.category} onChange={handleChange} className="w-full border rounded-lg p-2">
-                    <option value="">Pilih Kategori...</option>
-                    <option value="Ikan Air Tawar">Ikan Air Tawar</option>
-                    <option value="Ikan Laut">Ikan Laut</option>
-                    <option value="Seafood">Seafood</option>
-                    <option value="Ikan Hias">Ikan Hias</option>
-                  </select>
-                </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Kategori</label>
+              <select name="category" value={formData.category} onChange={handleChange} className="w-full border rounded-lg p-2">
+                <option value="">Pilih Kategori...</option>
+                <option value="Ikan Air Tawar">Ikan Air Tawar</option>
+                <option value="Ikan Laut">Ikan Laut</option>
+                <option value="Seafood">Seafood</option>
+                <option value="Ikan Hias">Ikan Hias</option>
+              </select>
+            </div>
 
             <div className="border-b pb-4 mb-4">
               <label className="block text-sm font-medium text-gray-700 mb-2">Tipe Produk</label>
@@ -398,15 +473,27 @@ export default function AddProductPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Deskripsi</label>
-              <textarea name="description" value={formData.description} onChange={handleChange} rows={4} className="w-full border rounded-lg p-2"></textarea>
+              <div className="flex justify-between items-center mb-1">
+                <label className="block text-sm font-medium text-gray-700">Deskripsi</label>
+                <span className={`text-xs ${formData.description.length > 800 ? "text-red-800" : "text-gray-700"}`}>
+                  {formData.description.length}/1000
+                </span>
+              </div>
+              <textarea
+                name="description"
+                value={formData.description}
+                onChange={handleChange}
+                rows={4}
+                maxLength={1000}
+                className="w-full border rounded-lg p-2"
+              />
             </div>
 
             <button disabled={loading} type="submit" className="w-full btn-primary py-3 rounded-xl mt-4">
-              {loading ? "Menyimpan..." : "Simpan Produk"}
+              {loading ? "Menyimpan..." : "Simpan Perubahan"}
             </button>
-              </div>
-            </form>
+            </div>
+          </form>
           </div>
         </div>
       </Container>

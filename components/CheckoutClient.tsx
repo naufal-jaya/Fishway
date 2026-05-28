@@ -19,7 +19,6 @@ import {
   ClipboardList,
   CreditCard,
   Smartphone,
-  Package,
 } from "lucide-react";
 
 /** Haversine formula — jarak dalam km antara dua koordinat */
@@ -120,7 +119,7 @@ export default function CheckoutClient({
   // Selected Shipping method per store: { storeId: optionId }
   const [selectedShipping, setSelectedShipping] = useState<Record<string, string>>({});
 
-  // Initialize selected shipping for each store to "gosend" (first option)
+  // Initialize selected shipping for each store to first option
   useEffect(() => {
     const initialShipping: Record<string, string> = {};
     stores.forEach((store) => {
@@ -145,7 +144,6 @@ export default function CheckoutClient({
       const currentOption = shippingOptions.find((s) => s.id === optionId);
       const maxKm = currentOption?.maxKm;
 
-      // If option has no maxKm constraint, or store coords not available, skip validation
       if (!maxKm || !store.lat || !store.lon) {
         setStoreDistances((prev) => ({
           ...prev,
@@ -232,8 +230,8 @@ export default function CheckoutClient({
     }
     setLoading(true);
     try {
-      // Pass the actual shipping costs map, notes, and selected item IDs to checkoutCart
-      const result = await checkoutCart(storeShippingCosts, notes, selectedItemIds);
+      // Pass shipping costs, notes, selected item IDs, and selected address ID
+      const result = await checkoutCart(storeShippingCosts, notes, selectedItemIds, selectedAddressId);
       if (result.error) {
         alert(result.error);
         setLoading(false);

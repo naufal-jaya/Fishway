@@ -4,7 +4,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { SlidersHorizontal } from "lucide-react";
 
-const STATUS_TABS = ["Semua", "Menunggu Konfirmasi", "Diproses", "Dikirim", "Selesai"];
+const STATUS_TABS = ["Semua", "Menunggu Konfirmasi", "Diproses", "Dikirim", "Selesai", "Dibatalkan"];
 const DATE_OPTIONS = [
   { label: "Semua Tanggal", value: "" },
   { label: "Hari ini", value: "today" },
@@ -24,7 +24,7 @@ export default function OrderFilterBar({ currentStatus, currentDate }: { current
     } else {
       params.delete(key);
     }
-    router.push(`/seller/orders?${params.toString()}`);
+    router.push(`/dashboard/orders?${params.toString()}`);
     setOpen(false);
   };
 
@@ -35,6 +35,7 @@ export default function OrderFilterBar({ currentStatus, currentDate }: { current
       {/* Active filter chips */}
       {currentStatus !== "Semua" && (
         <span className="hidden md:flex items-center gap-1 px-3 py-1 bg-primary/10 text-primary text-xs rounded-full">
+
           {currentStatus}
           <button onClick={() => setFilter("status", "")} className="ml-1 hover:text-red-400">×</button>
         </span>

@@ -19,6 +19,8 @@ import {
   CheckCircle2,
   FishSymbol,
   HandPlatter,
+  Store,
+  MapPin,
 } from "lucide-react";
 
 const WA_NUMBER = "6281234567890";
@@ -56,7 +58,7 @@ type ProductRow = {
   ph_ideal?: string | null;
   price_options?: PriceOption[] | string | null;
   product_images?: ProductImage[] | null;
-  stores?: { name: string; phone: string } | null;
+  stores?: { name: string; phone: string; address?: string | null; location?: string | null } | null;
 };
 
 function normalizePriceOptions(value: unknown): PriceOption[] {
@@ -98,11 +100,12 @@ export default async function ProductDetailPage({
   const supabase = createClient(cookies());
   const { data: product, error } = await supabase
     .from("products")
-    .select("*, stores(name, phone), price_options(*), product_images(*)")
+    .select("*, stores(*), price_options(*), product_images(*)")
     .eq("id", params.id)
     .maybeSingle<ProductRow>();
 
   if (error || !product) {
+    if (error) console.error("Error fetching product:", error);
     notFound();
   }
 
@@ -122,163 +125,156 @@ export default async function ProductDetailPage({
   const waLink = `https://wa.me/${waNumber}?text=Halo, saya tertarik dengan ${product.name}`;
   const galleryImages = Array.isArray(product.product_images) && product.product_images.length > 0
     ? [...product.product_images]
-        .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0))
-        .map((image) => ({ url: image.url, caption: image.caption }))
+      .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0))
+      .map((image) => ({ url: image.url, caption: image.caption }))
     : [{ url: product.gambar || "/images/default.png", caption: null }];
   const attrs = [
-  { icon: <FishSymbol className="w-4 h-4" />, label: "Jenis", value: product.jenis || product.category },
-  { icon: <Activity className="w-4 h-4" />, label: "Kondisi", value: product.condition },
-  { icon: <Globe className="w-4 h-4" />, label: "Asal", value: product.origin },
-  { icon: <HandPlatter className="w-4 h-4" />, label: "Pakan", value: product.food },
-  { icon: <ThermometerSun className="w-4 h-4" />, label: "Suhu Ideal", value: product.suhu_ideal || "26–30°C" },
-  { icon: <Droplets className="w-4 h-4" />, label: "pH Air Ideal", value: product.ph_ideal || "6,5–7,5" },
-].filter((a) => a.value);
+    { icon: <FishSymbol className="w-4 h-4" />, label: "Jenis", value: product.jenis || product.category },
+    { icon: <Activity className="w-4 h-4" />, label: "Kondisi", value: product.condition },
+    { icon: <Globe className="w-4 h-4" />, label: "Asal", value: product.origin },
+    { icon: <HandPlatter className="w-4 h-4" />, label: "Pakan", value: product.food },
+    { icon: <ThermometerSun className="w-4 h-4" />, label: "Suhu Ideal", value: product.suhu_ideal || "26–30°C" },
+    { icon: <Droplets className="w-4 h-4" />, label: "pH Air Ideal", value: product.ph_ideal || "6,5–7,5" },
+  ].filter((a) => a.value);
 
-const packaging = [
-  { icon: <Box className="w-5 h-5" />, label: "Plastik double + oksigen" },
-  { icon: <Package className="w-5 h-5" />, label: "Dus styrofoam (opsional)" },
-  { icon: <Truck className="w-5 h-5" />, label: "Dikirim setiap hari" },
-  { icon: <CheckCircle2 className="w-5 h-5" />, label: "Aman sampai tujuan" },
-];
+  const packaging = [
+    { icon: <Box className="w-5 h-5" />, label: "Plastik double + oksigen" },
+    { icon: <Package className="w-5 h-5" />, label: "Dus styrofoam (opsional)" },
+    { icon: <Truck className="w-5 h-5" />, label: "Dikirim setiap hari" },
+    { icon: <CheckCircle2 className="w-5 h-5" />, label: "Aman sampai tujuan" },
+  ];
 
   return (
     <div className="min-h-screen bg-gray-50 overflow-x-hidden">
 
       <div
-          className="fixed top-0 left-0 h-full pointer-events-none z-0"
-          style={{
-            backgroundImage: "url('/images/latar.png')",
-            backgroundRepeat: "no-repeat",
-            backgroundSize: "contain",
-            backgroundPosition: "left center",
-            width: "1300px",
-            opacity: 1,
-          }}
-        />
+        className="fixed top-0 left-0 h-full pointer-events-none z-0"
+        style={{
+          backgroundImage: "url('/images/latar.png')",
+          backgroundRepeat: "no-repeat",
+          backgroundSize: "contain",
+          backgroundPosition: "left center",
+          width: "1300px",
+          opacity: 1,
+        }}
+      />
       <div className="relative z-10">
-<Navbar />
-      <Container>
-        <div className="max-w-5xl mx-auto py-6 relative z-10">
-        
-          {/* Breadcrumb */}
-          <Link href="/" className="inline-flex items-center text-gray-400 hover:text-[#407BB5] mb-4">
-          <ChevronLeft className="w-5 h-5" />
-          </Link>
-          <nav className="flex items-center gap-1 text-sm text-gray-400 mb-5">
-            <Link href="/" className="hover:text-[#407BB5] transition-colors">Home</Link>
-            <ChevronRight className="w-3.5 h-3.5" />
-            <Link href="/" className="hover:text-[#407BB5] transition-colors">Produk</Link>
-            <ChevronRight className="w-3.5 h-3.5" />
-            <span className="text-gray-700 font-medium">{product.name}</span>
-          </nav>
+        <Navbar />
+        <Container>
+          <div className="max-w-5xl mx-auto py-6 relative z-10">
 
-          {/* Main Card */}
-          <div className="bg-transparent border-none shadow-none overflow-visible">
-            <div className="flex flex-col md:flex-row gap-6">
+            {/* Breadcrumb */}
+            <Link href="/" className="inline-flex items-center text-gray-400 hover:text-[#407BB5] mb-4">
+              <ChevronLeft className="w-5 h-5" />
+            </Link>
+            <nav className="flex items-center gap-1 text-sm text-gray-400 mb-5">
+              <Link href="/" className="hover:text-[#407BB5] transition-colors">Home</Link>
+              <ChevronRight className="w-3.5 h-3.5" />
+              <Link href="/" className="hover:text-[#407BB5] transition-colors">Produk</Link>
+              <ChevronRight className="w-3.5 h-3.5" />
+              <span className="text-gray-700 font-medium">{product.name}</span>
+            </nav>
 
-              {/* Gallery — handled client side */}
-              <div className="w-full md:w-1/2">
-                <ProductGallery
-                  mainImage={product.gambar || "/images/default.png"}
-                  extraImages={[product.image, product.gambar].filter(Boolean) as string[]}
-                  name={product.name}
-                />
-              </div>
-              
-              
+            {/* Main Card */}
+            <div className="bg-transparent border-none shadow-none overflow-visible">
+              <div className="flex flex-col md:flex-row gap-6">
 
-              {/* Right: Info + Actions */}
-              <div className="w-full md:w-1/2 p-4 md:p-6 border-t md:border-t-0 md:border-l border-gray-100">
-                <h1 className="text-2xl md:text-4xl font-bold text-gray-900 mb-2 break-words">{product.name}</h1>
-
-                {/* Rating */}
-                <div className="flex items-center gap-2 mb-4">
-                  <div className="flex">
-                    {[1,2,3,4,5].map((s) => (
-                      <svg key={s} className={`w-4 h-4 ${s <= 3 ? "text-amber-400 fill-amber-400" : "text-gray-200 fill-gray-200"}`} viewBox="0 0 20 20">
-                        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                      </svg>
-                    ))}
-                  </div>
-                  <span className="text-sm text-gray-400">5 Reviews</span>
+                {/* Gallery — handled client side */}
+                <div className="w-full md:w-1/2">
+                  <ProductGallery
+                    mainImage={product.gambar || "/images/default.png"}
+                    extraImages={[product.image, product.gambar].filter(Boolean) as string[]}
+                    name={product.name}
+                  />
                 </div>
 
-                <ProductActions
-                  product={{
-                    id: product.id,
-                    name: product.name,
-                    type: product.type,
-                    price: product.price,
-                    unit: product.unit,
-                    stock: product.stock,
-                  }}
-                  priceOptions={priceOptions}
-                  waNumber={waNumber}
-                  sellerName={sellerName}
-                />
+
+
+                {/* Right: Info + Actions */}
+                <div className="w-full md:w-1/2 p-4 md:p-6 border-t md:border-t-0 md:border-l border-gray-100">
+                  <h1 className="text-2xl md:text-4xl font-bold text-gray-900 mb-2 break-words">{product.name}</h1>
+
+
+
+                  <ProductActions
+                    product={{
+                      id: product.id,
+                      name: product.name,
+                      type: product.type,
+                      price: product.price,
+                      unit: product.unit,
+                      stock: product.stock,
+                    }}
+                    priceOptions={priceOptions}
+                    waNumber={waNumber}
+                    sellerName={sellerName}
+                    storeId={product.store_id}
+                  />
+                </div>
               </div>
             </div>
-          </div>
 
-          {/* Bottom: Tab Info */}
-          <div className="mt-4 bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-            {/* Tab bar — static, Info Produk always shown */}
-            <div className="flex border-b border-gray-100">
-              {["Info Produk", "Ulasan (3)", "Rekomendasi"].map((tab, i) => (
-                <button
-                  key={tab}
-                  className={`px-6 py-3.5 text-sm font-medium transition-colors ${
-                    i === 0
-                      ? "border-b-2 border-[#407BB5] text-[#407BB5]"
-                      : "text-gray-400 hover:text-gray-600"
-                  }`}
-                >
-                  {tab}
-                </button>
-              ))}
-            </div>
-
-            <div className="p-6 space-y-6">
-              {/* Deskripsi */}
-              <div>
-                <h3 className="font-semibold text-gray-800 mb-2">Deskripsi Produk</h3>
-                <p className="text-sm text-gray-500 leading-relaxed break-words">
-                  {product.description || "Produk segar berkualitas, dibudidayakan secara higienis."}
-                </p>
-                 </div>
-
-              {/* Attributes */}
-              <div className="flex gap-3 overflow-x-auto scrollbar-hide">
-                {attrs.map((a) => (
-                  <div key={a.label} className="flex items-start gap-2.5 bg-gray-50 rounded-xl p-3">
-                    <span className="text-black-500 mt-0.5 flex-shrink-0">{a.icon}</span>
-                    <div>
-                      <p className="text-xs text-gray-400 mb-0.5">{a.label}</p>
-                      <p className="text-sm font-medium text-gray-800">{a.value}</p>
-                    </div>
+            {/* Store Info */}
+            <div className="rounded-2xl width-auto border border-gray-100 shadow-sm p-4 sm:p-6 mb-6 flex flex-col sm:flex-row items-center sm:items-start gap-4">
+              <Store className="w-8 h-8  text-[#407BB5] self-center" />
+              <div className="flex-1 text-center sm:text-left">
+                <Link href={`/store/${product.store_id}`} className="text-xl font-bold text-gray-900 hover:text-[#407BB5] transition-colors">
+                  {sellerName}
+                </Link>
+                {(product.stores?.address || product.stores?.location) && (
+                  <div className="flex items-center justify-start gap-1.5 text-gray-500 mt-2 text-sm">
+                    <MapPin className="w-6 h-6 sm:w-4 sm:h-4 flex-shrink-0" />
+                    <span className="text-left">{product.stores.address || product.stores.location}</span>
                   </div>
-                ))}
+                )}
               </div>
+            </div>
 
-              {/* Packaging */}
-              <div>
-                <h3 className="font-semibold text-gray-800 mb-3">Pengiriman &amp; Packaging</h3>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                  {packaging.map((p) => (
-                    <div key={p.label} className="flex items-start gap-2.5 bg-gray-50 rounded-xl p-3">
-                      <span className="flex-shrink-0 mt-0.5">{p.icon}</span>
-                      <p className="text-sm text-gray-600 leading-snug">{p.label}</p>
+            {/* Bottom: Tab Info */}
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+
+
+              <div className="p-6 space-y-6">
+                {/* Deskripsi */}
+                <div>
+                  <h3 className="font-semibold text-gray-800 mb-2">Deskripsi Produk</h3>
+                  <p className="text-sm text-gray-500 leading-relaxed break-words">
+                    {product.description || "Produk segar berkualitas, dibudidayakan secara higienis."}
+                  </p>
+                </div>
+
+                {/* Attributes */}
+                <div className="flex gap-3 overflow-x-auto scrollbar-hide">
+                  {attrs.map((a) => (
+                    <div key={a.label} className="flex items-start gap-2.5 bg-gray-50 rounded-xl p-3">
+                      <span className="text-black-500 mt-0.5 flex-shrink-0">{a.icon}</span>
+                      <div>
+                        <p className="text-xs text-gray-400 mb-0.5">{a.label}</p>
+                        <p className="text-sm font-medium text-gray-800">{a.value}</p>
+                      </div>
                     </div>
                   ))}
                 </div>
+
+                {/* Packaging */}
+                <div>
+                  <h3 className="font-semibold text-gray-800 mb-3">Pengiriman &amp; Packaging</h3>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    {packaging.map((p) => (
+                      <div key={p.label} className="flex items-start gap-2.5 bg-gray-50 rounded-xl p-3">
+                        <span className="flex-shrink-0 mt-0.5">{p.icon}</span>
+                        <p className="text-sm text-gray-600 leading-snug">{p.label}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
 
-        </div>
-      </Container>
+          </div>
+        </Container>
       </div>
-      
+
     </div>
   );
 }

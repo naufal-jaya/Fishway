@@ -4,7 +4,7 @@ import Navbar from "@/components/Navbar";
 import { createClient } from "@/utils/supabase/server";
 import { cookies } from "next/headers";
 import { formatPrice } from "@/lib/data";
-import { LogOut, Package, Truck, Check, ClipboardList, MapPin, User, Clock } from "lucide-react";
+import { LogOut, Package, Truck, Check, ClipboardList, MapPin, User, Clock, X } from "lucide-react";
 import LogoutButton from "@/components/LogoutButton";
 
 const STATUS_COLOR: Record<string, string> = {
@@ -12,6 +12,7 @@ const STATUS_COLOR: Record<string, string> = {
   "Diproses": "bg-yellow-100 text-yellow-700",
   "Dikirim": "bg-blue-100 text-blue-700",
   "Selesai": "bg-green-100 text-green-700",
+  "Dibatalkan": "bg-red-100 text-red-600",  
 };
 
 type Address = {
@@ -24,7 +25,7 @@ type Address = {
 };
 
 export default async function ProfilePage() {
-  const supabase = createClient(cookies()); 
+  const supabase = createClient(cookies());
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {
@@ -71,23 +72,67 @@ const { data: addressesData } = !isSeller ? await supabase
   .order("is_primary", { ascending: false })
   .order("created_at", { ascending: false }) : { data: null };
 
-const addresses = (addressesData || []) as Address[];
+  const addresses = (addressesData || []) as Address[];
 
-  // Fetch orders for summary
-  const { data: orders } = await supabase
-    .from("orders")
-    .select("id, status, total_amount, created_at, stores(name)")
-    .eq("buyer_id", user.id)
-    .order("created_at", { ascending: false });
+  // Fetch orders — seller pakai store_id, pembeli pakai buyer_id
+  const { data: orders } = isSeller
+    ? await supabase
+        .from("orders")
+        .select("id, status, total_amount, created_at, stores(name)")
+        .eq("store_id", store!.id)
+        .order("created_at", { ascending: false })
+    : await supabase
+        .from("orders")
+        .select("id, status, total_amount, created_at, stores(name)")
+        .eq("buyer_id", user.id)
+        .order("created_at", { ascending: false });
 
   const menungguOrders = orders?.filter(o => o.status === "Menunggu Konfirmasi").length || 0;
   const diprosesOrders = orders?.filter(o => o.status === "Diproses").length || 0;
   const dikirimOrders = orders?.filter(o => o.status === "Dikirim").length || 0;
   const selesaiOrders = orders?.filter(o => o.status === "Selesai").length || 0;
-  
+const dibatalkanOrders = orders?.filter(o => o.status === "Dibatalkan").length || 0;
   const recentOrders = orders?.slice(0, 3) || [];
 
-  const joinDate = account?.created_at ? new Date(account.created_at).toLocaleDateString('id-ID', { month: 'long', year: 'numeric' }) : "-";
+  const joinDate = account?.created_at
+    ? new Date(account.created_at).toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })
+    : "-";
+
+  // Stats config — beda href untuk seller vs pembeli
+  const stats = [
+    {
+      label: "Menunggu",
+      value: menungguOrders,
+      icon: <Clock size={28} className="text-orange-400 mx-auto" />,
+      href: isSeller
+        ? "/dashboard/orders?status=Menunggu+Konfirmasi"
+        : "/orders?status=Menunggu%20Konfirmasi",
+    },
+    {
+      label: "Diproses",
+      value: diprosesOrders,
+      icon: <Package size={28} className="text-blue-500 mx-auto" />,
+      href: isSeller ? "/dashboard/orders?status=Diproses" : "/orders?status=Diproses",
+    },
+    {
+      label: "Dikirim",
+      value: dikirimOrders,
+      icon: <Truck size={28} className="text-indigo-500 mx-auto" />,
+      href: isSeller ? "/dashboard/orders?status=Dikirim" : "/orders?status=Dikirim",
+    },
+    {
+      label: "Selesai",
+      value: selesaiOrders,
+      icon: <Check size={28} className="text-green-500 mx-auto" />,
+      href: isSeller ? "/dashboard/orders?status=Selesai" : "/orders?status=Selesai",
+    },
+    {
+      label: "Dibatalkan",
+      value: dibatalkanOrders,
+      icon: <X size={28} className="text-red-500 mx-auto" />,
+      href: isSeller ? "/dashboard/orders?status=Dibatalkan" : "/orders?status=Dibatalkan",
+    },
+  ];
 
   return (
     <div>
@@ -117,34 +162,13 @@ const addresses = (addressesData || []) as Address[];
           </div>
 
           {/* Stats */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            {[
-              {
-                label: "Menunggu",
-                value: menungguOrders,
-                icon: <Clock size={28} className="text-orange-400 mx-auto" />,
-                href: "/orders?status=Menunggu%20Konfirmasi",
-              },
-              {
-                label: "Diproses",
-                value: diprosesOrders,
-                icon: <Package size={28} className="text-blue-500 mx-auto" />,
-                href: "/orders?status=Diproses",
-              },
-              {
-                label: "Dikirim",
-                value: dikirimOrders,
-                icon: <Truck size={28} className="text-indigo-500 mx-auto" />,
-                href: "/orders?status=Dikirim",
-              },
-              {
-                label: "Selesai",
-                value: selesaiOrders,
-                icon: <Check size={28} className="text-green-500 mx-auto" />,
-                href: "/orders?status=Selesai",
-              },
-            ].map((stat) => (
-              <Link key={stat.label} href={stat.href} className="card p-4 text-center hover:shadow-md transition-shadow">
+          <div className="grid grid-cols-3 md:grid-cols-5 gap-3">
+            {stats.map((stat) => (
+              <Link
+                key={stat.label}
+                href={stat.href}
+                className="card p-4 text-center hover:shadow-md hover:scale-[1.02] transition-all cursor-pointer"
+              >
                 <p className="text-2xl mb-1">{stat.icon}</p>
                 <p className="text-2xl font-bold text-primary">{stat.value}</p>
                 <p className="text-xs text-gray-500">{stat.label}</p>
@@ -197,7 +221,10 @@ const addresses = (addressesData || []) as Address[];
                 <ClipboardList size={20} className="text-primary" />
                 Pesanan Terakhir
               </h2>
-              <Link href="/orders" className="text-sm text-primary hover:underline">
+              <Link
+                href={isSeller ? "/dashboard/orders" : "/orders"}
+                className="text-sm text-primary hover:underline"
+              >
                 Lihat Semua
               </Link>
             </div>
@@ -234,10 +261,10 @@ const addresses = (addressesData || []) as Address[];
                   );
                 })
               )}
-            </div> 
+            </div>
           </div>
 
-          {/* Quick Links */}
+          {/* Logout */}
           <div className="pt-8 flex justify-center">
             <LogoutButton />
           </div>

@@ -19,6 +19,14 @@ const STATUS_COLOR: Record<string, string> = {
 
 const ALL_STATUSES = ["Menunggu Konfirmasi", "Diproses", "Dikirim", "Selesai"];
 
+// Map urutan status — hanya boleh maju, tidak boleh mundur
+const STATUS_ORDER: Record<string, number> = {
+  "Menunggu Konfirmasi": 0,
+  "Diproses": 1,
+  "Dikirim": 2,
+  "Selesai": 3,
+};
+
 export default async function SellerOrderDetailPage({ params }: { params: { id: string } }) {
   const supabase = createClient(cookies());
   const { data: { user } } = await supabase.auth.getUser();
@@ -37,10 +45,10 @@ export default async function SellerOrderDetailPage({ params }: { params: { id: 
       shipping_cost,
       created_at,
       notes,
-      buyers (
-        phone,
-        accounts ( name, address )
-      ),
+      buyer_id,
+      shipping_name,
+      shipping_phone,
+      shipping_address,
       order_items (
         id, quantity, price,
         products ( name, gambar, unit )
@@ -56,14 +64,9 @@ export default async function SellerOrderDetailPage({ params }: { params: { id: 
     year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit'
   });
 
-  const buyerInfo = Array.isArray(order.buyers) ? order.buyers[0] : order.buyers;
-  const accountData = buyerInfo && Array.isArray((buyerInfo as any).accounts)
-    ? (buyerInfo as any).accounts[0]
-    : (buyerInfo as any)?.accounts;
-
-  const buyerName = accountData?.name || "Pembeli";
-  const buyerPhone = (buyerInfo as any)?.phone || "Tidak ada nomor";
-  const buyerAddress = accountData?.address || "Tidak ada alamat";
+  const buyerName = order.shipping_name || "Pembeli";
+  const buyerPhone = order.shipping_phone || "Tidak ada nomor";
+  const buyerAddress = order.shipping_address || "Tidak ada alamat";
 
   // ✅ Server action: update status
   async function updateStatus(formData: FormData) {
@@ -72,27 +75,34 @@ export default async function SellerOrderDetailPage({ params }: { params: { id: 
     if (!newStatus || !ALL_STATUSES.includes(newStatus)) return;
 
     const supabaseAdmin = createClient(cookies());
+
+    // Ambil status saat ini dulu
+    const { data: currentOrder } = await supabaseAdmin
+      .from("orders")
+      .select("status, buyer_id")
+      .eq("id", params.id)
+      .maybeSingle();
+
+    if (!currentOrder) return;
+
+    // ✅ Constraint: status tidak boleh mundur
+    if (STATUS_ORDER[newStatus] <= STATUS_ORDER[currentOrder.status]) return;
+
     await supabaseAdmin
       .from("orders")
       .update({ status: newStatus })
       .eq("id", params.id);
 
-    const { data: orderData } = await supabaseAdmin
-      .from("orders")
-      .select("buyer_id")
-      .eq("id", params.id)
-      .maybeSingle();
-
-    if (orderData?.buyer_id) {
+    if (currentOrder?.buyer_id) {
       await supabaseAdmin.from("notifications").insert({
-        user_id: orderData.buyer_id,
+        user_id: currentOrder.buyer_id,
         title: "Status Pesanan Diperbarui",
         message: `Pesanan Anda sekarang berstatus: ${newStatus}`,
         link: `/orders/${params.id}`,
       });
     }
 
-    revalidatePath(`/seller/orders/${params.id}`);
+    revalidatePath(`/dashboard/orders/${params.id}`);
   }
 
   // ✅ Server action: cancel order (hanya Menunggu Konfirmasi atau Dikirim)
@@ -126,7 +136,7 @@ export default async function SellerOrderDetailPage({ params }: { params: { id: 
       });
     }
 
-    revalidatePath(`/seller/orders/${params.id}`);
+    revalidatePath(`/dashboard/orders/${params.id}`);
   }
 
   return (
@@ -134,7 +144,7 @@ export default async function SellerOrderDetailPage({ params }: { params: { id: 
       <Navbar />
       <Container>
         <div className="max-w-3xl mx-auto py-8">
-          <Link href="/seller/orders" className="text-sm text-gray-500 hover:text-primary mb-6 inline-block">
+          <Link href="/dashboard/orders" className="text-sm text-gray-500 hover:text-primary mb-6 inline-block">
             ← Kembali ke Daftar Pesanan
           </Link>
 
@@ -145,6 +155,12 @@ export default async function SellerOrderDetailPage({ params }: { params: { id: 
                 <h1 className="text-2xl font-bold text-gray-800 mb-1">Detail Pesanan</h1>
                 <p className="text-sm text-gray-500 font-mono">ID: {order.id}</p>
                 <p className="text-sm text-gray-500 mt-1">Dibuat pada: {orderDate}</p>
+                {order.buyer_note && (
+                  <div className="mt-3 p-3 bg-blue-50/50 rounded-lg border border-blue-100">
+                    <p className="text-xs font-semibold text-gray-600 mb-1">Catatan Pembeli:</p>
+                    <p className="text-sm text-gray-800 italic">"{order.buyer_note}"</p>
+                  </div>
+                )}
               </div>
 
               {/* Update status — hanya tampil kalau belum Dibatalkan */}
@@ -159,7 +175,13 @@ export default async function SellerOrderDetailPage({ params }: { params: { id: 
                       className="border-gray-300 rounded-lg text-sm bg-white focus:ring-primary focus:border-primary"
                     >
                       {ALL_STATUSES.map(s => (
-                        <option key={s} value={s}>{s}</option>
+                        <option
+                          key={s}
+                          value={s}
+                          disabled={STATUS_ORDER[s] <= STATUS_ORDER[order.status]}
+                        >
+                          {s}
+                        </option>
                       ))}
                     </select>
                     <button type="submit" className="btn-primary py-1.5 px-3 text-xs rounded-lg">Update</button>
@@ -259,7 +281,7 @@ export default async function SellerOrderDetailPage({ params }: { params: { id: 
             {(order.status === "Menunggu Konfirmasi" || order.status === "Dikirim") && (
               <CancelOrderButton action={cancelOrder} />
             )}
-            
+
           </div>
         </div>
       </Container>
