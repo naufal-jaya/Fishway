@@ -7,7 +7,7 @@ import { formatPrice } from "@/lib/data";
 
 export async function addToCart(productId: string, quantity: number, variantId?: string) {
   const supabase = createClient(cookies());
-  
+
   const { data: { user }, error: userError } = await supabase.auth.getUser();
   if (userError || !user) {
     return { error: "Anda harus login untuk menambahkan ke keranjang." };
@@ -29,7 +29,7 @@ export async function addToCart(productId: string, quantity: number, variantId?:
       .insert({ buyer_id: user.id })
       .select("id")
       .single();
-    
+
     if (cartError) {
       console.error(cartError);
       return { error: "Gagal membuat keranjang. Pastikan profil pembeli sudah lengkap." };
@@ -52,7 +52,7 @@ export async function addToCart(productId: string, quantity: number, variantId?:
       .from("cart_items")
       .update({ quantity: existingItem.quantity + quantity })
       .eq("id", existingItem.id);
-      
+
     if (error) return { error: "Gagal update keranjang." };
   } else {
     // Insert item baru
@@ -64,7 +64,7 @@ export async function addToCart(productId: string, quantity: number, variantId?:
         quantity: quantity,
         selected_variant_id: variantId || null,
       });
-      
+
     if (error) return { error: "Gagal menambah item ke keranjang." };
   }
 
@@ -135,7 +135,7 @@ export async function clearCart() {
   return { success: true };
 }
 
-export async function checkoutCart() {
+export async function checkoutCart(addressId?: string, note?: string) {
   const supabase = createClient(cookies());
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Not logged in" };
@@ -168,16 +168,40 @@ export async function checkoutCart() {
     await supabase.from("buyers").insert({ id: user.id });
   }
 
+  // Fetch address snapshot
+  let shippingName = "";
+  let shippingPhone = "";
+  let shippingAddressStr = "";
+
+  if (addressId) {
+    const { data: addr } = await supabase.from("addresses").select("*").eq("id", addressId).maybeSingle();
+    if (addr) {
+      shippingName = addr.recipient_name || "";
+      shippingPhone = addr.phone || "";
+      shippingAddressStr = addr.address || "";
+    }
+  }
+
+  if (!shippingName || !shippingPhone || !shippingAddressStr) {
+    const [{ data: acc }, { data: buy }] = await Promise.all([
+      supabase.from("accounts").select("name, address").eq("id", user.id).maybeSingle(),
+      supabase.from("buyers").select("phone").eq("id", user.id).maybeSingle()
+    ]);
+    if (!shippingName) shippingName = acc?.name || "";
+    if (!shippingPhone) shippingPhone = buy?.phone || "";
+    if (!shippingAddressStr) shippingAddressStr = acc?.address || "";
+  }
+
   const storeOrders: Record<string, any[]> = {};
-  
+
   for (const item of cart.cart_items) {
     const product = item.products as any;
     if (!product || !product.store_id) continue;
-    
+
     if (!storeOrders[product.store_id]) {
       storeOrders[product.store_id] = [];
     }
-    
+
     let price = 0;
     if (product.type === 1 && item.selected_variant_id && product.price_options) {
       const opt = product.price_options.find((o: any) => o.id === item.selected_variant_id);
@@ -204,7 +228,7 @@ export async function checkoutCart() {
     const items = storeOrders[storeId];
     const totalAmount = items.reduce((sum, i) => sum + (i.price * i.quantity), 0);
     const shippingCost = 15000;
-    
+
     const { data: order, error: orderError } = await supabase
       .from("orders")
       .insert({
@@ -212,7 +236,11 @@ export async function checkoutCart() {
         store_id: storeId,
         status: "Menunggu Konfirmasi",
         total_amount: totalAmount,
-        shipping_cost: shippingCost
+        shipping_cost: shippingCost,
+        shipping_name: shippingName,
+        shipping_phone: shippingPhone,
+        shipping_address: shippingAddressStr,
+        buyer_note: note || null
       })
       .select("id")
       .single();

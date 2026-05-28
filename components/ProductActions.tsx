@@ -33,26 +33,26 @@ export default function ProductActions({
   const [selectedVariant, setSelectedVariant] = useState<PriceOption | null>(
     priceOptions.length > 0 ? priceOptions[0] : null
   );
-const [isBuying, setIsBuying] = useState(false);
-const [isAdding, setIsAdding] = useState(false);
-const router = useRouter();
+  const [isBuying, setIsBuying] = useState(false);
+  const [isAdding, setIsAdding] = useState(false);
+  const router = useRouter();
 
-const handleBuyNow = async () => {
-  setIsBuying(true);
-  try {
-    const variantId = product.type === 1 ? (selectedVariant as any)?.id : undefined;
-    const res = await buyNow(product.id, Number(quantity), variantId);
-    if (res.error) {
-      alert(res.error);
-    } else {
-      router.push("/checkout");
+  const handleBuyNow = async () => {
+    setIsBuying(true);
+    try {
+      const variantId = product.type === 1 ? (selectedVariant as any)?.id : undefined;
+      const res = await buyNow(product.id, Number(quantity), variantId);
+      if (res.error) {
+        alert(res.error);
+      } else {
+        router.push("/checkout");
+      }
+    } catch {
+      alert("Terjadi kesalahan sistem.");
+    } finally {
+      setIsBuying(false);
     }
-  } catch {
-    alert("Terjadi kesalahan sistem.");
-  } finally {
-    setIsBuying(false);
-  }
-};
+  };
 
   const currentPrice = product.type === 1 ? selectedVariant?.price || 0 : product.price || 0;
   const currentStock = product.type === 1 ? selectedVariant?.stock || 0 : product.stock || 0;
@@ -121,8 +121,8 @@ const handleBuyNow = async () => {
                 key={(opt as any).id || opt.label}
                 onClick={() => { setSelectedVariant(opt); setQuantity("1"); }}
                 className={`px-4 py-1.5 border rounded-lg text-sm transition-all ${selectedVariant?.label === opt.label
-                    ? "border-blue-500 bg-blue-50 text-blue-600 font-medium"
-                    : "border-gray-200 text-gray-600 hover:border-gray-300"
+                  ? "border-blue-500 bg-blue-50 text-blue-600 font-medium"
+                  : "border-gray-200 text-gray-600 hover:border-gray-300"
                   }`}
               >
                 {opt.label}
