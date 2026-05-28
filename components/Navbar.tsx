@@ -87,7 +87,7 @@ export default function Navbar() {
       <nav className="bg-[#407BB5] text-white shadow-md fixed top-0 w-full z-[100]">
         <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
           {/* Logo */}
-          <Link href={userInfo.role === "Penjual" ? "/seller" : "/"}>
+          <Link href={userInfo.role === "Penjual" ? "/dashboard" : "/"}>
             <Image
               src="/images/logotemp.png"
               alt="logo"
@@ -119,8 +119,8 @@ export default function Navbar() {
               <div className="hidden md:flex items-center gap-1 ml-auto">
                 {userInfo.role === "Penjual" ? (
                   <>
-                    <Link href="/products" className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${pathname === "/products" ? "bg-white/20 text-white" : "hover:bg-white/10 text-white/90"}`}><Package size={18} /> <span className="hidden lg:inline">Produk Saya</span></Link>
-                    <Link href="/seller/orders" className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${pathname === "/seller/orders" ? "bg-white/20 text-white" : "hover:bg-white/10 text-white/90"}`}><ClipboardList size={18} /> <span className="hidden lg:inline">Pesanan</span></Link>
+                    <Link href="/dashboard/products" className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${pathname === "/dashboard/products" ? "bg-white/20 text-white" : "hover:bg-white/10 text-white/90"}`}><Package size={18} /> <span className="hidden lg:inline">Produk Saya</span></Link>
+                    <Link href="/dashboard/orders" className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${pathname === "/dashboard/orders" ? "bg-white/20 text-white" : "hover:bg-white/10 text-white/90"}`}><ClipboardList size={18} /> <span className="hidden lg:inline">Pesanan</span></Link>
 
                   </>
                 ) : userInfo.role === "Pembeli" ? (
@@ -206,8 +206,8 @@ export default function Navbar() {
               <div className="flex flex-col gap-1 mb-6">
                 {userInfo.role === "Penjual" ? (
                   <>
-                    <Link href="/products" onClick={() => setDrawerOpen(false)} className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/10 text-sm font-medium"><Package size={18} />Produk Saya</Link>
-                    <Link href="/seller/orders" onClick={() => setDrawerOpen(false)} className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/10 text-sm font-medium"><ClipboardList size={18} /> Pesanan</Link>
+                    <Link href="/dashboard/products" onClick={() => setDrawerOpen(false)} className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/10 text-sm font-medium"><Package size={18} />Produk Saya</Link>
+                    <Link href="/dashboard/orders" onClick={() => setDrawerOpen(false)} className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/10 text-sm font-medium"><ClipboardList size={18} /> Pesanan</Link>
                   </>
                 ) : userInfo.role === "Pembeli" ? (
                   <>

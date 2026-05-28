@@ -102,7 +102,7 @@ export default async function SellerOrderDetailPage({ params }: { params: { id: 
       });
     }
 
-    revalidatePath(`/seller/orders/${params.id}`);
+    revalidatePath(`/dashboard/orders/${params.id}`);
   }
 
   // ✅ Server action: cancel order (hanya Menunggu Konfirmasi atau Dikirim)
@@ -136,7 +136,7 @@ export default async function SellerOrderDetailPage({ params }: { params: { id: 
       });
     }
 
-    revalidatePath(`/seller/orders/${params.id}`);
+    revalidatePath(`/dashboard/orders/${params.id}`);
   }
 
   return (
@@ -144,7 +144,7 @@ export default async function SellerOrderDetailPage({ params }: { params: { id: 
       <Navbar />
       <Container>
         <div className="max-w-3xl mx-auto py-8">
-          <Link href="/seller/orders" className="text-sm text-gray-500 hover:text-primary mb-6 inline-block">
+          <Link href="/dashboard/orders" className="text-sm text-gray-500 hover:text-primary mb-6 inline-block">
             ← Kembali ke Daftar Pesanan
           </Link>
 

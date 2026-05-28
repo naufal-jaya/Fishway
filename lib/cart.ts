@@ -298,7 +298,7 @@ export async function checkoutCart(addressId?: string, note?: string) {
         user_id: storeData.seller_id,
         title: "Pesanan Baru!",
         message: `Ada pesanan baru sejumlah ${formatPrice(totalAmount)}. Silakan periksa halaman pesanan.`,
-        link: `/seller/orders/${order.id}`
+        link: `/dashboard/orders/${order.id}`
       });
     }
   }
