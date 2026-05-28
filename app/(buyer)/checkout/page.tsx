@@ -1,24 +1,43 @@
 import Container from "@/components/Container";
-import { formatPrice } from "@/lib/data";
 import Navbar from "@/components/Navbar";
 import { createClient } from "@/utils/supabase/server";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import CheckoutClient from "@/components/CheckoutClient";
 
-export default async function CheckoutPage() {
+/** Geocode alamat teks → koordinat via Nominatim (server-side) */
+async function geocodeServerSide(
+  address: string
+): Promise<{ lat: number; lon: number } | null> {
+  try {
+    const res = await fetch(
+      `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(
+        address + ", Indonesia"
+      )}&format=json&limit=1`,
+      {
+        headers: { "User-Agent": "FishWay-App/1.0" },
+        next: { revalidate: 3600 }, // cache 1 jam
+      }
+    );
+    const data = await res.json();
+    if (data.length > 0) {
+      return { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon) };
+    }
+  } catch { }
+  return null;
+}
+
+export default async function CheckoutPage({
+  searchParams,
+}: {
+  searchParams: { items?: string };
+}) {
   const supabase = createClient(cookies());
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) redirect("/");
 
-  // Fetch account & buyer info
-  const [{ data: account }, { data: buyer }] = await Promise.all([
-    supabase.from("accounts").select("name, address").eq("id", user.id).maybeSingle(),
-    supabase.from("buyers").select("phone").eq("id", user.id).maybeSingle()
-  ]);
-
-  // Fetch addresses
+  // Fetch addresses pembeli
   const { data: addressesData } = await supabase
     .from("addresses")
     .select("*")
@@ -35,7 +54,7 @@ export default async function CheckoutPage() {
     is_primary: boolean;
   }[];
 
-  // Fetch Cart
+  // Fetch Cart (sertakan store_id dari products)
   const { data: cart } = await supabase
     .from("carts")
     .select(`
@@ -44,7 +63,7 @@ export default async function CheckoutPage() {
         id,
         quantity,
         products (
-          id, name, type, price, unit
+          id, name, type, price, unit, store_id
         ),
         price_options (
           id, label, price
@@ -55,108 +74,99 @@ export default async function CheckoutPage() {
     .maybeSingle();
 
   const cartItems = cart?.cart_items || [];
-  
-  if (cartItems.length === 0) {
+
+  // Filter berdasarkan item IDs yang dipilih dari keranjang (?items=id1,id2,...)
+  const selectedIdsParam = searchParams.items || "";
+  const selectedIds = selectedIdsParam
+    ? new Set(selectedIdsParam.split(",").map((s) => s.trim()).filter(Boolean))
+    : null;
+
+  // Kalau tidak ada filter (user akses /checkout langsung tanpa dari keranjang), redirect ke cart
+  if (!selectedIds || selectedIds.size === 0) {
     redirect("/cart");
   }
 
-  let subtotal = 0;
-  
-  const formattedItems = cartItems.map((item: any) => {
-    const product = item.products;
-    const variant = item.price_options;
-    
+  const filteredItems = selectedIds
+    ? cartItems.filter((item: any) => selectedIds.has(item.id))
+    : cartItems;
+
+  if (filteredItems.length === 0) {
+    redirect("/cart");
+  }
+
+  // Kumpulkan ID cart items yang akan di-checkout (untuk dihapus dari keranjang setelah checkout)
+  const selectedItemIdsList = filteredItems.map((item: any) => item.id);
+
+  const formattedItems = filteredItems.map((item: any) => {
+    const product = Array.isArray(item.products) ? item.products[0] : item.products;
+    const variant = Array.isArray(item.price_options) ? item.price_options[0] : item.price_options;
+
     const itemPrice = product?.type === 0 ? product.price : variant?.price || 0;
-    
-    subtotal += itemPrice * item.quantity;
+    const storeId = product?.store_id;
 
     return {
       id: item.id,
       name: product?.name || "Produk",
       qty: item.quantity,
       price: itemPrice,
+      storeId,
     };
   });
 
-  const shipping = 15000;
-  const biayaAdmin = 5000;
-  const total = subtotal + shipping;
+  // Get unique store IDs from items
+  const uniqueStoreIds = Array.from(new Set(formattedItems.map(item => item.storeId).filter(Boolean))) as string[];
+
+  // Fetch store details (name, address) for these store IDs
+  const storesData = [];
+  if (uniqueStoreIds.length > 0) {
+    const { data } = await supabase
+      .from("stores")
+      .select("id, name, address")
+      .in("id", uniqueStoreIds);
+    if (data) {
+      storesData.push(...data);
+    }
+  }
+
+  // Geocode all store addresses on the server
+  const stores = await Promise.all(
+    storesData.map(async (store) => {
+      let lat: number | undefined;
+      let lon: number | undefined;
+      if (store.address) {
+        const coords = await geocodeServerSide(store.address);
+        if (coords) {
+          lat = coords.lat;
+          lon = coords.lon;
+        }
+      }
+      return {
+        id: store.id,
+        name: store.name,
+        address: store.address,
+        lat,
+        lon,
+      };
+    })
+  );
+
+  const SHIPPING_OPTIONS = [
+    { id: "gosend", label: "GoSend", price: 0, desc: "Ongkir dibayar terpisah", maxKm: 10 },
+    { id: "ambil", label: "Ambil Sendiri", price: 0, desc: "Ambil langsung ke toko" },
+    { id: "penjual", label: "Dianterin Penjual", price: 15000, desc: "Dikirim langsung oleh penjual", maxKm: 10 },
+  ];
 
   return (
     <div>
       <Navbar />
       <Container>
-        <h1 className="text-2xl font-bold text-gray-800 mb-6">Checkout</h1>
-
-        <div className="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto items-start">
-
-          {/* KIRI — Detail Pemesan (memanjang sejajar kanan) */}
-          <div className="card p-6 space-y-4">
-            <h2 className="font-bold text-gray-800 text-lg border-b pb-3">
-              👤 Detail Pemesan
-            </h2>
-
-            {addresses.length === 0 ? (
-              <p className="text-sm text-gray-500">
-                Belum ada alamat tersimpan.{" "}
-                <a href="/profile/edit" className="text-primary hover:underline">Tambah alamat</a>
-              </p>
-            ) : (
-              <CheckoutClient
-                addresses={addresses}
-                defaultName={account?.name || ""}
-                defaultPhone={buyer?.phone || ""}
-              />
-            )}
-          </div>
-
-          {/* KANAN — Pesanan + QRIS + Tombol Konfirmasi */}
-          <div className="space-y-4">
-            {/* Order Summary */}
-            <div className="card p-5">
-              <h2 className="font-bold text-gray-800 mb-3 border-b pb-2">
-                🧾 Pesanan
-              </h2>
-              <div className="space-y-2">
-                {formattedItems.map((item: any) => (
-                  <div key={item.id} className="flex justify-between text-sm">
-                    <span className="text-gray-600">{item.name} x{item.qty}</span>
-                    <span className="font-medium">{formatPrice(item.price * item.qty)}</span>
-                  </div>
-                ))}
-                <div className="flex justify-between text-sm text-gray-500 pt-2">
-                  <span>Ongkos Kirim</span>
-                  <span>{formatPrice(shipping)}</span>
-                </div>
-                <div className="flex justify-between text-sm text-gray-500">
-                  <span>Biaya Admin</span>
-                  <span>{formatPrice(biayaAdmin)}</span>
-                </div>
-                <div className="border-t pt-2 mt-2 flex justify-between font-bold text-primary text-base">
-                  <span>Total Bayar</span>
-                  <span>{formatPrice(total)}</span>
-                </div>
-              </div>
-            </div>
-
-            {/* QRIS Payment */}
-            <div className="card p-5 text-center">
-              <h2 className="font-bold text-gray-800 mb-3">💳 Pembayaran QRIS</h2>
-              <div className="bg-gray-100 rounded-xl w-40 h-40 mx-auto flex items-center justify-center mb-3 border-2 border-dashed border-gray-300">
-                <span className="text-4xl">📱</span>
-              </div>
-              <p className="text-sm text-gray-500 mb-1">
-                Scan QR Code dengan e-wallet atau mobile banking
-              </p>
-              <p className="font-bold text-primary text-lg">{formatPrice(total)}</p>
-              <p className="text-xs text-gray-400 mt-1">Berlaku 15 menit</p>
-            </div>
-
-            {/* Tombol konfirmasi di bawah QRIS */}
-            <CheckoutClient confirmOnly />
-          </div>
-
-        </div>
+        <CheckoutClient
+          addresses={addresses}
+          items={formattedItems}
+          stores={stores}
+          shippingOptions={SHIPPING_OPTIONS}
+          selectedItemIds={selectedItemIdsList}
+        />
       </Container>
     </div>
   );

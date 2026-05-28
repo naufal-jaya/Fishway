@@ -6,7 +6,9 @@ import Navbar from "@/components/Navbar";
 import Container from "@/components/Container";
 import { createClient } from "@/utils/supabase/supabaseClient";
 import AddressList from "@/components/AddressList";
+import SellerAddressForm from "@/components/SellerAddressForm";
 import { getAddresses } from "@/lib/addresses";
+import { User } from "lucide-react";
 
 type Address = {
   id: string;
@@ -23,6 +25,7 @@ export default function EditProfilePage() {
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
   const [userId, setUserId] = useState("");
+  const [isSeller, setIsSeller] = useState(false);
   const [addresses, setAddresses] = useState<Address[]>([]);
 
   const [errors, setErrors] = useState<{ name?: string; phone?: string }>({});
@@ -30,7 +33,6 @@ export default function EditProfilePage() {
   const [formData, setFormData] = useState({
     name: "",
     phone: "",
-    address: "",
   });
 
   useEffect(() => {
@@ -42,25 +44,31 @@ export default function EditProfilePage() {
       }
       setUserId(user.id);
 
-      const [{ data: account }, { data: buyer }] = await Promise.all([
-        supabase.from("accounts").select("name, address").eq("id", user.id).maybeSingle(),
+      const [{ data: account }, { data: buyer }, { data: store }] = await Promise.all([
+        supabase.from("accounts").select("name").eq("id", user.id).maybeSingle(),
         supabase.from("buyers").select("phone").eq("id", user.id).maybeSingle(),
+        supabase.from("stores").select("id, name").eq("seller_id", user.id).maybeSingle(),
       ]);
 
-      const fetchedAddresses = await getAddresses();
-      setAddresses(fetchedAddresses || []);
+      const sellerDetected = !!store;
+      setIsSeller(sellerDetected);
+
+      // Hanya fetch buyer addresses jika bukan penjual
+      if (!sellerDetected) {
+        const fetchedAddresses = await getAddresses();
+        setAddresses(fetchedAddresses || []);
+      }
 
       setFormData({
-        name: account?.name || user.email?.split("@")[0] || "",
+        name: sellerDetected ? (store?.name || account?.name || "") : (account?.name || user.email?.split("@")[0] || ""),
         phone: buyer?.phone || "",
-        address: account?.address || "",
       });
       setFetching(false);
     }
     fetchProfile();
   }, [supabase, router]);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
@@ -97,10 +105,9 @@ export default function EditProfilePage() {
       // Update accounts
       await supabase.from("accounts").update({
         name: formData.name,
-        address: formData.address,
       }).eq("id", userId);
 
-      // Upsert buyers (since phone is in buyers table, and might not exist yet)
+      // Upsert buyers
       const { data: buyerExists } = await supabase.from("buyers").select("id").eq("id", userId).maybeSingle();
       if (buyerExists) {
         await supabase.from("buyers").update({ phone: formData.phone }).eq("id", userId);
@@ -108,16 +115,18 @@ export default function EditProfilePage() {
         await supabase.from("buyers").insert({ id: userId, phone: formData.phone });
       }
 
-      // Sync phone number to stores table if user is a seller
-      const { data: storeExists } = await supabase.from("stores").select("id").eq("seller_id", userId).maybeSingle();
-      if (storeExists) {
-        await supabase.from("stores").update({ phone: formData.phone }).eq("seller_id", userId);
+      // Sync name & phone ke stores jika seller
+      if (isSeller) {
+        await supabase.from("stores").update({
+          name: formData.name,
+          phone: formData.phone,
+        }).eq("seller_id", userId);
       }
 
       alert("Profil berhasil diperbarui!");
       router.push("/profile");
       router.refresh();
-      
+
     } catch (error: any) {
       console.error(error);
       alert("Gagal memperbarui profil.");
@@ -139,52 +148,70 @@ export default function EditProfilePage() {
 
           <div className="grid md:grid-cols-2 gap-6 items-start">
 
-            {/* KIRI — Form Edit Profil (tanpa tombol) */}
+            {/* KIRI — Informasi Akun */}
             <form onSubmit={handleSubmit} className="card p-6 space-y-4">
-              <h2 className="font-bold text-gray-800 text-lg border-b pb-3">👤 Informasi Akun</h2>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Nama Lengkap</label>
-          <input
-            type="text"
-            name="name"
-            value={formData.name}
-            onChange={(e) => {
-              handleChange(e);
-              setErrors((prev) => ({ ...prev, name: undefined }));
-            }}
-            className={`w-full border rounded-lg p-2 ${errors.name ? "border-red-400 focus:outline-red-400" : ""}`}
-          />
-          {errors.name && <p className="text-xs text-red-500 mt-1">{errors.name}</p>}
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Nomor Telepon</label>
-          <input
-            type="text"
-            inputMode="numeric"
-            name="phone"
-            value={formData.phone}
-            onChange={(e) => {
-              const val = e.target.value.replace(/[^0-9+]/g, "");
-              setFormData({ ...formData, phone: val });
-              setErrors((prev) => ({ ...prev, phone: undefined }));
-            }}
-            className={`w-full border rounded-lg p-2 ${errors.phone ? "border-red-400 focus:outline-red-400" : ""}`}
-            placeholder="08123456789"
-          />
-          {errors.phone && <p className="text-xs text-red-500 mt-1">{errors.phone}</p>}
-        </div>
+              <h2 className="font-bold text-gray-800 text-lg border-b pb-3 flex items-center gap-2">
+                <User size={18} className="text-primary" /> Informasi Akun
+              </h2>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  {isSeller ? "Nama Toko" : "Nama Lengkap"}
+                </label>
+                <input
+                  type="text"
+                  name="name"
+                  value={formData.name}
+                  onChange={(e) => {
+                    handleChange(e);
+                    setErrors((prev) => ({ ...prev, name: undefined }));
+                  }}
+                  className={`w-full border rounded-lg p-2 ${errors.name ? "border-red-400 focus:outline-red-400" : ""}`}
+                />
+                {errors.name && <p className="text-xs text-red-500 mt-1">{errors.name}</p>}
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Nomor Telepon</label>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  name="phone"
+                  value={formData.phone}
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/[^0-9+]/g, "");
+                    setFormData({ ...formData, phone: val });
+                    setErrors((prev) => ({ ...prev, phone: undefined }));
+                  }}
+                  className={`w-full border rounded-lg p-2 ${errors.phone ? "border-red-400 focus:outline-red-400" : ""}`}
+                  placeholder="08123456789"
+                />
+                {errors.phone && <p className="text-xs text-red-500 mt-1">{errors.phone}</p>}
+              </div>
             </form>
 
-            {/* KANAN — Alamat Saya + tombol di bawahnya */}
+            {/* KANAN — Alamat (berbeda untuk seller dan buyer) */}
             <div className="space-y-4">
-              <AddressList initialAddresses={addresses} />
+              {isSeller ? (
+                /* Penjual: 1 alamat toko, wajib, self-managed */
+                <SellerAddressForm />
+              ) : (
+                /* Pembeli: banyak alamat pengiriman */
+                <AddressList initialAddresses={addresses} />
+              )}
 
-              {/* Tombol di bawah card kanan */}
+              {/* Tombol aksi */}
               <div className="flex gap-3">
-                <button type="button" onClick={() => router.push("/profile")} className="flex-1 btn-outline py-2.5 rounded-xl">
+                <button
+                  type="button"
+                  onClick={() => router.push("/profile")}
+                  className="flex-1 btn-outline py-2.5 rounded-xl"
+                >
                   Batal
                 </button>
-                <button disabled={loading} onClick={handleSubmit} className="flex-1 btn-primary py-2.5 rounded-xl">
+                <button
+                  disabled={loading}
+                  onClick={handleSubmit}
+                  className="flex-1 btn-primary py-2.5 rounded-xl"
+                >
                   {loading ? "Menyimpan..." : "Simpan Perubahan"}
                 </button>
               </div>

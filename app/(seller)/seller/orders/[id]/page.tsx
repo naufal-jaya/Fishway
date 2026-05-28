@@ -36,6 +36,7 @@ export default async function SellerOrderDetailPage({ params }: { params: { id: 
       total_amount,
       shipping_cost,
       created_at,
+      notes,
       buyers (
         phone,
         accounts ( name, address )
@@ -197,6 +198,16 @@ export default async function SellerOrderDetailPage({ params }: { params: { id: 
                 </p>
               </div>
             </div>
+
+            {order.notes && (
+              <div className="mb-8">
+                <h2 className="text-lg font-bold text-gray-800 mb-3">Catatan Pembeli</h2>
+                <div className="bg-amber-50 border border-amber-200/60 p-4 rounded-xl text-sm text-amber-900 flex flex-col gap-1">
+                  <span className="text-xs font-semibold text-amber-700 uppercase tracking-wider">Catatan</span>
+                  <p className="leading-relaxed font-medium">{order.notes}</p>
+                </div>
+              </div>
+            )}
 
             {/* Daftar Produk */}
             <div className="mb-8">

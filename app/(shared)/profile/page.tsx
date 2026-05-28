@@ -55,12 +55,21 @@ export default async function ProfilePage() {
     .eq("id", user.id)
     .maybeSingle();
 
-const { data: addressesData } = await supabase
+  // Cek apakah user adalah penjual & ambil alamat toko
+  const { data: store } = await supabase
+    .from("stores")
+    .select("id, name, address")
+    .eq("seller_id", user.id)
+    .maybeSingle();
+
+  const isSeller = !!store;
+
+const { data: addressesData } = !isSeller ? await supabase
   .from("addresses")
   .select("*")
   .eq("user_id", user.id)
   .order("is_primary", { ascending: false })
-  .order("created_at", { ascending: false });
+  .order("created_at", { ascending: false }) : { data: null };
 
 const addresses = (addressesData || []) as Address[];
 
@@ -143,21 +152,41 @@ const addresses = (addressesData || []) as Address[];
             ))}
           </div>
 
-          {/* Address */}
+          {/* Address — beda tampilan seller vs buyer */}
           <div className="card p-5">
             <div className="flex justify-between items-center mb-3">
               <h2 className="font-bold text-gray-800 flex items-center gap-2">
                 <MapPin size={20} className="text-primary" />
-                Alamat Utama
+                {isSeller ? "Alamat Toko" : "Alamat Utama"}
               </h2>
+              <Link
+                href="/profile/edit"
+                className="text-xs text-primary hover:underline"
+              >
+                Edit
+              </Link>
             </div>
-            {addresses.find(a => a.is_primary) ? (
-              <div className="text-sm text-gray-700 space-y-1">
-                <p className="font-medium">{addresses.find(a => a.is_primary)?.recipient_name} · {addresses.find(a => a.is_primary)?.phone}</p>
-                <p className="text-gray-500">{addresses.find(a => a.is_primary)?.address}</p>
-              </div>
+
+            {isSeller ? (
+              store?.address ? (
+                <p className="text-sm text-gray-700">{store.address}</p>
+              ) : (
+                <p className="text-sm text-gray-500">
+                  Belum ada alamat toko.{" "}
+                  <Link href="/profile/edit" className="text-primary hover:underline">
+                    Isi sekarang
+                  </Link>
+                </p>
+              )
             ) : (
-              <p className="text-sm text-gray-500">Belum ada alamat utama. <Link href="/profile/edit" className="text-primary hover:underline">Tambah sekarang</Link></p>
+              addresses.find(a => a.is_primary) ? (
+                <div className="text-sm text-gray-700 space-y-1">
+                  <p className="font-medium">{addresses.find(a => a.is_primary)?.recipient_name} · {addresses.find(a => a.is_primary)?.phone}</p>
+                  <p className="text-gray-500">{addresses.find(a => a.is_primary)?.address}</p>
+                </div>
+              ) : (
+                <p className="text-sm text-gray-500">Belum ada alamat utama. <Link href="/profile/edit" className="text-primary hover:underline">Tambah sekarang</Link></p>
+              )
             )}
           </div>
 

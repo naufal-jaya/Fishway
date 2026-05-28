@@ -38,13 +38,19 @@ export async function addToCart(productId: string, quantity: number, variantId?:
   }
 
   // Cek apakah item sudah ada di keranjang
-  const { data: existingItem } = await supabase
+  // PENTING: gunakan .is() untuk NULL — .eq("col", null) menghasilkan "col = NULL"
+  // yang selalu false di SQL; harus "col IS NULL" agar duplikat terdeteksi.
+  let existingQuery = supabase
     .from("cart_items")
     .select("id, quantity")
     .eq("cart_id", cart.id)
-    .eq("product_id", productId)
-    .eq("selected_variant_id", variantId || null)
-    .maybeSingle();
+    .eq("product_id", productId);
+
+  existingQuery = variantId
+    ? existingQuery.eq("selected_variant_id", variantId)
+    : existingQuery.is("selected_variant_id", null);
+
+  const { data: existingItem } = await existingQuery.maybeSingle();
 
   if (existingItem) {
     // Update quantity
@@ -135,7 +141,11 @@ export async function clearCart() {
   return { success: true };
 }
 
-export async function checkoutCart() {
+export async function checkoutCart(
+  shippingCosts?: Record<string, number>,
+  storeNotes?: Record<string, string>,
+  selectedItemIds?: string[]
+) {
   const supabase = createClient(cookies());
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Not logged in" };
@@ -162,6 +172,15 @@ export async function checkoutCart() {
     return { error: "Keranjang kosong" };
   }
 
+  // Filter hanya item yang dipilih saat checkout (jika ada)
+  const itemsToCheckout = selectedItemIds && selectedItemIds.length > 0
+    ? cart.cart_items.filter((item: any) => selectedItemIds.includes(item.id))
+    : cart.cart_items;
+
+  if (itemsToCheckout.length === 0) {
+    return { error: "Tidak ada item yang valid untuk di-checkout" };
+  }
+
   // Upsert ke buyers table untuk mencegah foreign key error
   const { data: buyerExists } = await supabase.from("buyers").select("id").eq("id", user.id).maybeSingle();
   if (!buyerExists) {
@@ -169,8 +188,10 @@ export async function checkoutCart() {
   }
 
   const storeOrders: Record<string, any[]> = {};
+  // Track which cart_item IDs were successfully processed
+  const processedCartItemIds: string[] = [];
   
-  for (const item of cart.cart_items) {
+  for (const item of itemsToCheckout) {
     const product = item.products as any;
     if (!product || !product.store_id) continue;
     
@@ -187,11 +208,13 @@ export async function checkoutCart() {
     }
 
     storeOrders[product.store_id].push({
+      cart_item_id: item.id,
       product_id: product.id,
       quantity: item.quantity,
       selected_variant_id: item.selected_variant_id,
       price: price
     });
+    processedCartItemIds.push(item.id);
   }
 
   if (Object.keys(storeOrders).length === 0) {
@@ -203,7 +226,8 @@ export async function checkoutCart() {
   for (const storeId in storeOrders) {
     const items = storeOrders[storeId];
     const totalAmount = items.reduce((sum, i) => sum + (i.price * i.quantity), 0);
-    const shippingCost = 15000;
+    const shippingCost = shippingCosts?.[storeId] ?? 15000;
+    const note = storeNotes?.[storeId] || null;
     
     const { data: order, error: orderError } = await supabase
       .from("orders")
@@ -212,7 +236,8 @@ export async function checkoutCart() {
         store_id: storeId,
         status: "Menunggu Konfirmasi",
         total_amount: totalAmount,
-        shipping_cost: shippingCost
+        shipping_cost: shippingCost,
+        notes: note
       })
       .select("id")
       .single();
@@ -258,7 +283,21 @@ export async function checkoutCart() {
     }
   }
 
-  await clearCart();
+  // Hapus hanya cart items yang sudah di-checkout (bukan seluruh keranjang)
+  if (processedCartItemIds.length > 0) {
+    const { error: deleteError } = await supabase
+      .from("cart_items")
+      .delete()
+      .in("id", processedCartItemIds);
+
+    if (deleteError) {
+      console.error("Gagal menghapus cart items:", deleteError);
+      // Pesanan sudah dibuat, jangan return error — cukup log
+    }
+  }
+
+  revalidatePath("/cart");
+  revalidatePath("/checkout");
 
   return { success: true, orderIds: createdOrderIds };
 }

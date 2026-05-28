@@ -31,6 +31,7 @@ export default async function BuyerOrderDetailPage({ params }: { params: { id: s
       total_amount,
       shipping_cost,
       created_at,
+      notes,
       stores ( name, phone ),
       order_items (
         id,
@@ -109,6 +110,16 @@ Mohon diproses ya. Terima kasih!`;
                   </p>
               </div>
             </div>
+
+            {order.notes && (
+              <div className="mb-8">
+                <h2 className="text-lg font-bold text-gray-800 mb-3">Catatan Pesanan</h2>
+                <div className="bg-amber-50 border border-amber-200/60 p-4 rounded-xl text-sm text-amber-900 flex flex-col gap-1">
+                  <span className="text-xs font-semibold text-amber-700 uppercase tracking-wider">Catatan Ke Toko</span>
+                  <p className="leading-relaxed font-medium">{order.notes}</p>
+                </div>
+              </div>
+            )}
 
             <div className="mb-8">
               <h2 className="text-lg font-bold text-gray-800 mb-4">Daftar Produk</h2>
