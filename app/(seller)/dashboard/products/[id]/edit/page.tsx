@@ -311,7 +311,7 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
       }
 
       alert("Produk berhasil diperbarui!");
-      router.push("/products");
+      router.push("/dashboard/products");
       router.refresh();
       
     } catch (error: any) {
@@ -344,7 +344,7 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
           />
           <div className="relative z-10">
             <div className="mb-6">
-              <Link href="/products" className="inline-flex items-center text-gray-400 hover:text-[#407BB5]">
+              <Link href="/dashboard/products" className="inline-flex items-center text-gray-400 hover:text-[#407BB5]">
                 <ChevronLeft className="w-5 h-5" />
               </Link>
               <h1 className="text-2xl font-bold text-gray-800 mt-1">Edit Produk</h1>

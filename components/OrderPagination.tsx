@@ -12,7 +12,7 @@ export default function OrderPagination({ total, perPage }: { total: number; per
   const goToPage = (page: number) => {
     const params = new URLSearchParams(searchParams.toString());
     params.set("page", String(page));
-    router.push(`/seller/orders?${params.toString()}`);
+    router.push(`/dashboard/orders?${params.toString()}`);
   };
 
   if (totalPages <= 1) return null;

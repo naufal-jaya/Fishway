@@ -105,32 +105,32 @@ const dibatalkanOrders = orders?.filter(o => o.status === "Dibatalkan").length |
       value: menungguOrders,
       icon: <Clock size={28} className="text-orange-400 mx-auto" />,
       href: isSeller
-        ? "/seller/orders?status=Menunggu+Konfirmasi"
+        ? "/dashboard/orders?status=Menunggu+Konfirmasi"
         : "/orders?status=Menunggu%20Konfirmasi",
     },
     {
       label: "Diproses",
       value: diprosesOrders,
       icon: <Package size={28} className="text-blue-500 mx-auto" />,
-      href: isSeller ? "/seller/orders?status=Diproses" : "/orders?status=Diproses",
+      href: isSeller ? "/dashboard/orders?status=Diproses" : "/orders?status=Diproses",
     },
     {
       label: "Dikirim",
       value: dikirimOrders,
       icon: <Truck size={28} className="text-indigo-500 mx-auto" />,
-      href: isSeller ? "/seller/orders?status=Dikirim" : "/orders?status=Dikirim",
+      href: isSeller ? "/dashboard/orders?status=Dikirim" : "/orders?status=Dikirim",
     },
     {
       label: "Selesai",
       value: selesaiOrders,
       icon: <Check size={28} className="text-green-500 mx-auto" />,
-      href: isSeller ? "/seller/orders?status=Selesai" : "/orders?status=Selesai",
+      href: isSeller ? "/dashboard/orders?status=Selesai" : "/orders?status=Selesai",
     },
     {
       label: "Dibatalkan",
       value: dibatalkanOrders,
       icon: <X size={28} className="text-red-500 mx-auto" />,
-      href: isSeller ? "/seller/orders?status=Dibatalkan" : "/orders?status=Dibatalkan",
+      href: isSeller ? "/dashboard/orders?status=Dibatalkan" : "/orders?status=Dibatalkan",
     },
   ];
 
@@ -207,7 +207,7 @@ const dibatalkanOrders = orders?.filter(o => o.status === "Dibatalkan").length |
                 Pesanan Terakhir
               </h2>
               <Link
-                href={isSeller ? "/seller/orders" : "/orders"}
+                href={isSeller ? "/dashboard/orders" : "/orders"}
                 className="text-sm text-primary hover:underline"
               >
                 Lihat Semua

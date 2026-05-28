@@ -47,7 +47,7 @@ export default async function SellerProductsPage() {
     // Hapus opsi harga dulu (atau andalkan CASCADE di supabase)
     await supabaseAdmin.from("price_options").delete().eq("product_id", productId);
     await supabaseAdmin.from("products").delete().eq("id", productId);
-    revalidatePath("/products");
+    revalidatePath("/dashboard/products");
   }
 
   return (
@@ -181,7 +181,7 @@ export default async function SellerProductsPage() {
                       {/* ACTION */}
                       <div className="flex justify-end mt-2 gap-3">
                         <Link
-                          href={`/products/${product.id}/edit`}
+                          href={`/dashboard/products/${product.id}/edit`}
                           className="flex items-center gap-1 text-xs text-gray-400 hover:text-primary"
                         >
                           <Pencil size={12} />
@@ -227,7 +227,7 @@ export default async function SellerProductsPage() {
                   </div>
                 </div>
 
-                <Link href="/products/add" className="w-full btn-primary py-3 text-sm flex justify-center items-center">
+                <Link href="/dashboard/products/add" className="w-full btn-primary py-3 text-sm flex justify-center items-center">
                   + Tambahkan Produk
                 </Link>
               </div>

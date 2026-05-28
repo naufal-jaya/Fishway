@@ -24,7 +24,7 @@ export default function OrderFilterBar({ currentStatus, currentDate }: { current
     } else {
       params.delete(key);
     }
-    router.push(`/seller/orders?${params.toString()}`);
+    router.push(`/dashboard/orders?${params.toString()}`);
     setOpen(false);
   };
 
