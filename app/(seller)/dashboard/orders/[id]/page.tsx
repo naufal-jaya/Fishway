@@ -45,6 +45,7 @@ export default async function SellerOrderDetailPage({ params }: { params: { id: 
       shipping_cost,
       created_at,
       notes,
+      buyer_note,
       buyer_id,
       shipping_name,
       shipping_phone,
@@ -155,10 +156,10 @@ export default async function SellerOrderDetailPage({ params }: { params: { id: 
                 <h1 className="text-2xl font-bold text-gray-800 mb-1">Detail Pesanan</h1>
                 <p className="text-sm text-gray-500 font-mono">ID: {order.id}</p>
                 <p className="text-sm text-gray-500 mt-1">Dibuat pada: {orderDate}</p>
-                {order.buyer_note && (
+                {(order.notes || order.buyer_note) && (
                   <div className="mt-3 p-3 bg-blue-50/50 rounded-lg border border-blue-100">
                     <p className="text-xs font-semibold text-gray-600 mb-1">Catatan Pembeli:</p>
-                    <p className="text-sm text-gray-800 italic">"{order.buyer_note}"</p>
+                    <p className="text-sm text-gray-800 italic">"{order.notes || order.buyer_note}"</p>
                   </div>
                 )}
               </div>

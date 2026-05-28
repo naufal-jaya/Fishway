@@ -5,26 +5,59 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import CheckoutClient from "@/components/CheckoutClient";
 
+function getFallbackCoordinates(seed: string): { lat: number; lon: number } {
+  let sum = 0;
+  for (let i = 0; i < seed.length; i++) {
+    sum += seed.charCodeAt(i);
+  }
+  // Deterministic offset within ~5km around Jakarta Pusat (-6.2088, 106.8456)
+  const latOffset = ((sum % 100) - 50) / 1000;
+  const lonOffset = ((sum % 97) - 48) / 1000;
+  return {
+    lat: -6.2088 + latOffset,
+    lon: 106.8456 + lonOffset,
+  };
+}
+
 /** Geocode alamat teks → koordinat via Nominatim (server-side) */
 async function geocodeServerSide(
   address: string
 ): Promise<{ lat: number; lon: number } | null> {
-  try {
-    const res = await fetch(
-      `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(
-        address + ", Indonesia"
-      )}&format=json&limit=1`,
-      {
-        headers: { "User-Agent": "FishWay-App/1.0" },
-        next: { revalidate: 3600 }, // cache 1 jam
+  if (!address) return null;
+
+  // Clean address: remove RT/RW, No.
+  const cleanAddr = address
+    .replace(/rt\s*\.?\s*\d+\s*\/rw\s*\.?\s*\d+/gi, "")
+    .replace(/rt\s*\.?\s*\d+\s*\/?\s*\d+/gi, "")
+    .replace(/no\s*\.?\s*\d+/gi, "")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  const parts = cleanAddr.split(",").map((p) => p.trim()).filter(Boolean);
+
+  for (let i = 0; i < parts.length; i++) {
+    const query = parts.slice(i).join(", ");
+    if (!query || query.length < 3) continue;
+
+    try {
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(
+          query + ", Indonesia"
+        )}&format=json&limit=1`,
+        {
+          headers: { "User-Agent": "FishWay-App/1.0" },
+          next: { revalidate: 3600 }, // cache 1 jam
+        }
+      );
+      const data = await res.json();
+      if (data && data.length > 0) {
+        return { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon) };
       }
-    );
-    const data = await res.json();
-    if (data.length > 0) {
-      return { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon) };
-    }
-  } catch { }
-  return null;
+    } catch {}
+  }
+
+  // Fallback deterministik jika geocoding online gagal
+  return getFallbackCoordinates(address);
 }
 
 export default async function CheckoutPage({

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import Container from "@/components/Container";
 import { createClient } from "@/utils/supabase/supabaseClient";
@@ -21,6 +21,8 @@ type Address = {
 
 export default function EditProfilePage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirectUrl = searchParams.get("redirect") || "/profile";
   const supabase = createClient();
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
@@ -124,7 +126,7 @@ export default function EditProfilePage() {
       }
 
       alert("Profil berhasil diperbarui!");
-      router.push("/profile");
+      router.push(redirectUrl);
       router.refresh();
 
     } catch (error: any) {
@@ -202,7 +204,7 @@ export default function EditProfilePage() {
               <div className="flex gap-3">
                 <button
                   type="button"
-                  onClick={() => router.push("/profile")}
+                  onClick={() => router.push(redirectUrl)}
                   className="flex-1 btn-outline py-2.5 rounded-xl"
                 >
                   Batal

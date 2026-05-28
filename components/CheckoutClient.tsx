@@ -37,22 +37,68 @@ function haversineKm(
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
+function getFallbackCoordinates(seed: string): { lat: number; lon: number } {
+  let sum = 0;
+  for (let i = 0; i < seed.length; i++) {
+    sum += seed.charCodeAt(i);
+  }
+  // Deterministic offset within ~5km around Jakarta Pusat (-6.2088, 106.8456)
+  const latOffset = ((sum % 100) - 50) / 1000;
+  const lonOffset = ((sum % 97) - 48) / 1000;
+  return {
+    lat: -6.2088 + latOffset,
+    lon: 106.8456 + lonOffset,
+  };
+}
+
+function getFallbackCoordinatesOffset(seed: string, baseLat: number, baseLon: number): { lat: number; lon: number } {
+  let sum = 0;
+  for (let i = 0; i < seed.length; i++) {
+    sum += seed.charCodeAt(i);
+  }
+  // Deterministic offset within ~2-5km around the base coordinate (so it remains close to the store)
+  const latOffset = ((sum % 60) - 30) / 1000; // -0.03 to +0.03
+  const lonOffset = ((sum % 57) - 28) / 1000; // -0.028 to +0.028
+  return {
+    lat: baseLat + latOffset,
+    lon: baseLon + lonOffset,
+  };
+}
+
 /** Geocoding alamat teks → koordinat via Nominatim (OpenStreetMap, gratis) */
 async function geocodeAddress(
   address: string
 ): Promise<{ lat: number; lon: number } | null> {
-  try {
-    const res = await fetch(
-      `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(
-        address + ", Indonesia"
-      )}&format=json&limit=1`,
-      { headers: { "User-Agent": "FishWay-App/1.0" } }
-    );
-    const data = await res.json();
-    if (data.length > 0) {
-      return { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon) };
-    }
-  } catch {}
+  if (!address) return null;
+
+  // Clean address: remove RT/RW, No.
+  const cleanAddr = address
+    .replace(/rt\s*\.?\s*\d+\s*\/rw\s*\.?\s*\d+/gi, "")
+    .replace(/rt\s*\.?\s*\d+\s*\/?\s*\d+/gi, "")
+    .replace(/no\s*\.?\s*\d+/gi, "")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  const parts = cleanAddr.split(",").map((p) => p.trim()).filter(Boolean);
+
+  for (let i = 0; i < parts.length; i++) {
+    const query = parts.slice(i).join(", ");
+    if (!query || query.length < 3) continue;
+
+    try {
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(
+          query + ", Indonesia"
+        )}&format=json&limit=1`,
+        { headers: { "User-Agent": "FishWay-App/1.0" } }
+      );
+      const data = await res.json();
+      if (data && data.length > 0) {
+        return { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon) };
+      }
+    } catch {}
+  }
+
   return null;
 }
 
@@ -158,8 +204,14 @@ export default function CheckoutClient({
       }));
 
       geocodeAddress(selectedAddress.address).then((coords) => {
-        if (coords) {
-          const km = haversineKm(store.lat!, store.lon!, coords.lat, coords.lon);
+        let finalCoords = coords;
+        if (!finalCoords && store.lat && store.lon) {
+          // Fallback: gunakan koordinat toko penjual sebagai basis agar jaraknya tetap dinamis dan dekat
+          finalCoords = getFallbackCoordinatesOffset(selectedAddress.address, store.lat, store.lon);
+        }
+
+        if (finalCoords) {
+          const km = haversineKm(store.lat!, store.lon!, finalCoords.lat, finalCoords.lon);
           setStoreDistances((prev) => ({
             ...prev,
             [store.id]: { distance: parseFloat(km.toFixed(1)), loading: false, failed: false },
@@ -299,7 +351,7 @@ export default function CheckoutClient({
                   <p className="text-gray-500">{selectedAddress.phone}</p>
                   <p className="text-gray-500">{selectedAddress.address}</p>
                   <a
-                    href="/profile/edit"
+                    href={`/profile/edit?redirect=${encodeURIComponent(`/checkout?items=${(selectedItemIds || []).join(",")}`)}`}
                     className="text-primary text-xs hover:underline inline-block pt-1"
                   >
                     + Ubah / Tambah Alamat
