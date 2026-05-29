@@ -5,6 +5,7 @@ import { checkoutCart } from "@/lib/cart";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { formatPrice } from "@/lib/data";
+import { calculateDistance } from "@/lib/distance";
 import {
   ChevronDown,
   CheckCircle,
@@ -21,87 +22,6 @@ import {
   Smartphone,
 } from "lucide-react";
 
-/** Haversine formula — jarak dalam km antara dua koordinat */
-function haversineKm(
-  lat1: number, lon1: number,
-  lat2: number, lon2: number
-): number {
-  const R = 6371;
-  const dLat = (lat2 - lat1) * (Math.PI / 180);
-  const dLon = (lon2 - lon1) * (Math.PI / 180);
-  const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos(lat1 * (Math.PI / 180)) *
-      Math.cos(lat2 * (Math.PI / 180)) *
-      Math.sin(dLon / 2) ** 2;
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-}
-
-function getFallbackCoordinates(seed: string): { lat: number; lon: number } {
-  let sum = 0;
-  for (let i = 0; i < seed.length; i++) {
-    sum += seed.charCodeAt(i);
-  }
-  // Deterministic offset within ~5km around Jakarta Pusat (-6.2088, 106.8456)
-  const latOffset = ((sum % 100) - 50) / 1000;
-  const lonOffset = ((sum % 97) - 48) / 1000;
-  return {
-    lat: -6.2088 + latOffset,
-    lon: 106.8456 + lonOffset,
-  };
-}
-
-function getFallbackCoordinatesOffset(seed: string, baseLat: number, baseLon: number): { lat: number; lon: number } {
-  let sum = 0;
-  for (let i = 0; i < seed.length; i++) {
-    sum += seed.charCodeAt(i);
-  }
-  // Deterministic offset within ~2-5km around the base coordinate (so it remains close to the store)
-  const latOffset = ((sum % 60) - 30) / 1000; // -0.03 to +0.03
-  const lonOffset = ((sum % 57) - 28) / 1000; // -0.028 to +0.028
-  return {
-    lat: baseLat + latOffset,
-    lon: baseLon + lonOffset,
-  };
-}
-
-/** Geocoding alamat teks → koordinat via Nominatim (OpenStreetMap, gratis) */
-async function geocodeAddress(
-  address: string
-): Promise<{ lat: number; lon: number } | null> {
-  if (!address) return null;
-
-  // Clean address: remove RT/RW, No.
-  const cleanAddr = address
-    .replace(/rt\s*\.?\s*\d+\s*\/rw\s*\.?\s*\d+/gi, "")
-    .replace(/rt\s*\.?\s*\d+\s*\/?\s*\d+/gi, "")
-    .replace(/no\s*\.?\s*\d+/gi, "")
-    .replace(/\s+/g, " ")
-    .trim();
-
-  const parts = cleanAddr.split(",").map((p) => p.trim()).filter(Boolean);
-
-  for (let i = 0; i < parts.length; i++) {
-    const query = parts.slice(i).join(", ");
-    if (!query || query.length < 3) continue;
-
-    try {
-      const res = await fetch(
-        `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(
-          query + ", Indonesia"
-        )}&format=json&limit=1`,
-        { headers: { "User-Agent": "FishWay-App/1.0" } }
-      );
-      const data = await res.json();
-      if (data && data.length > 0) {
-        return { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon) };
-      }
-    } catch {}
-  }
-
-  return null;
-}
-
 /** Icon per metode pengiriman */
 const SHIPPING_ICONS: Record<string, React.ReactNode> = {
   gosend: <Bike size={16} />,
@@ -115,6 +35,8 @@ type Address = {
   recipient_name: string;
   phone: string;
   address: string;
+  lat?: number | null;
+  lon?: number | null;
   is_primary: boolean;
 };
 
@@ -203,28 +125,21 @@ export default function CheckoutClient({
         [store.id]: { distance: prev[store.id]?.distance ?? null, loading: true, failed: false },
       }));
 
-      geocodeAddress(selectedAddress.address).then((coords) => {
-        let finalCoords = coords;
-        if (!finalCoords && store.lat && store.lon) {
-          // Fallback: gunakan koordinat toko penjual sebagai basis agar jaraknya tetap dinamis dan dekat
-          finalCoords = getFallbackCoordinatesOffset(selectedAddress.address, store.lat, store.lon);
-        }
-
-        if (finalCoords) {
-          const km = haversineKm(store.lat!, store.lon!, finalCoords.lat, finalCoords.lon);
-          setStoreDistances((prev) => ({
-            ...prev,
-            [store.id]: { distance: parseFloat(km.toFixed(1)), loading: false, failed: false },
-          }));
-        } else {
-          setStoreDistances((prev) => ({
-            ...prev,
-            [store.id]: { distance: null, loading: false, failed: true },
-          }));
-        }
-      });
+      // Assume distance calculation is instantaneous since we have coordinates
+      if (selectedAddress.lat && selectedAddress.lon && store.lat && store.lon) {
+        const km = calculateDistance(store.lat, store.lon, selectedAddress.lat, selectedAddress.lon);
+        setStoreDistances((prev) => ({
+          ...prev,
+          [store.id]: { distance: parseFloat(km.toFixed(1)), loading: false, failed: false },
+        }));
+      } else {
+        setStoreDistances((prev) => ({
+          ...prev,
+          [store.id]: { distance: null, loading: false, failed: true },
+        }));
+      }
     });
-  }, [selectedAddressId, selectedShipping, stores, shippingOptions]);
+  }, [selectedAddressId, selectedShipping, stores, shippingOptions, selectedAddress]);
 
   // Group items by storeId
   const itemsByStore = useMemo(() => {

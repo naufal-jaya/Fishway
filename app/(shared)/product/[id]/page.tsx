@@ -58,7 +58,7 @@ type ProductRow = {
   ph_ideal?: string | null;
   price_options?: PriceOption[] | string | null;
   product_images?: ProductImage[] | null;
-  stores?: { name: string; phone: string; address?: string | null; location?: string | null } | null;
+  stores?: { name: string; phone: string; address?: string | null; location?: string | null; lat?: number | null; lon?: number | null } | null;
 };
 
 function normalizePriceOptions(value: unknown): PriceOption[] {
@@ -144,6 +144,22 @@ export default async function ProductDetailPage({
     { icon: <CheckCircle2 className="w-5 h-5" />, label: "Aman sampai tujuan" },
   ];
 
+  let userDistance: number | null = null;
+  const { data: { user } } = await supabase.auth.getUser();
+  if (user && product.stores?.lat && product.stores?.lon) {
+    const { data: address } = await supabase
+      .from("addresses")
+      .select("lat, lon")
+      .eq("user_id", user.id)
+      .eq("is_primary", true)
+      .maybeSingle();
+
+    if (address?.lat && address?.lon) {
+      const { calculateDistance } = await import("@/lib/distance");
+      userDistance = calculateDistance(product.stores.lat, product.stores.lon, address.lat, address.lon);
+    }
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 overflow-x-hidden">
 
@@ -225,6 +241,13 @@ export default async function ProductDetailPage({
                   <div className="flex items-center justify-start gap-1.5 text-gray-500 mt-2 text-sm">
                     <MapPin className="w-6 h-6 sm:w-4 sm:h-4 flex-shrink-0" />
                     <span className="text-left">{product.stores.address || product.stores.location}</span>
+                  </div>
+                )}
+                {userDistance !== null && (
+                  <div className={`mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border ${userDistance > 10 ? 'bg-red-50 text-red-700 border-red-200' : 'bg-green-50 text-green-700 border-green-200'}`}>
+                    <Truck className="w-4 h-4" />
+                    Jarak ke alamat Anda: {userDistance.toFixed(1)} km
+                    {userDistance > 10 && " (Luar Jangkauan)"}
                   </div>
                 )}
               </div>

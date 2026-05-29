@@ -24,6 +24,8 @@ export async function addAddress(formData: {
   recipient_name: string;
   phone: string;
   address: string;
+  lat?: number;
+  lon?: number;
   is_primary: boolean;
 }) {
   const supabase = createClient(cookies());
@@ -49,6 +51,8 @@ export async function updateAddress(id: string, formData: {
   recipient_name: string;
   phone: string;
   address: string;
+  lat?: number;
+  lon?: number;
   is_primary: boolean;
 }) {
   const supabase = createClient(cookies());

@@ -5,61 +5,6 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import CheckoutClient from "@/components/CheckoutClient";
 
-function getFallbackCoordinates(seed: string): { lat: number; lon: number } {
-  let sum = 0;
-  for (let i = 0; i < seed.length; i++) {
-    sum += seed.charCodeAt(i);
-  }
-  // Deterministic offset within ~5km around Jakarta Pusat (-6.2088, 106.8456)
-  const latOffset = ((sum % 100) - 50) / 1000;
-  const lonOffset = ((sum % 97) - 48) / 1000;
-  return {
-    lat: -6.2088 + latOffset,
-    lon: 106.8456 + lonOffset,
-  };
-}
-
-/** Geocode alamat teks → koordinat via Nominatim (server-side) */
-async function geocodeServerSide(
-  address: string
-): Promise<{ lat: number; lon: number } | null> {
-  if (!address) return null;
-
-  // Clean address: remove RT/RW, No.
-  const cleanAddr = address
-    .replace(/rt\s*\.?\s*\d+\s*\/rw\s*\.?\s*\d+/gi, "")
-    .replace(/rt\s*\.?\s*\d+\s*\/?\s*\d+/gi, "")
-    .replace(/no\s*\.?\s*\d+/gi, "")
-    .replace(/\s+/g, " ")
-    .trim();
-
-  const parts = cleanAddr.split(",").map((p) => p.trim()).filter(Boolean);
-
-  for (let i = 0; i < parts.length; i++) {
-    const query = parts.slice(i).join(", ");
-    if (!query || query.length < 3) continue;
-
-    try {
-      const res = await fetch(
-        `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(
-          query + ", Indonesia"
-        )}&format=json&limit=1`,
-        {
-          headers: { "User-Agent": "FishWay-App/1.0" },
-          next: { revalidate: 3600 }, // cache 1 jam
-        }
-      );
-      const data = await res.json();
-      if (data && data.length > 0) {
-        return { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon) };
-      }
-    } catch {}
-  }
-
-  // Fallback deterministik jika geocoding online gagal
-  return getFallbackCoordinates(address);
-}
-
 export default async function CheckoutPage({
   searchParams,
 }: {
@@ -84,6 +29,8 @@ export default async function CheckoutPage({
     recipient_name: string;
     phone: string;
     address: string;
+    lat?: number | null;
+    lon?: number | null;
     is_primary: boolean;
   }[];
 
@@ -149,39 +96,25 @@ export default async function CheckoutPage({
   // Get unique store IDs from items
   const uniqueStoreIds = Array.from(new Set(formattedItems.map(item => item.storeId).filter(Boolean))) as string[];
 
-  // Fetch store details (name, address) for these store IDs
+  // Fetch store details (name, address, lat, lon) for these store IDs
   const storesData = [];
   if (uniqueStoreIds.length > 0) {
     const { data } = await supabase
       .from("stores")
-      .select("id, name, address")
+      .select("id, name, address, lat, lon")
       .in("id", uniqueStoreIds);
     if (data) {
       storesData.push(...data);
     }
   }
 
-  // Geocode all store addresses on the server
-  const stores = await Promise.all(
-    storesData.map(async (store) => {
-      let lat: number | undefined;
-      let lon: number | undefined;
-      if (store.address) {
-        const coords = await geocodeServerSide(store.address);
-        if (coords) {
-          lat = coords.lat;
-          lon = coords.lon;
-        }
-      }
-      return {
-        id: store.id,
-        name: store.name,
-        address: store.address,
-        lat,
-        lon,
-      };
-    })
-  );
+  const stores = storesData.map((store) => ({
+    id: store.id,
+    name: store.name,
+    address: store.address,
+    lat: store.lat,
+    lon: store.lon,
+  }));
 
   const SHIPPING_OPTIONS = [
     { id: "gosend", label: "GoSend", price: 0, desc: "Ongkir dibayar terpisah", maxKm: 10 },

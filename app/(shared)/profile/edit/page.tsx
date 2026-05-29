@@ -19,7 +19,7 @@ type Address = {
   is_primary: boolean;
 };
 
-export default function EditProfilePage() {
+function EditProfileContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirectUrl = searchParams.get("redirect") || "/profile";
@@ -223,5 +223,14 @@ export default function EditProfilePage() {
         </div>
       </Container>
     </div>
+  );
+}
+
+import { Suspense } from "react";
+export default function EditProfilePage() {
+  return (
+    <Suspense fallback={<div className="text-center py-20">Memuat...</div>}>
+      <EditProfileContent />
+    </Suspense>
   );
 }
