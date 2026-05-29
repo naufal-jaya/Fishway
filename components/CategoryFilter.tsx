@@ -27,7 +27,7 @@ export default function CategoryFilter({ products }: { products: Product[] }) {
   return (
     <>
 
-    <div className="flex gap-2 overflow-x-auto pb-2 px-0 sm:px-4 mb-2 mt-4">
+    <div className="flex gap-2 overflow-x-auto pb-2 px-0 mb-2 mt-4">
         {CATEGORIES.map((cat) => (
           <button
             key={cat}

@@ -56,7 +56,7 @@ export default async function SellerDashboardPage() {
   const totalOrders = orders?.length || 0;
   const pendingOrders = orders?.filter(o => o.status === "Menunggu Konfirmasi" || o.status === "Diproses").length || 0;
   const totalRevenue = orders?.filter(o => o.status === "Selesai").reduce((sum, o) => sum + o.total_amount, 0) || 0;
-  
+
   const recentOrders = orders?.slice(0, 3) || [];
 
   return (
@@ -185,17 +185,17 @@ export default async function SellerDashboardPage() {
                 recentOrders.map((order) => {
                   const oDate = new Date(order.created_at).toLocaleDateString('id-ID');
                   const buyerData = Array.isArray(order.buyers) ? order.buyers[0] : order.buyers;
-                  const accountData = buyerData && Array.isArray((buyerData as any).accounts) 
-                    ? (buyerData as any).accounts[0] 
+                  const accountData = buyerData && Array.isArray((buyerData as any).accounts)
+                    ? (buyerData as any).accounts[0]
                     : (buyerData as any)?.accounts;
                   const buyerName = accountData?.name || "Pembeli";
-                  
+
                   const productData = order.order_items?.[0];
                   const productInfo = productData && Array.isArray((productData as any).products)
                     ? (productData as any).products[0]
                     : (productData as any)?.products;
                   const productStr = productInfo?.name || "Produk";
-                  
+
                   return (
                     <div
                       key={order.id}
@@ -212,13 +212,12 @@ export default async function SellerDashboardPage() {
                           {formatPrice(order.total_amount + order.shipping_cost)}
                         </p>
                         <span
-                          className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${
-                            order.status === "Selesai"
+                          className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${order.status === "Selesai"
                               ? "bg-green-100 text-green-700"
                               : order.status === "Dikirim"
                                 ? "bg-blue-100 text-blue-700"
                                 : "bg-yellow-100 text-yellow-700"
-                          }`}
+                            }`}
                         >
                           {order.status}
                         </span>
