@@ -13,6 +13,7 @@ export type CartItemData = {
   productId: string;
   name: string;
   seller: string;
+  storeId?: string;
   location: string;
   gambar: string;
   qty: number;
@@ -123,7 +124,10 @@ export default function CartClient({ items }: Props) {
                 }`}
               >
                 {/* Image */}
-                <div className="bg-blue-50 w-16 h-16 rounded-lg flex-shrink-0 relative overflow-hidden">
+                <Link
+                  href={`/product/${item.productId}`}
+                  className="bg-blue-50 w-16 h-16 rounded-lg flex-shrink-0 relative overflow-hidden hover:opacity-90 transition-opacity"
+                >
                   <Image
                     src={item.gambar || "/images/default.png"}
                     alt={item.name || "Product"}
@@ -131,11 +135,22 @@ export default function CartClient({ items }: Props) {
                     sizes="64px"
                     className="object-cover"
                   />
-                </div>
+                </Link>
                 {/* Info */}
                 <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-gray-800 truncate">{item.name}</p>
-                  <p className="text-sm text-gray-500">{item.seller} · {item.location}</p>
+                  <Link href={`/product/${item.productId}`} className="hover:text-primary transition-colors block">
+                    <p className="font-semibold text-gray-800 truncate">{item.name}</p>
+                  </Link>
+                  <p className="text-sm text-gray-500">
+                    {item.storeId ? (
+                      <Link href={`/store/${item.storeId}`} className="hover:text-primary hover:underline transition-colors font-medium">
+                        {item.seller}
+                      </Link>
+                    ) : (
+                      item.seller
+                    )}{" "}
+                    · {item.location}
+                  </p>
                   <p className="text-primary font-bold mt-1">
                     {formatPrice(item.price)}/{item.unit}
                   </p>

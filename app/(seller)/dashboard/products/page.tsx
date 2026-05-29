@@ -26,18 +26,74 @@ export default async function SellerProductsPage() {
     .maybeSingle();
 
   let myProducts: any[] = [];
+  const productSales: Record<string, number> = {};
+  const productRevenue: Record<string, number> = {};
+  const variantSales: Record<string, number> = {};
+  let totalStoreRevenue = 0;
+  const uniqueOrderIds = new Set<string>();
 
   if (store) {
-    const { data } = await supabase
+    // 1. Fetch products
+    const { data: productsData } = await supabase
       .from("products")
       .select("*, price_options(*)")
       .eq("store_id", store.id)
       .order("created_at", { ascending: false });
 
-    if (data) {
-      myProducts = data;
+    if (productsData) {
+      myProducts = productsData;
+    }
+
+    // 2. Fetch order items for sales calculations
+    const { data: storeOrderItems } = await supabase
+      .from("order_items")
+      .select(`
+        id,
+        quantity,
+        price,
+        product_id,
+        selected_variant_id,
+        orders!inner (
+          id,
+          status,
+          store_id
+        )
+      `)
+      .eq("orders.store_id", store.id)
+      .neq("orders.status", "Dibatalkan");
+
+    if (storeOrderItems) {
+      storeOrderItems.forEach((item: any) => {
+        const qty = item.quantity || 0;
+        const price = item.price || 0;
+        const revenue = qty * price;
+        
+        const pId = item.product_id;
+        productSales[pId] = (productSales[pId] || 0) + qty;
+        productRevenue[pId] = (productRevenue[pId] || 0) + revenue;
+
+        if (item.selected_variant_id) {
+          const vId = item.selected_variant_id;
+          variantSales[vId] = (variantSales[vId] || 0) + qty;
+        }
+
+        totalStoreRevenue += revenue;
+        if (item.orders?.id) {
+          uniqueOrderIds.add(item.orders.id);
+        }
+      });
     }
   }
+
+  let bestSellingProduct = "Belum ada penjualan";
+  let maxSoldQty = 0;
+  myProducts.forEach((p) => {
+    const soldQty = productSales[p.id] || 0;
+    if (soldQty > maxSoldQty) {
+      maxSoldQty = soldQty;
+      bestSellingProduct = p.name;
+    }
+  });
 
   async function deleteProduct(formData: FormData) {
     "use server";
@@ -106,7 +162,7 @@ export default async function SellerProductsPage() {
                         {product.description || "Deskripsi produk..."}
                       </p>
 
-                      {/* PRICE */}
+                       {/* PRICE */}
                       {product.type === 0 ? (
                         <p className="text-lg font-bold text-primary mt-2">
                           {formatPrice(product.price)}{" "}
@@ -117,7 +173,7 @@ export default async function SellerProductsPage() {
                       ) : (
                         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 mt-2">
                           {(product.price_options || []).map((opt: any) => {
-                            const sold = 0; // sementara dummy kalau belum ada data
+                            const sold = variantSales[opt.id] || 0;
 
                             return (
                               <div
@@ -165,7 +221,7 @@ export default async function SellerProductsPage() {
                         </span>
 
                         <span className="px-2 py-1 rounded bg-[#5b99d7] text-white">
-                          5 {product.type === 0 ? product.unit : "unit"}
+                          {productSales[product.id] || 0} {product.type === 0 ? (product.unit || "unit") : "unit"}
                         </span>
 
                         {/* TOTAL PENDAPATAN */}
@@ -174,7 +230,7 @@ export default async function SellerProductsPage() {
                         </span>
 
                         <span className="px-2 py-1 rounded bg-[#7db5ed] text-white">
-                          Rp75.000
+                          {formatPrice(productRevenue[product.id] || 0)}
                         </span>
                       </div>
 
@@ -210,18 +266,18 @@ export default async function SellerProductsPage() {
                   <div className="text-sm space-y-2">
                     <div className="flex justify-between">
                       <span className="text-gray-500">Total Pemasukan</span>
-                      <span className="font-semibold">Rp1.400.000</span>
+                      <span className="font-semibold">{formatPrice(totalStoreRevenue)}</span>
                     </div>
 
                     <div className="flex justify-between">
                       <span className="text-gray-500">Total Order</span>
-                      <span className="font-semibold">23</span>
+                      <span className="font-semibold">{uniqueOrderIds.size}</span>
                     </div>
 
                     <div className="flex justify-between">
                       <span className="text-gray-500">Produk Paling Laris</span>
                       <span className="font-semibold text-primary text-right">
-                        Ikan Lele Asli Magetan
+                        {bestSellingProduct}
                       </span>
                     </div>
                   </div>

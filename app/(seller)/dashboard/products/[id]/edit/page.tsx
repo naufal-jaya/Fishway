@@ -181,15 +181,37 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
     return Number.isInteger(stock) && stock >= 0 ? stock : null;
   };
 
+  const parsePrice = (value: string) => {
+    const price = Number(value);
+    return !isNaN(price) && price >= 0 ? price : null;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
+      if (!/^[a-zA-Z\s]+$/.test(formData.name.trim())) {
+        throw new Error("Nama produk hanya boleh berisi huruf dan spasi");
+      }
+
       const stockValue = productType === 0 ? parseStock(formData.stock) : null;
       const variantStockValues = productType === 1
         ? variants.map((variant) => parseStock(variant.stock))
         : [];
+
+      const priceValue = productType === 0 ? parsePrice(formData.price) : null;
+      const variantPriceValues = productType === 1
+        ? variants.map((variant) => parsePrice(variant.price))
+        : [];
+
+      if (productType === 0 && priceValue === null) {
+        throw new Error("Harga harus berupa angka minimal 0");
+      }
+
+      if (productType === 1 && variantPriceValues.some((price) => price === null)) {
+        throw new Error("Harga varian harus berupa angka minimal 0");
+      }
 
       if (productType === 0 && stockValue === null) {
         throw new Error("Stok harus berupa angka bulat minimal 0");
@@ -254,7 +276,7 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
         gambar: imageUrl,
         image: imageUrl,
         ...(productType === 0 ? {
-          price: parseInt(formData.price) || 0,
+          price: priceValue,
           unit: formData.unit,
           stock: stockValue,
         } : {
@@ -293,14 +315,14 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
           if (v.id) {
             await supabase.from("price_options").update({
               label: v.label,
-              price: parseInt(v.price) || 0,
+              price: variantPriceValues[index],
               stock: variantStockValues[index],
             }).eq("id", v.id);
           } else {
             await supabase.from("price_options").insert({
               product_id: params.id,
               label: v.label,
-              price: parseInt(v.price) || 0,
+              price: variantPriceValues[index],
               stock: variantStockValues[index],
             });
           }
@@ -408,11 +430,16 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Harga (Rp)</label>
-                    <input required type="number" name="price" value={formData.price} onChange={handleChange} className="w-full border rounded-lg p-2" />
+                    <input required type="number" min="0" name="price" value={formData.price} onChange={handleChange} className="w-full border rounded-lg p-2" />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Satuan (mis. kg, ekor)</label>
-                    <input required type="text" name="unit" value={formData.unit} onChange={handleChange} className="w-full border rounded-lg p-2" />
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Satuan</label>
+                    <select required name="unit" value={formData.unit} onChange={handleChange} className="w-full border rounded-lg p-2 bg-white">
+                      <option value="">Pilih Satuan...</option>
+                      <option value="kg">kg</option>
+                      <option value="gr">gr</option>
+                      <option value="ekor">ekor</option>
+                    </select>
                   </div>
                 </div>
                 <div>
@@ -431,7 +458,7 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
                     </div>
                     <div className="flex-1">
                       <label className="block text-xs font-medium text-gray-500 mb-1">Harga (Rp)</label>
-                      <input required type="number" value={variant.price} onChange={(e) => handleVariantChange(index, 'price', e.target.value)} className="w-full border rounded-lg p-2 text-sm" />
+                      <input required type="number" min="0" value={variant.price} onChange={(e) => handleVariantChange(index, 'price', e.target.value)} className="w-full border rounded-lg p-2 text-sm" />
                     </div>
                     <div className="w-24">
                       <label className="block text-xs font-medium text-gray-500 mb-1">Stok</label>

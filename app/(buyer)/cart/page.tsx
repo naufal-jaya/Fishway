@@ -24,7 +24,7 @@ export default async function CartPage() {
         quantity,
         products (
           id, name, type, price, unit, stock, gambar, location,
-          stores (name)
+          stores (id, name)
         ),
         price_options (
           id, label, price, stock
@@ -39,6 +39,7 @@ export default async function CartPage() {
   const formattedItems = cartItems.map((item: any) => {
     const product = Array.isArray(item.products) ? item.products[0] : item.products;
     const variant = Array.isArray(item.price_options) ? item.price_options[0] : item.price_options;
+    const store = Array.isArray(product?.stores) ? product?.stores[0] : product?.stores;
 
     const itemPrice = product?.type === 0 ? product.price : variant?.price || 0;
     const itemUnit = product?.type === 0 ? product.unit : variant?.label || "unit";
@@ -48,10 +49,8 @@ export default async function CartPage() {
       id: item.id,
       productId: product?.id,
       name: product?.name || "Produk Tidak Ditemukan",
-      seller:
-        (Array.isArray(product?.stores)
-          ? product?.stores[0]?.name
-          : product?.stores?.name) || "Penjual",
+      seller: store?.name || "Penjual",
+      storeId: store?.id,
       location: product?.location || "-",
       gambar: product?.gambar || "/images/default.png",
       qty: item.quantity,

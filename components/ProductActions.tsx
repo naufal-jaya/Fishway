@@ -45,7 +45,7 @@ export default function ProductActions({
       if (res.error) {
         alert(res.error);
       } else {
-        router.push("/checkout");
+        router.push(`/checkout?items=${res.cartItemId}`);
       }
     } catch {
       alert("Terjadi kesalahan sistem.");

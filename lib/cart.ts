@@ -52,21 +52,26 @@ export async function addToCart(productId: string, quantity: number, variantId?:
       .eq("id", existingItem.id);
       
     if (error) return { error: "Gagal update keranjang." };
+
+    revalidatePath("/cart");
+    return { success: true, cartItemId: existingItem.id };
   } else {
-    const { error } = await supabase
+    const { data: newItem, error } = await supabase
       .from("cart_items")
       .insert({
         cart_id: cart.id,
         product_id: productId,
         quantity: quantity,
         selected_variant_id: variantId || null,
-      });
+      })
+      .select("id")
+      .single();
       
     if (error) return { error: "Gagal menambah item ke keranjang." };
-  }
 
-  revalidatePath("/cart");
-  return { success: true };
+    revalidatePath("/cart");
+    return { success: true, cartItemId: newItem.id };
+  }
 }
 
 export async function updateCartItemQty(itemId: string, newQty: number) {
@@ -341,5 +346,5 @@ export async function buyNow(productId: string, quantity: number, variantId?: st
   await clearCart();
   const result = await addToCart(productId, quantity, variantId);
   if (result.error) return { error: result.error };
-  return { success: true };
+  return { success: true, cartItemId: result.cartItemId };
 }
