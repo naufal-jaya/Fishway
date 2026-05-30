@@ -30,8 +30,9 @@ export default async function BuyerOrdersPage({ searchParams }: { searchParams: 
       status,
       total_amount,
       shipping_cost,
+      shipping_method,
       created_at,
-      stores ( name ),
+      stores ( id, name ),
       order_items (
         id,
         quantity,

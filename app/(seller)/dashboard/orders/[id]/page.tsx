@@ -19,7 +19,6 @@ const STATUS_COLOR: Record<string, string> = {
 
 const ALL_STATUSES = ["Menunggu Konfirmasi", "Diproses", "Dikirim", "Selesai"];
 
-// Map urutan status — hanya boleh maju, tidak boleh mundur
 const STATUS_ORDER: Record<string, number> = {
   "Menunggu Konfirmasi": 0,
   "Diproses": 1,
@@ -33,9 +32,15 @@ export default async function SellerOrderDetailPage({ params }: { params: { id: 
 
   if (!user) return notFound();
 
-  const { data: store } = await supabase.from("stores").select("id").eq("seller_id", user.id).maybeSingle();
+  const { data: store } = await supabase
+    .from("stores")
+    .select("id")
+    .eq("seller_id", user.id)
+    .maybeSingle();
+
   if (!store) return notFound();
 
+  // Fetch order — .eq("store_id", store.id) memastikan seller hanya bisa akses ordernya sendiri
   const { data: order, error } = await supabase
     .from("orders")
     .select(`
@@ -51,9 +56,10 @@ export default async function SellerOrderDetailPage({ params }: { params: { id: 
       shipping_phone,
       shipping_address,
       shipping_method,
+      store_id,
       order_items (
         id, quantity, price,
-        products ( name, gambar, unit )
+        products ( id, name, gambar, unit, store_id )
       )
     `)
     .eq("id", params.id)
@@ -61,6 +67,14 @@ export default async function SellerOrderDetailPage({ params }: { params: { id: 
     .maybeSingle();
 
   if (error || !order) return notFound();
+
+  // Filter order_items: hanya tampilkan produk yang memang milik toko ini
+  // Ini lapisan keamanan kedua — seharusnya sudah beres dari query store_id di orders,
+  // tapi ini mencegah edge case jika ada produk dengan store_id berbeda masuk ke order
+  const safeOrderItems = (order.order_items as any[]).filter((item) => {
+    const product = Array.isArray(item.products) ? item.products[0] : item.products;
+    return product?.store_id === store.id;
+  });
 
   const orderDate = new Date(order.created_at).toLocaleDateString('id-ID', {
     year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit'
@@ -70,7 +84,7 @@ export default async function SellerOrderDetailPage({ params }: { params: { id: 
   const buyerPhone = order.shipping_phone || "Tidak ada nomor";
   const buyerAddress = order.shipping_address || "Tidak ada alamat";
 
-  // ✅ Server action: update status
+  // Server action: update status
   async function updateStatus(formData: FormData) {
     "use server";
     const newStatus = formData.get("status") as string;
@@ -78,7 +92,6 @@ export default async function SellerOrderDetailPage({ params }: { params: { id: 
 
     const supabaseAdmin = createClient(cookies());
 
-    // Ambil status saat ini dulu
     const { data: currentOrder } = await supabaseAdmin
       .from("orders")
       .select("status, buyer_id")
@@ -87,7 +100,6 @@ export default async function SellerOrderDetailPage({ params }: { params: { id: 
 
     if (!currentOrder) return;
 
-    // ✅ Constraint: status tidak boleh mundur
     if (STATUS_ORDER[newStatus] <= STATUS_ORDER[currentOrder.status]) return;
 
     await supabaseAdmin
@@ -107,7 +119,7 @@ export default async function SellerOrderDetailPage({ params }: { params: { id: 
     revalidatePath(`/dashboard/orders/${params.id}`);
   }
 
-  // ✅ Server action: cancel order (hanya Menunggu Konfirmasi atau Dikirim)
+  // Server action: cancel order
   async function cancelOrder(formData: FormData) {
     "use server";
     const reason = formData.get("reason") as string;
@@ -165,7 +177,6 @@ export default async function SellerOrderDetailPage({ params }: { params: { id: 
                 )}
               </div>
 
-              {/* Update status — hanya tampil kalau belum Dibatalkan */}
               {order.status !== "Dibatalkan" && (
                 <div className="bg-gray-50 p-3 rounded-xl border border-gray-200">
                   <form action={updateStatus} className="flex items-center gap-3">
@@ -191,7 +202,6 @@ export default async function SellerOrderDetailPage({ params }: { params: { id: 
                 </div>
               )}
 
-              {/* Badge kalau sudah Dibatalkan */}
               {order.status === "Dibatalkan" && (
                 <span className="inline-flex items-center gap-1 text-sm px-3 py-1.5 rounded-full font-semibold bg-red-100 text-red-700">
                   ✕ Pesanan Dibatalkan
@@ -237,11 +247,11 @@ export default async function SellerOrderDetailPage({ params }: { params: { id: 
               </div>
             )}
 
-            {/* Daftar Produk */}
+            {/* Daftar Produk — hanya produk milik toko ini */}
             <div className="mb-8">
               <h2 className="text-lg font-bold text-gray-800 mb-4">Daftar Produk</h2>
               <div className="space-y-4">
-                {order.order_items.map((item: any) => {
+                {safeOrderItems.map((item: any) => {
                   const productInfo = Array.isArray(item.products) ? item.products[0] : item.products;
                   return (
                     <div key={item.id} className="flex gap-4 items-center p-3 border border-gray-100 rounded-xl">
@@ -266,7 +276,7 @@ export default async function SellerOrderDetailPage({ params }: { params: { id: 
               </div>
             </div>
 
-            {/* Total */}
+            {/* Total — dihitung dari safeOrderItems saja */}
             <div className="border-t pt-6">
               <div className="w-full md:w-1/2 ml-auto space-y-3 text-sm">
                 <div className="flex justify-between text-gray-600">
@@ -287,7 +297,6 @@ export default async function SellerOrderDetailPage({ params }: { params: { id: 
             {(order.status === "Menunggu Konfirmasi" || order.status === "Dikirim") && (
               <CancelOrderButton action={cancelOrder} />
             )}
-
           </div>
         </div>
       </Container>
