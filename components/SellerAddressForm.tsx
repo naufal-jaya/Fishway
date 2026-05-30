@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { createClient } from "@/utils/supabase/supabaseClient";
-import { MapPin, Pencil, Check, X, AlertCircle, Search } from "lucide-react";
+import { MapPin, Pencil, Check, X, AlertCircle, Search, Truck } from "lucide-react";
 import { GoogleMap, Marker, useJsApiLoader } from "@react-google-maps/api";
 import usePlacesAutocomplete, { getGeocode, getLatLng } from "use-places-autocomplete";
 
@@ -23,10 +23,21 @@ export default function SellerAddressForm() {
   const [address, setAddress] = useState("");
   const [lat, setLat] = useState<number | null>(null);
   const [lon, setLon] = useState<number | null>(null);
+  const [maxDistance, setMaxDistance] = useState<number | null>(10); // default
+
+  // Shipping methods state
+  const [shippingOjol, setShippingOjol] = useState(true);
+  const [shippingAmbil, setShippingAmbil] = useState(true);
+  const [shippingPenjual, setShippingPenjual] = useState(true);
 
   const [draft, setDraft] = useState("");
   const [draftLat, setDraftLat] = useState<number | null>(null);
   const [draftLon, setDraftLon] = useState<number | null>(null);
+  const [draftMaxDistance, setDraftMaxDistance] = useState<number | null>(10);
+  
+  const [draftShippingOjol, setDraftShippingOjol] = useState(true);
+  const [draftShippingAmbil, setDraftShippingAmbil] = useState(true);
+  const [draftShippingPenjual, setDraftShippingPenjual] = useState(true);
 
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
@@ -65,17 +76,30 @@ export default function SellerAddressForm() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      const { data: store } = await supabase
+      const { data: store, error } = await supabase
         .from("stores")
-        .select("id, address, lat, lon")
+        .select("id, address, lat, lon, max_distance, shipping_ojol, shipping_ambil, shipping_penjual")
         .eq("seller_id", user.id)
         .maybeSingle();
+
+      if (error) {
+        console.error("Error fetching store address:", error.message);
+      }
 
       if (store) {
         setStoreId(store.id);
         setAddress(store.address || "");
         setLat(store.lat);
         setLon(store.lon);
+        
+        // If max_distance exists, use it, else default 10
+        const md = store.max_distance != null ? store.max_distance : 10;
+        setMaxDistance(md);
+        
+        // Shipping methods
+        setShippingOjol(store.shipping_ojol ?? true);
+        setShippingAmbil(store.shipping_ambil ?? true);
+        setShippingPenjual(store.shipping_penjual ?? true);
 
         if (store.lat && store.lon) {
           const center = { lat: store.lat, lng: store.lon };
@@ -142,6 +166,12 @@ export default function SellerAddressForm() {
     setDraft(address);
     setDraftLat(lat);
     setDraftLon(lon);
+    setDraftMaxDistance(maxDistance);
+    
+    setDraftShippingOjol(shippingOjol);
+    setDraftShippingAmbil(shippingAmbil);
+    setDraftShippingPenjual(shippingPenjual);
+
     if (lat && lon) {
       const center = { lat, lng: lon };
       setMapCenter(center);
@@ -163,13 +193,29 @@ export default function SellerAddressForm() {
       setError("Harap tentukan lokasi di peta untuk menyimpan koordinat.");
       return;
     }
+    if (draftMaxDistance == null || draftMaxDistance < 1) {
+      setError("Jarak maksimal pengiriman minimal 1 km.");
+      return;
+    }
+    if (!draftShippingOjol && !draftShippingAmbil && !draftShippingPenjual) {
+      setError("Minimal satu metode pengiriman harus diaktifkan.");
+      return;
+    }
     if (!storeId) return;
     setError("");
     setLoading(true);
 
     const { error: dbError } = await supabase
       .from("stores")
-      .update({ address: draft.trim(), lat: draftLat, lon: draftLon })
+      .update({ 
+        address: draft.trim(), 
+        lat: draftLat, 
+        lon: draftLon,
+        max_distance: draftMaxDistance,
+        shipping_ojol: draftShippingOjol,
+        shipping_ambil: draftShippingAmbil,
+        shipping_penjual: draftShippingPenjual,
+      })
       .eq("id", storeId);
 
     if (dbError) {
@@ -178,6 +224,12 @@ export default function SellerAddressForm() {
       setAddress(draft.trim());
       setLat(draftLat);
       setLon(draftLon);
+      setMaxDistance(draftMaxDistance);
+      
+      setShippingOjol(draftShippingOjol);
+      setShippingAmbil(draftShippingAmbil);
+      setShippingPenjual(draftShippingPenjual);
+      
       setEditing(false);
     }
     setLoading(false);
@@ -187,6 +239,12 @@ export default function SellerAddressForm() {
     setDraft(address);
     setDraftLat(lat);
     setDraftLon(lon);
+    setDraftMaxDistance(maxDistance);
+    
+    setDraftShippingOjol(shippingOjol);
+    setDraftShippingAmbil(shippingAmbil);
+    setDraftShippingPenjual(shippingPenjual);
+    
     setError("");
     setEditing(false);
   };
@@ -200,8 +258,7 @@ export default function SellerAddressForm() {
       <div className="flex justify-between items-center border-b pb-3">
         <h2 className="font-bold text-gray-800 flex items-center gap-2">
           <MapPin size={18} className="text-primary" />
-          Alamat Toko
-          <span className="text-red-500 text-xs font-normal">*wajib</span>
+          Alamat Toko & Pengiriman
         </h2>
         {!editing && (
           <button
@@ -236,9 +293,26 @@ export default function SellerAddressForm() {
             {address}
           </p>
           {lat && lon && (
-            <div className="flex items-center gap-1 text-xs text-gray-500">
-              <MapPin size={12} />
-              <span>Koordinat tersimpan: {lat.toFixed(6)}, {lon.toFixed(6)}</span>
+            <div className="flex flex-col gap-1 mt-2 border-t pt-2 border-gray-200">
+              <div className="flex items-center gap-1 text-xs text-gray-500">
+                <MapPin size={12} />
+                <span>Koordinat tersimpan: {lat.toFixed(6)}, {lon.toFixed(6)}</span>
+              </div>
+              <div className="flex items-center gap-1 text-xs text-gray-500">
+                <Truck size={12} />
+                <span>Jarak Maksimal Pengiriman: {maxDistance} km</span>
+              </div>
+              <div className="mt-1 pt-1 border-t border-gray-100 flex flex-wrap gap-2">
+                {shippingOjol && (
+                  <span className="text-[10px] bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 rounded-full font-medium">Ojol</span>
+                )}
+                {shippingAmbil && (
+                  <span className="text-[10px] bg-green-50 text-green-700 border border-green-200 px-2 py-0.5 rounded-full font-medium">Ambil Sendiri</span>
+                )}
+                {shippingPenjual && (
+                  <span className="text-[10px] bg-orange-50 text-orange-700 border border-orange-200 px-2 py-0.5 rounded-full font-medium">Dianterin Penjual</span>
+                )}
+              </div>
             </div>
           )}
         </div>
@@ -247,6 +321,57 @@ export default function SellerAddressForm() {
       {/* Form edit */}
       {editing && (
         <div className="space-y-4 pt-2">
+          {/* Max Distance */}
+          <div>
+             <label className="text-sm font-medium text-gray-700 block mb-1">Jarak Maksimal Pengiriman (km)</label>
+             <input 
+               type="number"
+               min="1"
+               step="1"
+               value={draftMaxDistance || ""}
+               onChange={(e) => setDraftMaxDistance(parseInt(e.target.value) || null)}
+               className="w-full border border-gray-300 rounded-lg p-2 text-sm outline-none focus:border-primary"
+               placeholder="Contoh: 10"
+             />
+             <p className="text-xs text-gray-500 mt-1">Pembeli yang berlokasi di luar jarak ini tidak bisa melakukan checkout dari toko Anda.</p>
+          </div>
+          
+          {/* Shipping Methods Selection */}
+          <div>
+            <label className="text-sm font-medium text-gray-700 block mb-2">Metode Pengiriman yang Tersedia</label>
+            <div className="space-y-2">
+              <label className="flex items-center gap-2 cursor-pointer border p-2 rounded-lg border-gray-200 hover:bg-gray-50">
+                <input 
+                  type="checkbox" 
+                  checked={draftShippingOjol}
+                  onChange={(e) => setDraftShippingOjol(e.target.checked)}
+                  className="accent-primary w-4 h-4" 
+                />
+                <span className="text-sm text-gray-700 font-medium">Ojol (GoSend, GrabExpress, dll.)</span>
+              </label>
+              
+              <label className="flex items-center gap-2 cursor-pointer border p-2 rounded-lg border-gray-200 hover:bg-gray-50">
+                <input 
+                  type="checkbox" 
+                  checked={draftShippingAmbil}
+                  onChange={(e) => setDraftShippingAmbil(e.target.checked)}
+                  className="accent-primary w-4 h-4" 
+                />
+                <span className="text-sm text-gray-700 font-medium">Ambil Sendiri ke Toko</span>
+              </label>
+              
+              <label className="flex items-center gap-2 cursor-pointer border p-2 rounded-lg border-gray-200 hover:bg-gray-50">
+                <input 
+                  type="checkbox" 
+                  checked={draftShippingPenjual}
+                  onChange={(e) => setDraftShippingPenjual(e.target.checked)}
+                  className="accent-primary w-4 h-4" 
+                />
+                <span className="text-sm text-gray-700 font-medium">Dianterin Langsung oleh Penjual</span>
+              </label>
+            </div>
+          </div>
+
           {/* Map Integration */}
           <div>
             <label className="text-sm font-medium text-gray-700 mb-1 block">Tentukan Lokasi di Peta</label>

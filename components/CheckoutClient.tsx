@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { checkoutCart } from "@/lib/cart";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -63,6 +63,10 @@ type Props = {
     address?: string;
     lat?: number;
     lon?: number;
+    max_distance?: number;
+    shipping_ojol?: boolean;
+    shipping_ambil?: boolean;
+    shipping_penjual?: boolean;
   }[];
   shippingOptions?: ShippingOption[];
   selectedItemIds?: string[];
@@ -87,18 +91,35 @@ export default function CheckoutClient({
   // Selected Shipping method per store: { storeId: optionId }
   const [selectedShipping, setSelectedShipping] = useState<Record<string, string>>({});
 
-  // Initialize selected shipping for each store to first option
-  useEffect(() => {
-    const initialShipping: Record<string, string> = {};
-    stores.forEach((store) => {
-      if (!selectedShipping[store.id]) {
-        initialShipping[store.id] = shippingOptions[0]?.id || "gosend";
-      } else {
-        initialShipping[store.id] = selectedShipping[store.id];
-      }
+  // Get available shipping options for a store
+  const getAvailableOptions = useCallback((store: NonNullable<Props['stores']>[0]) => {
+    return shippingOptions.filter((opt) => {
+      if (opt.id === "gosend") return store.shipping_ojol ?? true;
+      if (opt.id === "ambil") return store.shipping_ambil ?? true;
+      if (opt.id === "penjual") return store.shipping_penjual ?? true;
+      return true;
     });
-    setSelectedShipping(initialShipping);
-  }, [stores, shippingOptions]);
+  }, [shippingOptions]);
+
+  // Initialize selected shipping for each store to first available option if none selected or if invalid
+  useEffect(() => {
+    setSelectedShipping((prev) => {
+      const nextShipping = { ...prev };
+      let changed = false;
+
+      stores.forEach((store) => {
+        const available = getAvailableOptions(store);
+        const current = prev[store.id];
+        
+        if (!current || !available.some(a => a.id === current)) {
+          nextShipping[store.id] = available[0]?.id || "gosend";
+          changed = true;
+        }
+      });
+
+      return changed ? nextShipping : prev;
+    });
+  }, [stores, getAvailableOptions]);
 
   // Distance state per store: { storeId: { distance, loading, failed } }
   const [storeDistances, setStoreDistances] = useState<Record<string, { distance: number | null; loading: boolean; failed: boolean }>>({});
@@ -108,9 +129,7 @@ export default function CheckoutClient({
     if (!selectedAddress) return;
 
     stores.forEach((store) => {
-      const optionId = selectedShipping[store.id] || shippingOptions[0]?.id;
-      const currentOption = shippingOptions.find((s) => s.id === optionId);
-      const maxKm = currentOption?.maxKm;
+      const maxKm = store.max_distance != null ? store.max_distance : 10;
 
       if (!maxKm || !store.lat || !store.lon) {
         setStoreDistances((prev) => ({
@@ -181,13 +200,11 @@ export default function CheckoutClient({
   // Validation: check if any selected shipping method is out of range
   const isAnyStoreOutOfRange = useMemo(() => {
     return stores.some((store) => {
-      const optionId = selectedShipping[store.id] || shippingOptions[0]?.id;
-      const currentOption = shippingOptions.find((s) => s.id === optionId);
-      const maxKm = currentOption?.maxKm;
+      const maxKm = store.max_distance != null ? store.max_distance : 10;
       const distInfo = storeDistances[store.id];
       return maxKm != null && distInfo?.distance != null && distInfo.distance > maxKm;
     });
-  }, [stores, selectedShipping, shippingOptions, storeDistances]);
+  }, [stores, storeDistances]);
 
   const handleConfirm = async () => {
     if (loading) return;
@@ -197,8 +214,8 @@ export default function CheckoutClient({
     }
     setLoading(true);
     try {
-      // Pass shipping costs, notes, selected item IDs, and selected address ID
-      const result = await checkoutCart(storeShippingCosts, notes, selectedItemIds, selectedAddressId);
+      // Pass shipping costs, notes, selected item IDs, selected address ID, and selected shipping methods
+      const result = await checkoutCart(storeShippingCosts, notes, selectedItemIds, selectedAddressId, selectedShipping);
       if (result.error) {
         alert(result.error);
         setLoading(false);
@@ -282,7 +299,7 @@ export default function CheckoutClient({
             const shippingOptionId = selectedShipping[store.id] || shippingOptions[0]?.id;
             const distInfo = storeDistances[store.id] || { distance: null, loading: false, failed: false };
             const currentOption = shippingOptions.find((s) => s.id === shippingOptionId);
-            const maxKm = currentOption?.maxKm;
+            const maxKm = store.max_distance != null ? store.max_distance : 10;
             const isOutOfRange = maxKm != null && distInfo.distance != null && distInfo.distance > maxKm;
 
             return (
@@ -321,45 +338,49 @@ export default function CheckoutClient({
                     <Navigation size={12} className="text-primary" /> Pengiriman Toko
                   </p>
                   <div className="grid gap-2">
-                    {shippingOptions.map((opt) => {
-                      const isSelected = shippingOptionId === opt.id;
-                      return (
-                        <label
-                          key={opt.id}
-                          className={`flex items-center justify-between border rounded-xl px-3 py-2 cursor-pointer transition-all ${
-                            isSelected
-                              ? "border-primary bg-primary/5"
-                              : "border-gray-200 hover:border-primary/40"
-                          }`}
-                        >
-                          <div className="flex items-center gap-2">
-                            <input
-                              type="radio"
-                              name={`shipping-${store.id}`}
-                              value={opt.id}
-                              checked={isSelected}
-                              onChange={() =>
-                                setSelectedShipping((prev) => ({
-                                  ...prev,
-                                  [store.id]: opt.id,
-                                }))
-                              }
-                              className="accent-primary"
-                            />
-                            <span className={isSelected ? "text-primary" : "text-gray-400"}>
-                              {SHIPPING_ICONS[opt.id] ?? <Truck size={16} />}
-                            </span>
-                            <div>
-                              <p className="text-xs font-semibold text-gray-800">{opt.label}</p>
-                              <p className="text-[10px] text-gray-500 leading-tight">{opt.desc}</p>
+                    {getAvailableOptions(store).length > 0 ? (
+                      getAvailableOptions(store).map((opt) => {
+                        const isSelected = shippingOptionId === opt.id;
+                        return (
+                          <label
+                            key={opt.id}
+                            className={`flex items-center justify-between border rounded-xl px-3 py-2 cursor-pointer transition-all ${
+                              isSelected
+                                ? "border-primary bg-primary/5"
+                                : "border-gray-200 hover:border-primary/40"
+                            }`}
+                          >
+                            <div className="flex items-center gap-2">
+                              <input
+                                type="radio"
+                                name={`shipping-${store.id}`}
+                                value={opt.id}
+                                checked={isSelected}
+                                onChange={() =>
+                                  setSelectedShipping((prev) => ({
+                                    ...prev,
+                                    [store.id]: opt.id,
+                                  }))
+                                }
+                                className="accent-primary"
+                              />
+                              <span className={isSelected ? "text-primary" : "text-gray-400"}>
+                                {SHIPPING_ICONS[opt.id] ?? <Truck size={16} />}
+                              </span>
+                              <div>
+                                <p className="text-xs font-semibold text-gray-800">{opt.label}</p>
+                                <p className="text-[10px] text-gray-500 leading-tight">{opt.desc}</p>
+                              </div>
                             </div>
-                          </div>
-                          <span className="text-xs font-semibold text-primary shrink-0">
-                            {opt.price === 0 ? "Gratis" : `Rp ${opt.price.toLocaleString("id-ID")}`}
-                          </span>
-                        </label>
-                      );
-                    })}
+                            <span className="text-xs font-semibold text-primary shrink-0">
+                              {opt.price === 0 ? "Gratis" : `Rp ${opt.price.toLocaleString("id-ID")}`}
+                            </span>
+                          </label>
+                        );
+                      })
+                    ) : (
+                      <p className="text-xs text-red-500 italic">Tidak ada opsi pengiriman yang tersedia untuk toko ini.</p>
+                    )}
                   </div>
                 </div>
 

@@ -141,7 +141,8 @@ export async function checkoutCart(
   shippingCosts?: Record<string, number>,
   storeNotes?: Record<string, string>,
   selectedItemIds?: string[],
-  addressId?: string
+  addressId?: string,
+  selectedShipping?: Record<string, string>
 ) {
   const supabase = createClient(cookies());
   const { data: { user } } = await supabase.auth.getUser();
@@ -249,6 +250,15 @@ export async function checkoutCart(
     const totalAmount = items.reduce((sum, i) => sum + (i.price * i.quantity), 0);
     const shippingCost = shippingCosts?.[storeId] ?? 15000;
     const noteForStore = storeNotes?.[storeId] || null;
+    const shippingMethodId = selectedShipping?.[storeId] || "gosend";
+    
+    // Map ID to readable name for database
+    const methodNames: Record<string, string> = {
+      "gosend": "Ojol",
+      "ambil": "Ambil Sendiri",
+      "penjual": "Dianterin Penjual"
+    };
+    const shippingMethodName = methodNames[shippingMethodId] || shippingMethodId;
     
     const { data: order, error: orderError } = await supabase
       .from("orders")
@@ -258,6 +268,7 @@ export async function checkoutCart(
         status: "Menunggu Konfirmasi",
         total_amount: totalAmount,
         shipping_cost: shippingCost,
+        shipping_method: shippingMethodName,
         notes: noteForStore,
         shipping_name: shippingName,
         shipping_phone: shippingPhone,

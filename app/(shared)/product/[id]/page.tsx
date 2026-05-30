@@ -58,7 +58,7 @@ type ProductRow = {
   ph_ideal?: string | null;
   price_options?: PriceOption[] | string | null;
   product_images?: ProductImage[] | null;
-  stores?: { name: string; phone: string; address?: string | null; location?: string | null; lat?: number | null; lon?: number | null } | null;
+  stores?: { name: string; phone: string; address?: string | null; location?: string | null; lat?: number | null; lon?: number | null; max_distance?: number | null } | null;
 };
 
 function normalizePriceOptions(value: unknown): PriceOption[] {
@@ -121,6 +121,7 @@ export default async function ProductDetailPage({
     ? priceOptions.reduce((sum, option) => sum + option.stock, 0)
     : (product.stock ?? 0);
   const sellerName = product.stores?.name || "Penjual";
+  const maxDistanceLimit = product.stores?.max_distance != null ? product.stores.max_distance : 10;
   const waNumber = product.stores?.phone || WA_NUMBER;
   const waLink = `https://wa.me/${waNumber}?text=Halo, saya tertarik dengan ${product.name}`;
   const galleryImages = Array.isArray(product.product_images) && product.product_images.length > 0
@@ -159,6 +160,8 @@ export default async function ProductDetailPage({
       userDistance = calculateDistance(product.stores.lat, product.stores.lon, address.lat, address.lon);
     }
   }
+
+  const isOutOfRange = userDistance !== null && userDistance > maxDistanceLimit;
 
   return (
     <div className="min-h-screen bg-gray-50 overflow-x-hidden">
@@ -225,6 +228,7 @@ export default async function ProductDetailPage({
                     waNumber={waNumber}
                     sellerName={sellerName}
                     storeId={product.store_id}
+                    isOutOfRange={isOutOfRange}
                   />
                 </div>
               </div>
@@ -244,10 +248,10 @@ export default async function ProductDetailPage({
                   </div>
                 )}
                 {userDistance !== null && (
-                  <div className={`mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border ${userDistance > 10 ? 'bg-red-50 text-red-700 border-red-200' : 'bg-green-50 text-green-700 border-green-200'}`}>
+                  <div className={`mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border ${isOutOfRange ? 'bg-red-50 text-red-700 border-red-200' : 'bg-green-50 text-green-700 border-green-200'}`}>
                     <Truck className="w-4 h-4" />
                     Jarak ke alamat Anda: {userDistance.toFixed(1)} km
-                    {userDistance > 10 && " (Luar Jangkauan)"}
+                    {isOutOfRange && " (Luar Jangkauan)"}
                   </div>
                 )}
               </div>

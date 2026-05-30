@@ -96,13 +96,17 @@ export default async function CheckoutPage({
   // Get unique store IDs from items
   const uniqueStoreIds = Array.from(new Set(formattedItems.map(item => item.storeId).filter(Boolean))) as string[];
 
-  // Fetch store details (name, address, lat, lon) for these store IDs
+  // Fetch store details (name, address, lat, lon, max_distance, shipping methods) for these store IDs
   const storesData = [];
   if (uniqueStoreIds.length > 0) {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("stores")
-      .select("id, name, address, lat, lon")
+      .select("id, name, address, lat, lon, max_distance, shipping_ojol, shipping_ambil, shipping_penjual")
       .in("id", uniqueStoreIds);
+      
+    if (error) {
+      console.error("Error fetching checkout stores:", error.message);
+    }
     if (data) {
       storesData.push(...data);
     }
@@ -114,10 +118,14 @@ export default async function CheckoutPage({
     address: store.address,
     lat: store.lat,
     lon: store.lon,
+    max_distance: store.max_distance != null ? store.max_distance : 10,
+    shipping_ojol: store.shipping_ojol ?? true,
+    shipping_ambil: store.shipping_ambil ?? true,
+    shipping_penjual: store.shipping_penjual ?? true,
   }));
 
   const SHIPPING_OPTIONS = [
-    { id: "gosend", label: "GoSend", price: 0, desc: "Ongkir dibayar terpisah", maxKm: 10 },
+    { id: "gosend", label: "Ojol", price: 0, desc: "Ongkir dibayar terpisah", maxKm: 10 },
     { id: "ambil", label: "Ambil Sendiri", price: 0, desc: "Ambil langsung ke toko" },
     { id: "penjual", label: "Dianterin Penjual", price: 15000, desc: "Dikirim langsung oleh penjual", maxKm: 10 },
   ];
@@ -136,4 +144,4 @@ export default async function CheckoutPage({
       </Container>
     </div>
   );
-}
+}
