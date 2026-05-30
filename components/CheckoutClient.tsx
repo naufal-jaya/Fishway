@@ -40,12 +40,17 @@ type Address = {
   is_primary: boolean;
 };
 
-type ShippingOption = {
+type StoreInfo = {
   id: string;
-  label: string;
-  price: number;
-  desc: string;
-  maxKm?: number;
+  name: string;
+  address?: string;
+  lat?: number;
+  lon?: number;
+  maxDistance?: number;
+  shippingOjol?: boolean;
+  shippingAmbil?: boolean;
+  shippingPenjual?: boolean;
+  pricePerKm?: number;
 };
 
 type Props = {
@@ -57,14 +62,7 @@ type Props = {
     price: number;
     storeId: string;
   }[];
-  stores?: {
-    id: string;
-    name: string;
-    address?: string;
-    lat?: number;
-    lon?: number;
-  }[];
-  shippingOptions?: ShippingOption[];
+  stores?: StoreInfo[];
   selectedItemIds?: string[];
 };
 
@@ -72,7 +70,6 @@ export default function CheckoutClient({
   addresses = [],
   items = [],
   stores = [],
-  shippingOptions = [],
   selectedItemIds = [],
 }: Props) {
   const [loading, setLoading] = useState(false);
@@ -87,18 +84,46 @@ export default function CheckoutClient({
   // Selected Shipping method per store: { storeId: optionId }
   const [selectedShipping, setSelectedShipping] = useState<Record<string, string>>({});
 
+  // Build shipping options per store based on the store's settings
+  const storeShippingOptions = useMemo(() => {
+    const map: Record<string, { id: string; label: string; desc: string; maxKm?: number }[]> = {};
+    stores.forEach((store) => {
+      const opts: { id: string; label: string; desc: string; maxKm?: number }[] = [];
+      if (store.shippingOjol !== false) {
+        opts.push({ id: "gosend", label: "GoSend", desc: "Ongkir dibayar terpisah", maxKm: store.maxDistance ?? 10 });
+      }
+      if (store.shippingAmbil !== false) {
+        opts.push({ id: "ambil", label: "Ambil Sendiri", desc: "Ambil langsung ke toko" });
+      }
+      if (store.shippingPenjual) {
+        opts.push({
+          id: "penjual",
+          label: "Dianterin Penjual",
+          desc: `Rp${(store.pricePerKm ?? 3000).toLocaleString("id-ID")}/km`,
+          maxKm: store.maxDistance ?? 10,
+        });
+      }
+      // Fallback jika semua dinonaktifkan
+      if (opts.length === 0) {
+        opts.push({ id: "gosend", label: "GoSend", desc: "Ongkir dibayar terpisah", maxKm: 10 });
+      }
+      map[store.id] = opts;
+    });
+    return map;
+  }, [stores]);
+
   // Initialize selected shipping for each store to first option
   useEffect(() => {
     const initialShipping: Record<string, string> = {};
     stores.forEach((store) => {
       if (!selectedShipping[store.id]) {
-        initialShipping[store.id] = shippingOptions[0]?.id || "gosend";
+        initialShipping[store.id] = storeShippingOptions[store.id]?.[0]?.id || "gosend";
       } else {
         initialShipping[store.id] = selectedShipping[store.id];
       }
     });
     setSelectedShipping(initialShipping);
-  }, [stores, shippingOptions]);
+  }, [stores, storeShippingOptions]);
 
   // Distance state per store: { storeId: { distance, loading, failed } }
   const [storeDistances, setStoreDistances] = useState<Record<string, { distance: number | null; loading: boolean; failed: boolean }>>({});
@@ -108,8 +133,9 @@ export default function CheckoutClient({
     if (!selectedAddress) return;
 
     stores.forEach((store) => {
-      const optionId = selectedShipping[store.id] || shippingOptions[0]?.id;
-      const currentOption = shippingOptions.find((s) => s.id === optionId);
+      const optionId = selectedShipping[store.id] || storeShippingOptions[store.id]?.[0]?.id;
+      const opts = storeShippingOptions[store.id] || [];
+      const currentOption = opts.find((s) => s.id === optionId);
       const maxKm = currentOption?.maxKm;
 
       if (!maxKm || !store.lat || !store.lon) {
@@ -125,7 +151,6 @@ export default function CheckoutClient({
         [store.id]: { distance: prev[store.id]?.distance ?? null, loading: true, failed: false },
       }));
 
-      // Assume distance calculation is instantaneous since we have coordinates
       if (selectedAddress.lat && selectedAddress.lon && store.lat && store.lon) {
         const km = calculateDistance(store.lat, store.lon, selectedAddress.lat, selectedAddress.lon);
         setStoreDistances((prev) => ({
@@ -139,7 +164,7 @@ export default function CheckoutClient({
         }));
       }
     });
-  }, [selectedAddressId, selectedShipping, stores, shippingOptions, selectedAddress]);
+  }, [selectedAddressId, selectedShipping, stores, storeShippingOptions, selectedAddress]);
 
   // Group items by storeId
   const itemsByStore = useMemo(() => {
@@ -161,16 +186,21 @@ export default function CheckoutClient({
     return subtotals;
   }, [itemsByStore]);
 
-  // Shipping costs per store
+  // Shipping costs per store — untuk 'penjual': kalkulasi jarak × tarif per km
   const storeShippingCosts = useMemo(() => {
     const costs: Record<string, number> = {};
     stores.forEach((store) => {
-      const optionId = selectedShipping[store.id] || shippingOptions[0]?.id;
-      const currentOption = shippingOptions.find((s) => s.id === optionId);
-      costs[store.id] = currentOption?.price || 0;
+      const optionId = selectedShipping[store.id] || storeShippingOptions[store.id]?.[0]?.id;
+      if (optionId === "penjual") {
+        const dist = storeDistances[store.id]?.distance;
+        const rate = store.pricePerKm ?? 3000;
+        costs[store.id] = dist != null ? Math.round(dist * rate) : 0;
+      } else {
+        costs[store.id] = 0; // gosend & ambil: 0 (dibayar terpisah atau gratis)
+      }
     });
     return costs;
-  }, [selectedShipping, stores, shippingOptions]);
+  }, [selectedShipping, stores, storeShippingOptions, storeDistances]);
 
   // Totals calculations
   const productSubtotal = Object.values(storeSubtotals).reduce((sum, val) => sum + val, 0);
@@ -181,13 +211,14 @@ export default function CheckoutClient({
   // Validation: check if any selected shipping method is out of range
   const isAnyStoreOutOfRange = useMemo(() => {
     return stores.some((store) => {
-      const optionId = selectedShipping[store.id] || shippingOptions[0]?.id;
-      const currentOption = shippingOptions.find((s) => s.id === optionId);
+      const optionId = selectedShipping[store.id] || storeShippingOptions[store.id]?.[0]?.id;
+      const opts = storeShippingOptions[store.id] || [];
+      const currentOption = opts.find((s) => s.id === optionId);
       const maxKm = currentOption?.maxKm;
       const distInfo = storeDistances[store.id];
       return maxKm != null && distInfo?.distance != null && distInfo.distance > maxKm;
     });
-  }, [stores, selectedShipping, shippingOptions, storeDistances]);
+  }, [stores, selectedShipping, storeShippingOptions, storeDistances]);
 
   const handleConfirm = async () => {
     if (loading) return;
@@ -197,8 +228,21 @@ export default function CheckoutClient({
     }
     setLoading(true);
     try {
-      // Pass shipping costs, notes, selected item IDs, and selected address ID
-      const result = await checkoutCart(storeShippingCosts, notes, selectedItemIds, selectedAddressId);
+      // Build shippingDetails untuk disimpan di orders
+      const shippingDetails: Record<string, { method: string; ratePerKm?: number; distanceKm?: number }> = {};
+      stores.forEach((store) => {
+        const method = selectedShipping[store.id] || "gosend";
+        const dist = storeDistances[store.id]?.distance;
+        shippingDetails[store.id] = {
+          method,
+          ...(method === "penjual" && {
+            ratePerKm: store.pricePerKm ?? 3000,
+            distanceKm: dist ?? undefined,
+          }),
+        };
+      });
+
+      const result = await checkoutCart(storeShippingCosts, notes, selectedItemIds, selectedAddressId, shippingDetails);
       if (result.error) {
         alert(result.error);
         setLoading(false);
@@ -279,11 +323,8 @@ export default function CheckoutClient({
           {/* Grouped Items & Shipping Selector per Store */}
           {stores.map((store) => {
             const storeItems = itemsByStore[store.id] || [];
-            const shippingOptionId = selectedShipping[store.id] || shippingOptions[0]?.id;
+            const shippingOptionId = selectedShipping[store.id] || storeShippingOptions[store.id]?.[0]?.id;
             const distInfo = storeDistances[store.id] || { distance: null, loading: false, failed: false };
-            const currentOption = shippingOptions.find((s) => s.id === shippingOptionId);
-            const maxKm = currentOption?.maxKm;
-            const isOutOfRange = maxKm != null && distInfo.distance != null && distInfo.distance > maxKm;
 
             return (
               <div key={store.id} className="card p-6 space-y-4 border border-gray-100">
@@ -321,8 +362,15 @@ export default function CheckoutClient({
                     <Navigation size={12} className="text-primary" /> Pengiriman Toko
                   </p>
                   <div className="grid gap-2">
-                    {shippingOptions.map((opt) => {
+                    {(storeShippingOptions[store.id] || []).map((opt) => {
                       const isSelected = shippingOptionId === opt.id;
+                      // Hitung harga tampilan untuk label di radio
+                      const dist = storeDistances[store.id]?.distance;
+                      const isPenjual = opt.id === "penjual";
+                      const computedPrice = isPenjual && dist != null
+                        ? Math.round(dist * (store.pricePerKm ?? 3000))
+                        : null;
+
                       return (
                         <label
                           key={opt.id}
@@ -355,7 +403,11 @@ export default function CheckoutClient({
                             </div>
                           </div>
                           <span className="text-xs font-semibold text-primary shrink-0">
-                            {opt.price === 0 ? "Gratis" : `Rp ${opt.price.toLocaleString("id-ID")}`}
+                            {isPenjual
+                              ? computedPrice != null
+                                ? formatPrice(computedPrice)
+                                : `Rp${(store.pricePerKm ?? 3000).toLocaleString("id-ID")}/km`
+                              : "Gratis"}
                           </span>
                         </label>
                       );
@@ -364,37 +416,56 @@ export default function CheckoutClient({
                 </div>
 
                 {/* Store Distance geocoding & validations */}
-                {maxKm && (
-                  <div className="mt-1">
-                    {distInfo.loading && (
-                      <div className="flex items-center gap-2 text-[10px] text-gray-500 bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5">
-                        <Loader2 size={12} className="animate-spin" />
-                        Mengecek jarak ke toko...
-                      </div>
-                    )}
+                {(() => {
+                  const optId = selectedShipping[store.id] || storeShippingOptions[store.id]?.[0]?.id;
+                  const opts = storeShippingOptions[store.id] || [];
+                  const curOpt = opts.find((s) => s.id === optId);
+                  const maxKm = curOpt?.maxKm;
+                  const isOut = maxKm != null && distInfo.distance != null && distInfo.distance > maxKm;
+                  const isPenjual = optId === "penjual";
 
-                    {!distInfo.loading && distInfo.failed && (
-                      <div className="flex items-center gap-2 text-[10px] text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-1.5">
-                        <AlertTriangle size={12} />
-                        Gagal memverifikasi jarak pengiriman.
-                      </div>
-                    )}
+                  return maxKm ? (
+                    <div className="mt-1 space-y-1">
+                      {distInfo.loading && (
+                        <div className="flex items-center gap-2 text-[10px] text-gray-500 bg-gray-50 border border-gray-200 rounded-lg px-3 py-1.5">
+                          <Loader2 size={12} className="animate-spin" />
+                          Mengecek jarak ke toko...
+                        </div>
+                      )}
 
-                    {!distInfo.loading && distInfo.distance !== null && !isOutOfRange && (
-                      <div className="flex items-center gap-2 text-[10px] text-green-700 bg-green-50 border border-green-200 rounded-lg px-3 py-1.5">
-                        <CheckCircle size={12} />
-                        Jarak toko ke alamat ±{distInfo.distance} km — dalam radius layanan ✓
-                      </div>
-                    )}
+                      {!distInfo.loading && distInfo.failed && (
+                        <div className="flex items-center gap-2 text-[10px] text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-1.5">
+                          <AlertTriangle size={12} />
+                          Gagal memverifikasi jarak pengiriman.
+                        </div>
+                      )}
 
-                    {!distInfo.loading && isOutOfRange && (
-                      <div className="flex items-center gap-2 text-[10px] text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-1.5">
-                        <AlertTriangle size={12} />
-                        Alamat terlalu jauh ({distInfo.distance} km). Batas maks {maxKm} km.
-                      </div>
-                    )}
-                  </div>
-                )}
+                      {!distInfo.loading && distInfo.distance !== null && !isOut && (
+                        <div className="flex items-center gap-2 text-[10px] text-green-700 bg-green-50 border border-green-200 rounded-lg px-3 py-1.5">
+                          <CheckCircle size={12} />
+                          Jarak toko ke alamat ±{distInfo.distance} km — dalam radius layanan ✓
+                        </div>
+                      )}
+
+                      {/* Detail kalkulasi tarif penjual */}
+                      {!distInfo.loading && isPenjual && distInfo.distance !== null && !isOut && (
+                        <div className="flex items-center gap-2 text-[10px] text-blue-700 bg-blue-50 border border-blue-200 rounded-lg px-3 py-1.5">
+                          <Truck size={12} />
+                          Rp{(store.pricePerKm ?? 3000).toLocaleString("id-ID")}/km × {distInfo.distance} km
+                          {" = "}
+                          <span className="font-bold">{formatPrice(Math.round(distInfo.distance * (store.pricePerKm ?? 3000)))}</span>
+                        </div>
+                      )}
+
+                      {!distInfo.loading && isOut && (
+                        <div className="flex items-center gap-2 text-[10px] text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-1.5">
+                          <AlertTriangle size={12} />
+                          Alamat terlalu jauh ({distInfo.distance} km). Batas maks {maxKm} km.
+                        </div>
+                      )}
+                    </div>
+                  ) : null;
+                })()}
 
                 {/* Catatan per Toko */}
                 <div className="mt-4 pt-4 border-t">
@@ -431,6 +502,10 @@ export default function CheckoutClient({
               {stores.map((store) => {
                 const sub = storeSubtotals[store.id] || 0;
                 const ship = storeShippingCosts[store.id] || 0;
+                const methodId = selectedShipping[store.id];
+                const dist = storeDistances[store.id]?.distance;
+                const isPenjual = methodId === "penjual";
+
                 return (
                   <div key={store.id} className="text-xs space-y-1 border-b pb-2 last:border-0 last:pb-0">
                     <p className="font-bold text-gray-700">{store.name}</p>
@@ -442,6 +517,18 @@ export default function CheckoutClient({
                       <span>Ongkir Toko</span>
                       <span>{formatPrice(ship)}</span>
                     </div>
+                    {/* Detail tarif per km untuk pengiriman penjual */}
+                    {isPenjual && dist != null && (
+                      <div className="flex justify-between text-blue-500 text-[10px]">
+                        <span>
+                          Rp{(store.pricePerKm ?? 3000).toLocaleString("id-ID")}/km × {dist} km
+                        </span>
+                        <span>{formatPrice(Math.round(dist * (store.pricePerKm ?? 3000)))}</span>
+                      </div>
+                    )}
+                    {isPenjual && dist == null && (
+                      <p className="text-[10px] text-amber-600">Pilih alamat untuk menghitung ongkir</p>
+                    )}
                   </div>
                 );
               })}

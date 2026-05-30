@@ -96,12 +96,12 @@ export default async function CheckoutPage({
   // Get unique store IDs from items
   const uniqueStoreIds = Array.from(new Set(formattedItems.map(item => item.storeId).filter(Boolean))) as string[];
 
-  // Fetch store details (name, address, lat, lon) for these store IDs
+  // Fetch store details (name, address, lat, lon, shipping settings) for these store IDs
   const storesData = [];
   if (uniqueStoreIds.length > 0) {
     const { data } = await supabase
       .from("stores")
-      .select("id, name, address, lat, lon")
+      .select("id, name, address, lat, lon, max_distance, shipping_ojol, shipping_ambil, shipping_penjual, shipping_penjual_price_per_km")
       .in("id", uniqueStoreIds);
     if (data) {
       storesData.push(...data);
@@ -114,13 +114,12 @@ export default async function CheckoutPage({
     address: store.address,
     lat: store.lat,
     lon: store.lon,
+    maxDistance: store.max_distance ?? 10,
+    shippingOjol: store.shipping_ojol ?? true,
+    shippingAmbil: store.shipping_ambil ?? true,
+    shippingPenjual: store.shipping_penjual ?? false,
+    pricePerKm: store.shipping_penjual_price_per_km ?? 3000,
   }));
-
-  const SHIPPING_OPTIONS = [
-    { id: "gosend", label: "GoSend", price: 0, desc: "Ongkir dibayar terpisah", maxKm: 10 },
-    { id: "ambil", label: "Ambil Sendiri", price: 0, desc: "Ambil langsung ke toko" },
-    { id: "penjual", label: "Dianterin Penjual", price: 15000, desc: "Dikirim langsung oleh penjual", maxKm: 10 },
-  ];
 
   return (
     <div>
@@ -130,7 +129,6 @@ export default async function CheckoutPage({
           addresses={addresses}
           items={formattedItems}
           stores={stores}
-          shippingOptions={SHIPPING_OPTIONS}
           selectedItemIds={selectedItemIdsList}
         />
       </Container>

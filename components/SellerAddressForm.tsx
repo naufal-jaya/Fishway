@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { createClient } from "@/utils/supabase/supabaseClient";
-import { MapPin, Pencil, Check, X, AlertCircle, Search } from "lucide-react";
+import { MapPin, Pencil, Check, X, AlertCircle, Search, Truck } from "lucide-react";
 import { GoogleMap, Marker, useJsApiLoader } from "@react-google-maps/api";
 import usePlacesAutocomplete, { getGeocode, getLatLng } from "use-places-autocomplete";
 
@@ -31,6 +31,13 @@ export default function SellerAddressForm() {
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
   const [error, setError] = useState("");
+
+  // Pengiriman penjual
+  const [shippingPenjual, setShippingPenjual] = useState(false);
+  const [pricePerKm, setPricePerKm] = useState<number>(3000);
+  const [shippingLoading, setShippingLoading] = useState(false);
+  const [shippingSuccess, setShippingSuccess] = useState(false);
+  const [shippingError, setShippingError] = useState("");
 
   const { isLoaded } = useJsApiLoader({
     id: "google-map-script",
@@ -67,7 +74,7 @@ export default function SellerAddressForm() {
 
       const { data: store } = await supabase
         .from("stores")
-        .select("id, address, lat, lon")
+        .select("id, address, lat, lon, shipping_penjual, shipping_penjual_price_per_km")
         .eq("seller_id", user.id)
         .maybeSingle();
 
@@ -76,6 +83,8 @@ export default function SellerAddressForm() {
         setAddress(store.address || "");
         setLat(store.lat);
         setLon(store.lon);
+        setShippingPenjual(store.shipping_penjual ?? false);
+        setPricePerKm(store.shipping_penjual_price_per_km ?? 3000);
 
         if (store.lat && store.lon) {
           const center = { lat: store.lat, lng: store.lon };
@@ -189,6 +198,33 @@ export default function SellerAddressForm() {
     setDraftLon(lon);
     setError("");
     setEditing(false);
+  };
+
+  const handleSaveShipping = async () => {
+    if (!storeId) return;
+    if (shippingPenjual && (isNaN(pricePerKm) || pricePerKm <= 0)) {
+      setShippingError("Tarif per km harus lebih dari 0.");
+      return;
+    }
+    setShippingError("");
+    setShippingLoading(true);
+    setShippingSuccess(false);
+
+    const { error: dbErr } = await supabase
+      .from("stores")
+      .update({
+        shipping_penjual: shippingPenjual,
+        shipping_penjual_price_per_km: shippingPenjual ? pricePerKm : null,
+      })
+      .eq("id", storeId);
+
+    if (dbErr) {
+      setShippingError("Gagal menyimpan: " + dbErr.message);
+    } else {
+      setShippingSuccess(true);
+      setTimeout(() => setShippingSuccess(false), 3000);
+    }
+    setShippingLoading(false);
   };
 
   if (fetching) return null;
@@ -345,6 +381,88 @@ export default function SellerAddressForm() {
           </div>
         </div>
       )}
+      {/* ── Pengiriman Penjual ── */}
+      <div className="card p-5 space-y-4 mt-4">
+        <div className="flex items-center justify-between border-b pb-3">
+          <h2 className="font-bold text-gray-800 flex items-center gap-2">
+            <Truck size={18} className="text-primary" />
+            Pengiriman oleh Penjual
+          </h2>
+          {/* Toggle aktif/nonaktif */}
+          <button
+            type="button"
+            onClick={() => {
+              setShippingPenjual((v) => !v);
+              setShippingSuccess(false);
+            }}
+            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${
+              shippingPenjual ? "bg-primary" : "bg-gray-300"
+            }`}
+            aria-label="Toggle pengiriman penjual"
+          >
+            <span
+              className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+                shippingPenjual ? "translate-x-6" : "translate-x-1"
+              }`}
+            />
+          </button>
+        </div>
+
+        <p className="text-xs text-gray-500 leading-relaxed">
+          Aktifkan opsi ini agar pembeli dapat memilih pengiriman langsung oleh Anda.
+          Ongkir dihitung otomatis berdasarkan jarak ke alamat pembeli.
+        </p>
+
+        {/* Input tarif per km — hanya tampil jika aktif */}
+        {shippingPenjual && (
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-gray-700 block">
+              Tarif per Kilometer (Rp)
+            </label>
+            <div className="relative flex items-center">
+              <span className="absolute left-3 text-sm text-gray-400 font-medium select-none">
+                Rp
+              </span>
+              <input
+                type="number"
+                min={100}
+                step={100}
+                value={pricePerKm}
+                onChange={(e) => {
+                  setPricePerKm(Number(e.target.value));
+                  setShippingError("");
+                  setShippingSuccess(false);
+                }}
+                className={`w-full border rounded-lg py-2 pl-10 pr-3 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary ${
+                  shippingError ? "border-red-400" : "border-gray-300"
+                }`}
+              />
+              <span className="absolute right-3 text-xs text-gray-400 select-none">/km</span>
+            </div>
+            <p className="text-[11px] text-gray-400">
+              Contoh: jarak 5 km × Rp{pricePerKm.toLocaleString("id-ID")} = Rp{(5 * pricePerKm).toLocaleString("id-ID")}
+            </p>
+            {shippingError && (
+              <p className="text-xs text-red-500">{shippingError}</p>
+            )}
+          </div>
+        )}
+
+        {shippingSuccess && (
+          <div className="flex items-center gap-2 text-xs text-green-700 bg-green-50 border border-green-200 rounded-lg px-3 py-2">
+            <Check size={13} /> Pengaturan pengiriman berhasil disimpan!
+          </div>
+        )}
+
+        <button
+          onClick={handleSaveShipping}
+          disabled={shippingLoading}
+          className="w-full btn-primary py-2 rounded-xl text-sm flex items-center justify-center gap-1.5 disabled:opacity-50"
+        >
+          <Check size={14} />
+          {shippingLoading ? "Menyimpan..." : "Simpan Pengaturan Pengiriman"}
+        </button>
+      </div>
     </div>
   );
 }

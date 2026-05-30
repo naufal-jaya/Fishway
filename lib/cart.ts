@@ -141,7 +141,8 @@ export async function checkoutCart(
   shippingCosts?: Record<string, number>,
   storeNotes?: Record<string, string>,
   selectedItemIds?: string[],
-  addressId?: string
+  addressId?: string,
+  shippingDetails?: Record<string, { method: string; ratePerKm?: number; distanceKm?: number }>
 ) {
   const supabase = createClient(cookies());
   const { data: { user } } = await supabase.auth.getUser();
@@ -249,6 +250,7 @@ export async function checkoutCart(
     const totalAmount = items.reduce((sum, i) => sum + (i.price * i.quantity), 0);
     const shippingCost = shippingCosts?.[storeId] ?? 15000;
     const noteForStore = storeNotes?.[storeId] || null;
+    const detail = shippingDetails?.[storeId];
     
     const { data: order, error: orderError } = await supabase
       .from("orders")
@@ -262,6 +264,9 @@ export async function checkoutCart(
         shipping_name: shippingName,
         shipping_phone: shippingPhone,
         shipping_address: shippingAddressStr,
+        shipping_method: detail?.method || null,
+        shipping_rate_per_km: detail?.ratePerKm ?? null,
+        shipping_distance_km: detail?.distanceKm ?? null,
       })
       .select("id")
       .single();
