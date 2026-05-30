@@ -19,7 +19,7 @@ export async function middleware(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    if (["/login", "/signup"].includes(path)) {
+    if (["/", "/login", "/signup"].includes(path)) {
       return getResponse();
     }
 
