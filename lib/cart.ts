@@ -251,7 +251,7 @@ export async function checkoutCart(
     const shippingCost = shippingCosts?.[storeId] ?? 15000;
     const noteForStore = storeNotes?.[storeId] || null;
     const detail = shippingDetails?.[storeId];
-    
+
     const { data: order, error: orderError } = await supabase
       .from("orders")
       .insert({

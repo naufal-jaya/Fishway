@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { checkoutCart } from "@/lib/cart";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -325,6 +325,7 @@ export default function CheckoutClient({
             const storeItems = itemsByStore[store.id] || [];
             const shippingOptionId = selectedShipping[store.id] || storeShippingOptions[store.id]?.[0]?.id;
             const distInfo = storeDistances[store.id] || { distance: null, loading: false, failed: false };
+
 
             return (
               <div key={store.id} className="card p-6 space-y-4 border border-gray-100">

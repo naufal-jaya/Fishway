@@ -99,10 +99,14 @@ export default async function CheckoutPage({
   // Fetch store details (name, address, lat, lon, shipping settings) for these store IDs
   const storesData = [];
   if (uniqueStoreIds.length > 0) {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("stores")
       .select("id, name, address, lat, lon, max_distance, shipping_ojol, shipping_ambil, shipping_penjual, shipping_penjual_price_per_km")
       .in("id", uniqueStoreIds);
+
+    if (error) {
+      console.error("Error fetching checkout stores:", error.message);
+    }
     if (data) {
       storesData.push(...data);
     }
@@ -134,4 +138,4 @@ export default async function CheckoutPage({
       </Container>
     </div>
   );
-}
+}

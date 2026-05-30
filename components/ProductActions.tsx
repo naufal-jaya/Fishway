@@ -20,6 +20,7 @@ type ProductActionsProps = {
   waNumber: string;
   sellerName: string;
   storeId: string;
+  isOutOfRange?: boolean;
 };
 
 export default function ProductActions({
@@ -28,6 +29,7 @@ export default function ProductActions({
   waNumber,
   sellerName,
   storeId,
+  isOutOfRange = false,
 }: ProductActionsProps) {
   const [quantity, setQuantity] = useState("1");
   const [selectedVariant, setSelectedVariant] = useState<PriceOption | null>(
@@ -38,6 +40,7 @@ export default function ProductActions({
   const router = useRouter();
 
   const handleBuyNow = async () => {
+    if (isOutOfRange) return;
     setIsBuying(true);
     try {
       const variantId = product.type === 1 ? (selectedVariant as any)?.id : undefined;
@@ -75,6 +78,7 @@ export default function ProductActions({
   };
 
   const handleAddToCart = async () => {
+    if (isOutOfRange) return;
     setIsAdding(true);
     try {
       const variantId = product.type === 1 ? (selectedVariant as any)?.id : undefined;
@@ -201,9 +205,9 @@ export default function ProductActions({
         {/* Keranjang */}
         <button
           onClick={handleAddToCart}
-          disabled={isAdding || currentStock === 0}
-          style={{ borderColor: "#407BB5", color: "#407BB5" }}
-          className="w-full sm:flex-1 flex items-center justify-center gap-2 h-11 px-5 border-2 rounded-xl text-sm font-semibold transition hover:bg-blue-50"
+          disabled={isAdding || currentStock === 0 || isOutOfRange}
+          style={{ borderColor: isOutOfRange ? "#ccc" : "#407BB5", color: isOutOfRange ? "#999" : "#407BB5" }}
+          className="w-full sm:flex-1 flex items-center justify-center gap-2 h-11 px-5 border-2 rounded-xl text-sm font-semibold transition hover:bg-blue-50 disabled:hover:bg-transparent disabled:opacity-60 disabled:cursor-not-allowed"
         >
           {isAdding ? (
             <span className="w-4 h-4 border-2 border-[#407BB5] border-t-transparent rounded-full animate-spin"></span>
@@ -218,9 +222,9 @@ export default function ProductActions({
         {/* Beli Sekarang */}
         <button
           onClick={handleBuyNow}
-          disabled={isBuying || currentStock === 0}
-          style={{ backgroundColor: "#407BB5" }}
-          className="w-full sm:flex-1 flex items-center justify-center gap-2 h-11 px-5 text-white rounded-xl text-sm font-semibold hover:opacity-90 transition disabled:opacity-50"
+          disabled={isBuying || currentStock === 0 || isOutOfRange}
+          style={{ backgroundColor: isOutOfRange ? "#ccc" : "#407BB5" }}
+          className="w-full sm:flex-1 flex items-center justify-center gap-2 h-11 px-5 text-white rounded-xl text-sm font-semibold hover:opacity-90 transition disabled:opacity-60 disabled:cursor-not-allowed"
         >
           {isBuying ? (
             <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>

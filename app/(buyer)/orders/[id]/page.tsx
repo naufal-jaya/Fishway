@@ -33,6 +33,7 @@ export default async function BuyerOrderDetailPage({ params }: { params: { id: s
       shipping_name,
       shipping_phone,
       shipping_address,
+      shipping_method,
       buyer_note,
       created_at,
       notes,
@@ -141,6 +142,10 @@ Mohon diproses ya. Terima kasih!`;
                 <p className="text-sm text-gray-500 mt-1">
                   {order.shipping_address || "-"}
                 </p>
+                <div className="mt-4 pt-3 border-t border-gray-200">
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Metode Pengiriman</p>
+                  <p className="text-sm font-medium text-gray-800">{order.shipping_method || "Reguler"}</p>
+                </div>
               </div>
             </div>
 
