@@ -44,10 +44,8 @@ export default function SellerAddressForm() {
   const [error, setError] = useState("");
 
   // Tarif per km (fitur kita)
-  const [pricePerKm, setPricePerKm] = useState<number>(3000);
-  const [shippingLoading, setShippingLoading] = useState(false);
-  const [shippingSuccess, setShippingSuccess] = useState(false);
-  const [shippingError, setShippingError] = useState("");
+  const [pricePerKm, setPricePerKm] = useState<number | "">(3000);
+  const [draftPricePerKm, setDraftPricePerKm] = useState<number | "">(3000);
 
   const { isLoaded } = useJsApiLoader({
     id: "google-map-script",
@@ -106,7 +104,9 @@ export default function SellerAddressForm() {
         setShippingPenjual(store.shipping_penjual ?? false);
 
         // tarif per km (fitur kita)
-        setPricePerKm(store.shipping_penjual_price_per_km ?? 3000);
+        const rate = store.shipping_penjual_price_per_km ?? 3000;
+        setPricePerKm(rate);
+        setDraftPricePerKm(rate);
 
         if (store.lat && store.lon) {
           const center = { lat: store.lat, lng: store.lon };
@@ -178,6 +178,7 @@ export default function SellerAddressForm() {
     setDraftShippingOjol(shippingOjol);
     setDraftShippingAmbil(shippingAmbil);
     setDraftShippingPenjual(shippingPenjual);
+    setDraftPricePerKm(pricePerKm);
 
     if (lat && lon) {
       const center = { lat, lng: lon };
@@ -204,10 +205,18 @@ export default function SellerAddressForm() {
       setError("Jarak maksimal pengiriman minimal 1 km.");
       return;
     }
+
+    const numericPrice = draftPricePerKm === "" ? 0 : draftPricePerKm;
+    if (draftShippingPenjual && (isNaN(numericPrice) || numericPrice <= 0)) {
+      setError("Tarif per km harus lebih dari 0.");
+      return;
+    }
+
     if (!draftShippingOjol && !draftShippingAmbil && !draftShippingPenjual) {
       setError("Minimal satu metode pengiriman harus diaktifkan.");
       return;
     }
+
     if (!storeId) return;
     setError("");
     setLoading(true);
@@ -222,6 +231,7 @@ export default function SellerAddressForm() {
         shipping_ojol: draftShippingOjol,
         shipping_ambil: draftShippingAmbil,
         shipping_penjual: draftShippingPenjual,
+        shipping_penjual_price_per_km: draftShippingPenjual ? numericPrice : null,
       })
       .eq("id", storeId);
 
@@ -236,6 +246,7 @@ export default function SellerAddressForm() {
       setShippingOjol(draftShippingOjol);
       setShippingAmbil(draftShippingAmbil);
       setShippingPenjual(draftShippingPenjual);
+      setPricePerKm(draftShippingPenjual ? numericPrice : pricePerKm);
       
       setEditing(false);
     }
@@ -251,36 +262,10 @@ export default function SellerAddressForm() {
     setDraftShippingOjol(shippingOjol);
     setDraftShippingAmbil(shippingAmbil);
     setDraftShippingPenjual(shippingPenjual);
+    setDraftPricePerKm(pricePerKm);
     
     setError("");
     setEditing(false);
-  };
-
-  const handleSaveShipping = async () => {
-    if (!storeId) return;
-    if (shippingPenjual && (isNaN(pricePerKm) || pricePerKm <= 0)) {
-      setShippingError("Tarif per km harus lebih dari 0.");
-      return;
-    }
-    setShippingError("");
-    setShippingLoading(true);
-    setShippingSuccess(false);
-
-    const { error: dbErr } = await supabase
-      .from("stores")
-      .update({
-        shipping_penjual: shippingPenjual,
-        shipping_penjual_price_per_km: shippingPenjual ? pricePerKm : null,
-      })
-      .eq("id", storeId);
-
-    if (dbErr) {
-      setShippingError("Gagal menyimpan: " + dbErr.message);
-    } else {
-      setShippingSuccess(true);
-      setTimeout(() => setShippingSuccess(false), 3000);
-    }
-    setShippingLoading(false);
   };
 
   if (fetching) return null;
@@ -344,7 +329,9 @@ export default function SellerAddressForm() {
                   <span className="text-[10px] bg-green-50 text-green-700 border border-green-200 px-2 py-0.5 rounded-full font-medium">Ambil Sendiri</span>
                 )}
                 {shippingPenjual && (
-                  <span className="text-[10px] bg-orange-50 text-orange-700 border border-orange-200 px-2 py-0.5 rounded-full font-medium">Dianterin Penjual</span>
+                  <span className="text-[10px] bg-orange-50 text-orange-700 border border-orange-200 px-2 py-0.5 rounded-full font-medium">
+                    Dianterin Penjual (Rp{(pricePerKm === "" ? 0 : pricePerKm).toLocaleString("id-ID")}/km)
+                  </span>
                 )}
               </div>
             </div>
@@ -393,7 +380,7 @@ export default function SellerAddressForm() {
                 />
                 <span className="text-sm text-gray-700 font-medium">Ambil Sendiri ke Toko</span>
               </label>
-              
+
               <label className="flex items-center gap-2 cursor-pointer border p-2 rounded-lg border-gray-200 hover:bg-gray-50">
                 <input 
                   type="checkbox" 
@@ -405,6 +392,45 @@ export default function SellerAddressForm() {
               </label>
             </div>
           </div>
+
+          {/* Tarif per Kilometer — tampil di atas peta jika Dianterin Penjual dicentang */}
+          {draftShippingPenjual && (
+            <div className="space-y-2 bg-orange-50 border border-orange-200 rounded-xl p-4">
+              <label className="text-sm font-semibold text-orange-800 block">
+                Tarif Pengiriman oleh Penjual
+              </label>
+              <p className="text-xs text-orange-600 leading-relaxed">
+                Ongkir dihitung otomatis saat checkout berdasarkan jarak ke alamat pembeli.
+                Masukkan tarif per kilometer yang Anda kenakan.
+              </p>
+              <div>
+                <label className="text-sm font-medium text-gray-700 block mb-1">
+                  Tarif per Kilometer (Rp)
+                </label>
+                <div className="relative flex items-center">
+                  <span className="absolute left-3 text-sm text-gray-400 font-medium select-none">
+                    Rp
+                  </span>
+                  <input
+                    type="number"
+                    min={100}
+                    step={100}
+                    value={draftPricePerKm}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setDraftPricePerKm(val === "" ? "" : Number(val));
+                      setError("");
+                    }}
+                    className="w-full border border-orange-300 rounded-lg py-2 pl-10 pr-10 text-sm outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-300 bg-white"
+                  />
+                  <span className="absolute right-3 text-xs text-gray-400 select-none">/km</span>
+                </div>
+                <p className="text-[11px] text-gray-400 mt-1">
+                  Contoh: jarak 5 km × Rp{(draftPricePerKm === "" ? 0 : draftPricePerKm).toLocaleString("id-ID")} = Rp{(5 * (draftPricePerKm === "" ? 0 : draftPricePerKm)).toLocaleString("id-ID")}
+                </p>
+              </div>
+            </div>
+          )}
 
           {/* Map Integration */}
           <div>
@@ -486,6 +512,8 @@ export default function SellerAddressForm() {
             {error && <p className="text-xs text-red-500 mt-1">{error}</p>}
           </div>
 
+
+
           <div className="flex gap-2 pt-2 border-t">
             <button
               onClick={handleCancel}
@@ -504,88 +532,6 @@ export default function SellerAddressForm() {
           </div>
         </div>
       )}
-      {/* ── Pengiriman Penjual ── */}
-      <div className="card p-5 space-y-4 mt-4">
-        <div className="flex items-center justify-between border-b pb-3">
-          <h2 className="font-bold text-gray-800 flex items-center gap-2">
-            <Truck size={18} className="text-primary" />
-            Pengiriman oleh Penjual
-          </h2>
-          {/* Toggle aktif/nonaktif */}
-          <button
-            type="button"
-            onClick={() => {
-              setShippingPenjual((v) => !v);
-              setShippingSuccess(false);
-            }}
-            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${
-              shippingPenjual ? "bg-primary" : "bg-gray-300"
-            }`}
-            aria-label="Toggle pengiriman penjual"
-          >
-            <span
-              className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
-                shippingPenjual ? "translate-x-6" : "translate-x-1"
-              }`}
-            />
-          </button>
-        </div>
-
-        <p className="text-xs text-gray-500 leading-relaxed">
-          Aktifkan opsi ini agar pembeli dapat memilih pengiriman langsung oleh Anda.
-          Ongkir dihitung otomatis berdasarkan jarak ke alamat pembeli.
-        </p>
-
-        {/* Input tarif per km — hanya tampil jika aktif */}
-        {shippingPenjual && (
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-700 block">
-              Tarif per Kilometer (Rp)
-            </label>
-            <div className="relative flex items-center">
-              <span className="absolute left-3 text-sm text-gray-400 font-medium select-none">
-                Rp
-              </span>
-              <input
-                type="number"
-                min={100}
-                step={100}
-                value={pricePerKm}
-                onChange={(e) => {
-                  setPricePerKm(Number(e.target.value));
-                  setShippingError("");
-                  setShippingSuccess(false);
-                }}
-                className={`w-full border rounded-lg py-2 pl-10 pr-3 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary ${
-                  shippingError ? "border-red-400" : "border-gray-300"
-                }`}
-              />
-              <span className="absolute right-3 text-xs text-gray-400 select-none">/km</span>
-            </div>
-            <p className="text-[11px] text-gray-400">
-              Contoh: jarak 5 km × Rp{pricePerKm.toLocaleString("id-ID")} = Rp{(5 * pricePerKm).toLocaleString("id-ID")}
-            </p>
-            {shippingError && (
-              <p className="text-xs text-red-500">{shippingError}</p>
-            )}
-          </div>
-        )}
-
-        {shippingSuccess && (
-          <div className="flex items-center gap-2 text-xs text-green-700 bg-green-50 border border-green-200 rounded-lg px-3 py-2">
-            <Check size={13} /> Pengaturan pengiriman berhasil disimpan!
-          </div>
-        )}
-
-        <button
-          onClick={handleSaveShipping}
-          disabled={shippingLoading}
-          className="w-full btn-primary py-2 rounded-xl text-sm flex items-center justify-center gap-1.5 disabled:opacity-50"
-        >
-          <Check size={14} />
-          {shippingLoading ? "Menyimpan..." : "Simpan Pengaturan Pengiriman"}
-        </button>
-      </div>
     </div>
   );
 }

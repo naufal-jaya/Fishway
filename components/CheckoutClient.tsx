@@ -74,6 +74,7 @@ export default function CheckoutClient({
 }: Props) {
   const [loading, setLoading] = useState(false);
   const [notes, setNotes] = useState<Record<string, string>>({});
+  const [addressDropdownOpen, setAddressDropdownOpen] = useState(false);
   const router = useRouter();
 
   // Address Selection
@@ -99,7 +100,7 @@ export default function CheckoutClient({
         opts.push({
           id: "penjual",
           label: "Dianterin Penjual",
-          desc: `Rp${(store.pricePerKm ?? 3000).toLocaleString("id-ID")}/km`,
+          desc: `Tarif: Rp${(store.pricePerKm ?? 3000).toLocaleString("id-ID")}/km · dihitung berdasarkan jarak`,
           maxKm: store.maxDistance ?? 10,
         });
       }
@@ -269,49 +270,84 @@ export default function CheckoutClient({
       <div className="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto items-start">
         {/* KIRI - Alamat & Per Toko Shipping Selection */}
         <div className="space-y-4">
-          {/* Pilih Alamat Card */}
+          {/* Pilih Alamat Card — Card sekaligus Dropdown */}
           <div className="card p-6 space-y-4">
             <h2 className="font-bold text-gray-800 text-lg border-b pb-3 flex items-center gap-2">
               <MapPin size={18} className="text-primary" /> Alamat Pengiriman
             </h2>
-            
-            <div>
-              <div className="relative">
-                <select
-                  value={selectedAddressId}
-                  onChange={(e) => setSelectedAddressId(e.target.value)}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none focus:border-primary appearance-none pr-8"
-                >
-                  {addresses.map((addr) => (
-                    <option key={addr.id} value={addr.id}>
-                      {addr.label} {addr.is_primary ? "(Utama)" : ""}
-                    </option>
-                  ))}
-                </select>
-                <ChevronDown
-                  size={16}
-                  className="absolute right-2 top-2.5 text-gray-400 pointer-events-none"
-                />
-              </div>
 
-              {selectedAddress && (
-                <div className="mt-2 border border-primary/30 rounded-xl p-4 bg-primary/5 space-y-1 text-sm">
-                  <p className="font-semibold text-gray-800">
-                    {selectedAddress.label}
-                    {selectedAddress.is_primary && (
-                      <span className="ml-2 text-[10px] px-2 py-0.5 rounded-full bg-primary text-white font-medium">
-                        Utama
-                      </span>
-                    )}
-                  </p>
-                  <p className="font-medium text-gray-800">
-                    {selectedAddress.recipient_name}
-                  </p>
-                  <p className="text-gray-500">{selectedAddress.phone}</p>
-                  <p className="text-gray-500">{selectedAddress.address}</p>
+            <div className="relative">
+              {/* Card utama yang sekaligus jadi tombol dropdown */}
+              <button
+                type="button"
+                onClick={() => setAddressDropdownOpen((prev) => !prev)}
+                className="w-full text-left border border-primary/30 rounded-xl p-4 bg-primary/5 space-y-1 text-sm hover:border-primary/60 transition-all focus:outline-none focus:ring-2 focus:ring-primary/20"
+              >
+                {selectedAddress ? (
+                  <>
+                    <div className="flex items-center justify-between">
+                      <p className="font-semibold text-gray-800 flex items-center gap-2">
+                        {selectedAddress.label}
+                        {selectedAddress.is_primary && (
+                          <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary text-white font-medium">
+                            Utama
+                          </span>
+                        )}
+                      </p>
+                      <ChevronDown
+                        size={16}
+                        className={`text-primary transition-transform duration-200 ${
+                          addressDropdownOpen ? "rotate-180" : ""
+                        }`}
+                      />
+                    </div>
+                    <p className="font-medium text-gray-800">{selectedAddress.recipient_name}</p>
+                    <p className="text-gray-500">{selectedAddress.phone}</p>
+                    <p className="text-gray-500">{selectedAddress.address}</p>
+                  </>
+                ) : (
+                  <div className="flex items-center justify-between text-gray-400">
+                    <span>Pilih alamat pengiriman</span>
+                    <ChevronDown size={16} className={`transition-transform duration-200 ${addressDropdownOpen ? "rotate-180" : ""}`} />
+                  </div>
+                )}
+              </button>
+
+              {/* Dropdown list alamat lainnya */}
+              {addressDropdownOpen && (
+                <div className="absolute z-20 mt-2 w-full bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden">
+                  {addresses.map((addr) => (
+                    <button
+                      key={addr.id}
+                      type="button"
+                      onClick={() => {
+                        setSelectedAddressId(addr.id);
+                        setAddressDropdownOpen(false);
+                      }}
+                      className={`w-full text-left px-4 py-3 text-sm transition-colors hover:bg-primary/5 border-b last:border-0 border-gray-100 ${
+                        selectedAddressId === addr.id ? "bg-primary/10" : ""
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <p className="font-semibold text-gray-800 flex items-center gap-2">
+                          {addr.label}
+                          {addr.is_primary && (
+                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary text-white font-medium">
+                              Utama
+                            </span>
+                          )}
+                        </p>
+                        {selectedAddressId === addr.id && (
+                          <CheckCircle size={14} className="text-primary shrink-0" />
+                        )}
+                      </div>
+                      <p className="text-gray-600 text-xs mt-0.5">{addr.recipient_name} · {addr.phone}</p>
+                      <p className="text-gray-400 text-xs truncate">{addr.address}</p>
+                    </button>
+                  ))}
                   <a
                     href={`/profile/edit?redirect=${encodeURIComponent(`/checkout?items=${(selectedItemIds || []).join(",")}`)}`}
-                    className="text-primary text-xs hover:underline inline-block pt-1"
+                    className="block px-4 py-3 text-xs text-primary font-medium hover:bg-primary/5 transition-colors"
                   >
                     + Ubah / Tambah Alamat
                   </a>
