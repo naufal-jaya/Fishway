@@ -1,6 +1,7 @@
 "use client";
 
 import { ImagePlus, Trash2 } from "lucide-react";
+import { useToast } from "@/components/ToastContext";
 
 export const MAX_PRODUCT_IMAGE_SIZE_BYTES = 10 * 1024 * 1024;
 
@@ -29,6 +30,7 @@ export default function ProductImageManager({
   maxImages = 10,
 }: Props) {
   const remaining = maxImages - images.length;
+  const { showToast } = useToast();
 
   return (
     <div className="card p-5 space-y-4">
@@ -88,7 +90,7 @@ export default function ProductImageManager({
           const validFiles = selectedFiles.filter((file) => file.size <= MAX_PRODUCT_IMAGE_SIZE_BYTES);
 
           if (validFiles.length !== selectedFiles.length) {
-            alert("Ukuran setiap foto maksimal 10 MB.");
+            showToast({ type: "warning", message: "Ukuran setiap foto maksimal 10 MB." });
           }
 
           onAdd(validFiles);

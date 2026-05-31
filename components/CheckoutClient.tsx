@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { formatPrice } from "@/lib/data";
 import { calculateDistance } from "@/lib/distance";
+import { useToast } from "@/components/ToastContext";
 import {
   ChevronDown,
   CheckCircle,
@@ -76,6 +77,7 @@ export default function CheckoutClient({
   const [notes, setNotes] = useState<Record<string, string>>({});
   const [addressDropdownOpen, setAddressDropdownOpen] = useState(false);
   const router = useRouter();
+  const { showToast } = useToast();
 
   // Address Selection
   const primaryAddress = addresses.find((a) => a.is_primary) || addresses[0];
@@ -224,7 +226,11 @@ export default function CheckoutClient({
   const handleConfirm = async () => {
     if (loading) return;
     if (isAnyStoreOutOfRange) {
-      alert("Ada pengiriman yang berada di luar jangkauan radius layanan toko. Harap ubah metode pengiriman atau alamat Anda.");
+      showToast({
+        type: "warning",
+        message: "Ada pengiriman di luar jangkauan radius toko. Harap ubah metode pengiriman atau alamat.",
+        duration: 5000,
+      });
       return;
     }
     setLoading(true);
@@ -244,16 +250,23 @@ export default function CheckoutClient({
       });
 
       const result = await checkoutCart(storeShippingCosts, notes, selectedItemIds, selectedAddressId, shippingDetails);
+
       if (result.error) {
-        alert(result.error);
+        showToast({ type: "error", message: result.error, duration: 5000 });
         setLoading(false);
         return;
       }
-      alert("Pesanan Berhasil Dibuat! Anda akan diarahkan ke halaman pesanan.");
+      showToast({
+        type: "success",
+        message: "Pesanan berhasil dibuat!",
+        actionLabel: "Lihat Pesanan",
+        actionHref: "/orders",
+        duration: 6000,
+      });
       router.push("/orders");
       router.refresh();
     } catch {
-      alert("Terjadi kesalahan.");
+      showToast({ type: "error", message: "Terjadi kesalahan saat memproses pesanan.", duration: 5000 });
       setLoading(false);
     }
   };
@@ -535,7 +548,6 @@ export default function CheckoutClient({
               <ClipboardList size={18} className="text-primary" /> Ringkasan Pesanan
             </h2>
             <div className="space-y-3">
-              {/* Product Subtotals per Store */}
               {stores.map((store) => {
                 const sub = storeSubtotals[store.id] || 0;
                 const ship = storeShippingCosts[store.id] || 0;

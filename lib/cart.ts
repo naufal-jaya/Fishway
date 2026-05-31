@@ -45,6 +45,14 @@ export async function addToCart(productId: string, quantity: number, variantId?:
 
   const { data: existingItem } = await existingQuery.maybeSingle();
 
+  // Ambil nama produk untuk notifikasi
+  const { data: productData } = await supabase
+    .from("products")
+    .select("name")
+    .eq("id", productId)
+    .maybeSingle();
+  const productName = productData?.name || "Produk";
+
   if (existingItem) {
     const { error } = await supabase
       .from("cart_items")
@@ -52,6 +60,14 @@ export async function addToCart(productId: string, quantity: number, variantId?:
       .eq("id", existingItem.id);
       
     if (error) return { error: "Gagal update keranjang." };
+
+    // Notif: update qty keranjang
+    await supabase.from("notifications").insert({
+      user_id: user.id,
+      title: "Keranjang Diperbarui",
+      message: `${productName} (x${existingItem.quantity + quantity}) sudah ada di keranjang kamu.`,
+      link: "/cart",
+    });
 
     revalidatePath("/cart");
     return { success: true, cartItemId: existingItem.id };
@@ -68,6 +84,14 @@ export async function addToCart(productId: string, quantity: number, variantId?:
       .single();
       
     if (error) return { error: "Gagal menambah item ke keranjang." };
+
+    // Notif: produk baru masuk keranjang
+    await supabase.from("notifications").insert({
+      user_id: user.id,
+      title: "Ditambahkan ke Keranjang 🛒",
+      message: `${productName} (x${quantity}) berhasil masuk ke keranjang kamu.`,
+      link: "/cart",
+    });
 
     revalidatePath("/cart");
     return { success: true, cartItemId: newItem.id };
@@ -170,7 +194,6 @@ export async function checkoutCart(
     return { error: "Keranjang kosong" };
   }
 
-  // Filter hanya item yang dipilih saat checkout (jika ada)
   const itemsToCheckout = selectedItemIds && selectedItemIds.length > 0
     ? cart.cart_items.filter((item: any) => selectedItemIds.includes(item.id))
     : cart.cart_items;
@@ -179,13 +202,12 @@ export async function checkoutCart(
     return { error: "Tidak ada item yang valid untuk di-checkout" };
   }
 
-  // Upsert ke buyers table untuk mencegah foreign key error
+  // Upsert ke buyers table
   const { data: buyerExists } = await supabase.from("buyers").select("id").eq("id", user.id).maybeSingle();
   if (!buyerExists) {
     await supabase.from("buyers").insert({ id: user.id });
   }
 
-  // Fetch address snapshot (simpan ke order agar tidak berubah jika user edit alamat nanti)
   let shippingName = "";
   let shippingPhone = "";
   let shippingAddressStr = "";
@@ -210,7 +232,6 @@ export async function checkoutCart(
   }
 
   const storeOrders: Record<string, any[]> = {};
-  // Track which cart_item IDs were successfully processed
   const processedCartItemIds: string[] = [];
   
   for (const item of itemsToCheckout) {
@@ -232,6 +253,7 @@ export async function checkoutCart(
     storeOrders[product.store_id].push({
       cart_item_id: item.id,
       product_id: product.id,
+      product_name: product.name,
       quantity: item.quantity,
       selected_variant_id: item.selected_variant_id,
       price: price
@@ -243,7 +265,9 @@ export async function checkoutCart(
     return { error: "Gagal checkout: Produk tidak memiliki informasi toko (store_id) yang valid." };
   }
 
-  const createdOrderIds = [];
+  const createdOrderIds: string[] = [];
+  // Kumpulkan info toko untuk notif buyer
+  const orderSummaries: { storeName: string; orderId: string; total: number }[] = [];
 
   for (const storeId in storeOrders) {
     const items = storeOrders[storeId];
@@ -295,7 +319,7 @@ export async function checkoutCart(
       return { error: `Gagal menambahkan item pesanan: ${itemsError?.message || 'Unknown'}` };
     }
 
-    // Kurangi stok produk setelah order berhasil dibuat
+    // Kurangi stok
     for (const i of items) {
       const { data: productStock } = await supabase
         .from("products")
@@ -312,24 +336,51 @@ export async function checkoutCart(
       }
     }
 
-    // Ambil seller_id dari store untuk kirim notifikasi
+    // Ambil nama toko + kirim notif ke seller
     const { data: storeData } = await supabase
       .from("stores")
-      .select("seller_id")
+      .select("seller_id, name")
       .eq("id", storeId)
       .maybeSingle();
 
-    if (storeData && storeData.seller_id) {
+    if (storeData?.seller_id) {
       await supabase.from("notifications").insert({
         user_id: storeData.seller_id,
-        title: "Pesanan Baru!",
+        title: "Pesanan Baru! 🎉",
         message: `Ada pesanan baru sejumlah ${formatPrice(totalAmount)}. Silakan periksa halaman pesanan.`,
         link: `/dashboard/orders/${order.id}`
       });
     }
+
+    orderSummaries.push({
+      storeName: storeData?.name || "Toko",
+      orderId: order.id,
+      total: totalAmount + shippingCost,
+    });
   }
 
-  // Hapus hanya cart items yang sudah di-checkout (bukan seluruh keranjang)
+  // Notif ke buyer: ringkasan checkout
+  if (orderSummaries.length === 1) {
+    // Checkout dari 1 toko
+    const s = orderSummaries[0];
+    await supabase.from("notifications").insert({
+      user_id: user.id,
+      title: "Pesanan Berhasil Dibuat ✅",
+      message: `Pesanan dari ${s.storeName} senilai ${formatPrice(s.total)} sedang menunggu konfirmasi penjual.`,
+      link: `/orders/${s.orderId}`,
+    });
+  } else {
+    // Checkout dari beberapa toko sekaligus
+    const totalAll = orderSummaries.reduce((sum, s) => sum + s.total, 0);
+    await supabase.from("notifications").insert({
+      user_id: user.id,
+      title: "Pesanan Berhasil Dibuat ✅",
+      message: `${orderSummaries.length} pesanan dari ${orderSummaries.length} toko senilai ${formatPrice(totalAll)} sedang menunggu konfirmasi.`,
+      link: `/orders`,
+    });
+  }
+
+  // Hapus cart items yang sudah di-checkout
   if (processedCartItemIds.length > 0) {
     const { error: deleteError } = await supabase
       .from("cart_items")

@@ -9,6 +9,7 @@ import AddressList from "@/components/AddressList";
 import SellerAddressForm from "@/components/SellerAddressForm";
 import { getAddresses } from "@/lib/addresses";
 import { User } from "lucide-react";
+import { useToast } from "@/components/ToastContext";
 
 type Address = {
   id: string;
@@ -29,6 +30,7 @@ function EditProfileContent() {
   const [userId, setUserId] = useState("");
   const [isSeller, setIsSeller] = useState(false);
   const [addresses, setAddresses] = useState<Address[]>([]);
+  const { showToast } = useToast();
 
   const [errors, setErrors] = useState<{ name?: string; phone?: string }>({});
 
@@ -55,7 +57,6 @@ function EditProfileContent() {
       const sellerDetected = !!store;
       setIsSeller(sellerDetected);
 
-      // Hanya fetch buyer addresses jika bukan penjual
       if (!sellerDetected) {
         const fetchedAddresses = await getAddresses();
         setAddresses(fetchedAddresses || []);
@@ -79,19 +80,12 @@ function EditProfileContent() {
 
     const newErrors: { name?: string; phone?: string } = {};
 
-    if (!formData.name.trim()) {
-      newErrors.name = "Nama tidak boleh kosong.";
-    } else if (formData.name.trim().length < 2) {
-      newErrors.name = "Nama minimal 2 karakter.";
-    } else if (/\d/.test(formData.name)) {
-      newErrors.name = "Nama tidak boleh mengandung angka.";
-    }
+    if (!formData.name.trim()) newErrors.name = "Nama tidak boleh kosong.";
+    else if (formData.name.trim().length < 2) newErrors.name = "Nama minimal 2 karakter.";
+    else if (/\d/.test(formData.name)) newErrors.name = "Nama tidak boleh mengandung angka.";
 
-    if (!formData.phone.trim()) {
-      newErrors.phone = "Nomor telepon tidak boleh kosong.";
-    } else if (!/^(\+62|62|0)[0-9]{8,12}$/.test(formData.phone.replace(/\s/g, ""))) {
-      newErrors.phone = "Nomor telepon tidak valid. Contoh: 08123456789";
-    }
+    if (!formData.phone.trim()) newErrors.phone = "Nomor telepon tidak boleh kosong.";
+    else if (!/^(\+62|62|0)[0-9]{8,12}$/.test(formData.phone.replace(/\s/g, ""))) newErrors.phone = "Nomor telepon tidak valid. Contoh: 08123456789";
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
@@ -104,12 +98,8 @@ function EditProfileContent() {
     try {
       if (!userId) throw new Error("Not authenticated");
 
-      // Update accounts
-      await supabase.from("accounts").update({
-        name: formData.name,
-      }).eq("id", userId);
+      await supabase.from("accounts").update({ name: formData.name }).eq("id", userId);
 
-      // Upsert buyers
       const { data: buyerExists } = await supabase.from("buyers").select("id").eq("id", userId).maybeSingle();
       if (buyerExists) {
         await supabase.from("buyers").update({ phone: formData.phone }).eq("id", userId);
@@ -117,29 +107,29 @@ function EditProfileContent() {
         await supabase.from("buyers").insert({ id: userId, phone: formData.phone });
       }
 
-      // Sync name & phone ke stores jika seller
       if (isSeller) {
-        await supabase.from("stores").update({
-          name: formData.name,
-          phone: formData.phone,
-        }).eq("seller_id", userId);
+        await supabase.from("stores").update({ name: formData.name, phone: formData.phone }).eq("seller_id", userId);
       }
 
-      alert("Profil berhasil diperbarui!");
+      showToast({
+        type: "success",
+        message: "Profil berhasil diperbarui!",
+        actionLabel: "Lihat Profil",
+        actionHref: "/profile",
+        duration: 5000,
+      });
       router.push(redirectUrl);
       router.refresh();
 
     } catch (error: any) {
       console.error(error);
-      alert("Gagal memperbarui profil.");
+      showToast({ type: "error", message: "Gagal memperbarui profil.", duration: 5000 });
     } finally {
       setLoading(false);
     }
   };
 
-  if (fetching) {
-    return <div className="text-center py-20">Memuat profil...</div>;
-  }
+  if (fetching) return <div className="text-center py-20">Memuat profil...</div>;
 
   return (
     <div>
@@ -149,7 +139,6 @@ function EditProfileContent() {
           <h1 className="text-2xl font-bold text-gray-800 mb-6">Edit Profil</h1>
 
           <div className="grid md:grid-cols-2 gap-6 items-start">
-
             {/* KIRI — Informasi Akun */}
             <form onSubmit={handleSubmit} className="card p-6 space-y-4">
               <h2 className="font-bold text-gray-800 text-lg border-b pb-3 flex items-center gap-2">
@@ -163,10 +152,7 @@ function EditProfileContent() {
                   type="text"
                   name="name"
                   value={formData.name}
-                  onChange={(e) => {
-                    handleChange(e);
-                    setErrors((prev) => ({ ...prev, name: undefined }));
-                  }}
+                  onChange={(e) => { handleChange(e); setErrors((prev) => ({ ...prev, name: undefined })); }}
                   className={`w-full border rounded-lg p-2 ${errors.name ? "border-red-400 focus:outline-red-400" : ""}`}
                 />
                 {errors.name && <p className="text-xs text-red-500 mt-1">{errors.name}</p>}
@@ -190,35 +176,17 @@ function EditProfileContent() {
               </div>
             </form>
 
-            {/* KANAN — Alamat (berbeda untuk seller dan buyer) */}
+            {/* KANAN — Alamat */}
             <div className="space-y-4">
-              {isSeller ? (
-                /* Penjual: 1 alamat toko, wajib, self-managed */
-                <SellerAddressForm />
-              ) : (
-                /* Pembeli: banyak alamat pengiriman */
-                <AddressList initialAddresses={addresses} />
-              )}
+              {isSeller ? <SellerAddressForm /> : <AddressList initialAddresses={addresses} />}
 
-              {/* Tombol aksi */}
               <div className="flex gap-3">
-                <button
-                  type="button"
-                  onClick={() => router.push(redirectUrl)}
-                  className="flex-1 btn-outline py-2.5 rounded-xl"
-                >
-                  Batal
-                </button>
-                <button
-                  disabled={loading}
-                  onClick={handleSubmit}
-                  className="flex-1 btn-primary py-2.5 rounded-xl"
-                >
+                <button type="button" onClick={() => router.push(redirectUrl)} className="flex-1 btn-outline py-2.5 rounded-xl">Batal</button>
+                <button disabled={loading} onClick={handleSubmit} className="flex-1 btn-primary py-2.5 rounded-xl">
                   {loading ? "Menyimpan..." : "Simpan Perubahan"}
                 </button>
               </div>
             </div>
-
           </div>
         </div>
       </Container>
