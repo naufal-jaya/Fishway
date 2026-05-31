@@ -125,8 +125,7 @@ Mohon diproses ya. Terima kasih!`;
             {order.notes && (
               <div className="mb-8">
                 <h2 className="text-lg font-bold text-gray-800 mb-3">Catatan Pesanan</h2>
-                <div className="bg-amber-50 border border-amber-200/60 p-4 rounded-xl text-sm text-amber-900 flex flex-col gap-1">
-                  <span className="text-xs font-semibold text-amber-700 uppercase tracking-wider">Catatan Ke Toko</span>
+                <div className="bg-amber-50 border border-amber-200/60 p-4 rounded-xl text-sm text-amber-900">
                   <p className="leading-relaxed font-medium">{order.notes}</p>
                 </div>
               </div>

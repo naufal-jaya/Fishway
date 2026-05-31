@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { XCircle } from "lucide-react";
 
 export default function CancelOrderButton({ action }: { action: (formData: FormData) => Promise<void> }) {
   const [open, setOpen] = useState(false);
@@ -10,8 +11,9 @@ export default function CancelOrderButton({ action }: { action: (formData: FormD
       {!open ? (
         <button
           onClick={() => setOpen(true)}
-          className="text-sm text-red-500 hover:text-red-600 font-semibold hover:underline transition-colors"
+          className="inline-flex items-center gap-2 text-sm font-semibold text-red-500 border border-red-300 px-4 py-2 rounded-lg hover:bg-red-50 hover:border-red-400 transition-colors"
         >
+          <XCircle className="w-4 h-4" />
           Batalkan Pesanan
         </button>
       ) : (

@@ -9,8 +9,10 @@ import { redirect } from "next/navigation";
 import { Pencil, Trash, ChevronLeft } from "lucide-react";
 import Image from "next/image";
 import DeleteProductButton from "@/components/DeleteProductButton";
+import ProductSearchBar from "@/components/ProductSearchBar";
+import { Suspense } from "react";
 
-export default async function SellerProductsPage() {
+export default async function SellerProductsPage({ searchParams }: { searchParams: { q?: string } }) {
   const supabase = createClient(cookies());
   const { data: { user } } = await supabase.auth.getUser();
 
@@ -95,6 +97,11 @@ export default async function SellerProductsPage() {
     }
   });
 
+  const searchQuery = (searchParams.q || "").toLowerCase().trim();
+  const filteredProducts = searchQuery
+    ? myProducts.filter((p) => p.name?.toLowerCase().includes(searchQuery))
+    : myProducts;
+
   async function deleteProduct(formData: FormData) {
     "use server";
     const productId = formData.get("productId") as string;
@@ -138,7 +145,22 @@ export default async function SellerProductsPage() {
             <div className="grid md:grid-cols-3 gap-6">
               {/* LEFT: PRODUCT LIST */}
               <div className="md:col-span-2 space-y-4">
-                {myProducts.map((product) => (
+
+                {/* Search bar */}
+                <Suspense fallback={null}>
+                  <ProductSearchBar defaultValue={searchParams.q} />
+                </Suspense>
+
+                {/* Result count */}
+                {searchQuery && (
+                  <p className="text-sm text-gray-500">
+                    {filteredProducts.length === 0
+                      ? `Tidak ada produk untuk "${searchParams.q}"`
+                      : `${filteredProducts.length} produk ditemukan untuk "${searchParams.q}"`}
+                  </p>
+                )}
+
+                {filteredProducts.map((product) => (
                   <div
                     key={product.id}
                     className="card p-4 flex gap-4 items-start"
@@ -253,10 +275,17 @@ export default async function SellerProductsPage() {
                     {/* ACTION */}
                   </div>
                 ))}
+
+                {/* Empty state */}
+                {filteredProducts.length === 0 && !searchQuery && (
+                  <div className="card p-12 text-center text-gray-400 text-sm">
+                    Belum ada produk. Tambahkan produk pertama Anda!
+                  </div>
+                )}
               </div>
 
               {/* RIGHT: SUMMARY */}
-              <div className="space-y-4">
+              <div className="space-y-4 sticky top-24 self-start">
                 {/* REKAP CARD */}
                 <div className="card p-5">
                   <h2 className="font-bold text-gray-800 mb-4">
