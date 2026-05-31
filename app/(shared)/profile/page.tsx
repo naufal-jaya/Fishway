@@ -8,11 +8,11 @@ import { LogOut, Package, Truck, Check, ClipboardList, MapPin, User, Clock, X } 
 import LogoutButton from "@/components/LogoutButton";
 
 const STATUS_COLOR: Record<string, string> = {
-  "Menunggu Konfirmasi": "bg-gray-100 text-gray-700",
-  "Diproses": "bg-yellow-100 text-yellow-700",
-  "Dikirim": "bg-blue-100 text-blue-700",
-  "Selesai": "bg-green-100 text-green-700",
-  "Dibatalkan": "bg-red-100 text-red-600",  
+  "Menunggu Konfirmasi": "bg-orange-100 text-orange-500",
+  "Diproses": "bg-blue-100 text-blue-500",
+  "Dikirim": "bg-purple-100 text-purple-500",
+  "Selesai": "bg-green-100 text-green-500",
+  "Dibatalkan": "bg-red-100 text-red-500",
 };
 
 type Address = {
@@ -234,10 +234,14 @@ const dibatalkanOrders = orders?.filter(o => o.status === "Dibatalkan").length |
               ) : (
                 recentOrders.map((order) => {
                   const oDate = new Date(order.created_at).toLocaleDateString('id-ID');
+                  const detailHref = isSeller
+                    ? `/dashboard/orders/${order.id}`
+                    : `/orders/${order.id}`;
                   return (
-                    <div
+                    <Link
                       key={order.id}
-                      className="flex items-center justify-between border-b pb-3 last:border-0 last:pb-0"
+                      href={detailHref}
+                      className="flex items-center justify-between border-b pb-3 last:border-0 last:pb-0 hover:bg-gray-50 rounded-lg px-2 -mx-2 transition-colors"
                     >
                       <div>
                         <p className="font-medium text-gray-800 text-sm">
@@ -257,7 +261,7 @@ const dibatalkanOrders = orders?.filter(o => o.status === "Dibatalkan").length |
                           {order.status}
                         </span>
                       </div>
-                    </div>
+                    </Link>
                   );
                 })
               )}
