@@ -1,7 +1,16 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
-import { Bell, ShoppingCart, ClipboardList, ArrowRight, Package, Truck, Check, Clock, X } from "lucide-react";
+import {
+  Bell,
+  ClipboardList,
+  Package,
+  Truck,
+  Check,
+  X,
+  Clock,
+  ArrowRight,
+} from "lucide-react";
 import { createClient } from "@/utils/supabase/supabaseClient";
 import { useRouter } from "next/navigation";
 import { markNotificationAsRead, markAllNotificationsAsRead } from "@/lib/notifications";
@@ -16,35 +25,78 @@ export type Notification = {
   created_at: string;
 };
 
-// Tentukan label & icon tombol CTA berdasarkan link notifikasi
-function getCtaInfo(link: string | null): { label: string; icon: React.ReactNode } | null {
-  if (!link) return null;
-  if (link === "/cart")
-    return { label: "Lihat Keranjang", icon: <ShoppingCart size={11} /> };
-  if (link === "/orders")
-    return { label: "Lihat Pesanan", icon: <ClipboardList size={11} /> };
-  if (link.startsWith("/orders/"))
-    return { label: "Detail Pesanan", icon: <ClipboardList size={11} /> };
-  if (link.startsWith("/dashboard/orders/"))
-    return { label: "Kelola Pesanan", icon: <Package size={11} /> };
-  if (link.startsWith("/dashboard"))
-    return { label: "Buka Dashboard", icon: <ArrowRight size={11} /> };
-  return { label: "Lihat", icon: <ArrowRight size={11} /> };
+// Hanya tampilkan notif yang berkaitan dengan status pesanan
+function isOrderNotif(notif: Notification): boolean {
+  const t = notif.title.toLowerCase();
+  const m = notif.message.toLowerCase();
+  return (
+    t.includes("pesanan") ||
+    t.includes("dikirim") ||
+    t.includes("dibatalkan") ||
+    t.includes("dikonfirmasi") ||
+    t.includes("diproses") ||
+    t.includes("selesai") ||
+    t.includes("status") ||
+    m.includes("pesanan") ||
+    (notif.link?.startsWith("/orders") ?? false)
+  );
 }
 
-// Icon per judul notif
-function getNotifIcon(title: string): React.ReactNode {
-  const t = title.toLowerCase();
-  if (t.includes("keranjang")) return <ShoppingCart size={15} className="text-blue-500" />;
-  if (t.includes("pesanan baru")) return <Package size={15} className="text-green-500" />;
-  if (t.includes("berhasil")) return <Check size={15} className="text-green-500" />;
-  if (t.includes("dikirim")) return <Truck size={15} className="text-purple-500" />;
-  if (t.includes("dibatalkan")) return <X size={15} className="text-red-500" />;
-  if (t.includes("diperbarui") || t.includes("status")) return <Clock size={15} className="text-orange-400" />;
-  return <Bell size={15} className="text-gray-400" />;
+// Icon & warna ngikutin status di halaman profile
+// data dari DB: "Pesanan Anda sekarang berstatus: Dikirim/Diproses/Selesai/Menunggu Konfirmasi"
+function getStatusInfo(title: string, message: string): {
+  icon: React.ReactNode;
+  bg: string;
+  color: string;
+} {
+  // ekstrak status dari format "berstatus: XXX"
+  const statusMatch = message.toLowerCase().match(/berstatus[:\s]+(.+)/);
+  const status = statusMatch ? statusMatch[1].trim().toLowerCase() : "";
+  const combined = (title + " " + message).toLowerCase();
+
+ if (status === "dikirim" || combined.includes("dikirim") || combined.includes("pengiriman"))
+  return { icon: <Truck size={14} />, bg: "bg-purple-50", color: "text-purple-500" };
+ 
+  if (status === "diproses" || status === "dikonfirmasi" || combined.includes("diproses") || combined.includes("dikonfirmasi"))
+    return { icon: <Package size={14} />, bg: "bg-blue-50", color: "text-blue-500" };
+
+  if (status === "selesai" || status === "diterima" || combined.includes("selesai") || combined.includes("diterima") || combined.includes("berhasil"))
+    return { icon: <Check size={14} />, bg: "bg-green-50", color: "text-green-500" };
+
+  if (status === "dibatalkan" || status === "ditolak" || combined.includes("dibatalkan") || combined.includes("ditolak") || combined.includes("gagal"))
+    return { icon: <X size={14} />, bg: "bg-red-50", color: "text-red-500" };
+
+  // menunggu konfirmasi / default
+  return { icon: <Clock size={14} />, bg: "bg-orange-50", color: "text-orange-400" };
 }
 
-export default function NotificationDropdown({ userId, label }: { userId: string; label?: string }) {
+function stripEmoji(text: string): string {
+  return text
+    .split("")
+    .filter((char) => {
+      const code = char.charCodeAt(0);
+      return code < 0x2600 || (code > 0x27BF && code < 0xFE00) || code > 0xFE0F;
+    })
+    .join("")
+    .trim();
+}
+
+function formatDate(dateStr: string): string {
+  return new Date(dateStr).toLocaleString("id-ID", {
+    day: "numeric",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+export default function NotificationDropdown({
+  userId,
+  label,
+}: {
+  userId: string;
+  label?: string;
+}) {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -71,8 +123,8 @@ export default function NotificationDropdown({ userId, label }: { userId: string
         .eq("user_id", userId)
         .order("created_at", { ascending: false })
         .limit(20);
-      
-      if (data) setNotifications(data);
+
+      if (data) setNotifications(data.filter(isOrderNotif));
     };
 
     fetchNotifications();
@@ -88,8 +140,9 @@ export default function NotificationDropdown({ userId, label }: { userId: string
           filter: `user_id=eq.${userId}`,
         },
         (payload) => {
-          const newNotification = payload.new as Notification;
-          setNotifications((prev) => [newNotification, ...prev].slice(0, 20));
+          const newNotif = payload.new as Notification;
+          if (!isOrderNotif(newNotif)) return;
+          setNotifications((prev) => [newNotif, ...prev].slice(0, 20));
         }
       )
       .subscribe();
@@ -109,9 +162,7 @@ export default function NotificationDropdown({ userId, label }: { userId: string
       );
       await markNotificationAsRead(notif.id);
     }
-    if (notif.link) {
-      router.push(notif.link);
-    }
+    if (notif.link) router.push(notif.link);
   };
 
   const handleMarkAllRead = async () => {
@@ -124,7 +175,7 @@ export default function NotificationDropdown({ userId, label }: { userId: string
       <button
         onClick={() => setIsOpen(!isOpen)}
         className="px-3 py-2 rounded-lg text-sm font-medium transition-colors hover:bg-white/10 flex items-center gap-3 relative w-full"
-        aria-label="Notifications"
+        aria-label="Notifikasi"
       >
         <Bell size={20} className="text-white/90" />
         {label && <span className="text-sm font-medium">{label}</span>}
@@ -138,10 +189,9 @@ export default function NotificationDropdown({ userId, label }: { userId: string
       {isOpen && (
         <div className="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden z-50">
           {/* Header */}
-          <div className="px-4 py-3 border-b flex justify-between items-center bg-gray-50">
+          <div className="px-4 py-3 border-b flex justify-between items-center">
             <div className="flex items-center gap-2">
-              <Bell size={14} className="text-gray-500" />
-              <h3 className="font-bold text-gray-800 text-sm">Notifikasi</h3>
+              <h3 className="font-semibold text-gray-800 text-sm">Notifikasi</h3>
               {unreadCount > 0 && (
                 <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-primary text-white font-bold">
                   {unreadCount}
@@ -162,33 +212,40 @@ export default function NotificationDropdown({ userId, label }: { userId: string
           <div className="max-h-96 overflow-y-auto divide-y divide-gray-50">
             {notifications.length === 0 ? (
               <div className="p-10 text-center">
-                <Bell size={28} className="text-gray-200 mx-auto mb-2" />
-                <p className="text-gray-400 text-sm">Belum ada notifikasi</p>
+                <ClipboardList size={28} className="text-gray-200 mx-auto mb-2" />
+                <p className="text-gray-400 text-sm">Belum ada notifikasi pesanan</p>
               </div>
             ) : (
               notifications.map((notif) => {
-                const cta = getCtaInfo(notif.link);
-                const icon = getNotifIcon(notif.title);
+                const { icon, bg, color } = getStatusInfo(notif.title, notif.message);
 
                 return (
                   <div
                     key={notif.id}
-                    className={`p-4 cursor-pointer hover:bg-gray-50 transition-colors ${
-                      !notif.is_read ? "bg-blue-50/40" : ""
+                    className={`px-4 py-3.5 cursor-pointer hover:bg-gray-50 transition-colors ${
+                      !notif.is_read ? "bg-blue-50/30" : ""
                     }`}
                     onClick={() => handleNotificationClick(notif)}
                   >
                     <div className="flex gap-3">
                       {/* Icon */}
-                      <div className={`mt-0.5 w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 ${!notif.is_read ? "bg-white shadow-sm border border-gray-100" : "bg-gray-100"}`}>
+                      <div
+                        className={`mt-0.5 w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 ${bg} ${color}`}
+                      >
                         {icon}
                       </div>
 
                       {/* Content */}
                       <div className="flex-1 min-w-0">
                         <div className="flex justify-between items-start gap-2 mb-0.5">
-                          <p className={`text-sm leading-snug ${!notif.is_read ? "font-bold text-gray-900" : "font-medium text-gray-700"}`}>
-                            {notif.title}
+                          <p
+                            className={`text-sm leading-snug ${
+                              !notif.is_read
+                                ? "font-semibold text-gray-900"
+                                : "font-medium text-gray-600"
+                            }`}
+                          >
+                            {stripEmoji(notif.title)}
                           </p>
                           {!notif.is_read && (
                             <span className="w-2 h-2 rounded-full bg-primary flex-shrink-0 mt-1.5" />
@@ -196,21 +253,14 @@ export default function NotificationDropdown({ userId, label }: { userId: string
                         </div>
 
                         <p className="text-xs text-gray-500 line-clamp-2 leading-relaxed">
-                          {notif.message}
+                          {stripEmoji(notif.message)}
                         </p>
 
                         <div className="flex items-center justify-between mt-2">
                           <p className="text-[10px] text-gray-400">
-                            {new Date(notif.created_at).toLocaleString("id-ID", {
-                              day: "numeric",
-                              month: "short",
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            })}
+                            {formatDate(notif.created_at)}
                           </p>
-
-                          {/* Tombol CTA eksplisit */}
-                          {cta && notif.link && (
+                          {notif.link && (
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -218,8 +268,8 @@ export default function NotificationDropdown({ userId, label }: { userId: string
                               }}
                               className="flex items-center gap-1 text-[10px] font-semibold text-primary hover:text-primary/80 bg-primary/8 hover:bg-primary/15 px-2 py-1 rounded-full transition-colors"
                             >
-                              {cta.icon}
-                              {cta.label}
+                              <ArrowRight size={10} />
+                              Lihat Pesanan
                             </button>
                           )}
                         </div>
@@ -233,12 +283,14 @@ export default function NotificationDropdown({ userId, label }: { userId: string
 
           {/* Footer */}
           {notifications.length > 0 && (
-            <div className="px-4 py-2.5 border-t bg-gray-50 text-center">
-              <p className="text-[11px] text-gray-400">{notifications.length} notifikasi terakhir</p>
+            <div className="px-4 py-2.5 border-t text-center">
+              <p className="text-[11px] text-gray-400">
+                {notifications.length} notifikasi terakhir
+              </p>
             </div>
           )}
         </div>
       )}
     </div>
   );
-}
+} 
