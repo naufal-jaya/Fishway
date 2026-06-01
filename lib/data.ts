@@ -1,3 +1,12 @@
+export const PRODUCT_CATEGORIES = [
+  "Ikan Hias",
+  "Ikan Ternak",
+  "Olahan Ikan",
+  "Peralatan Ikan",
+] as const;
+
+export type ProductCategory = typeof PRODUCT_CATEGORIES[number];
+
 export type PriceOption = {
   id?: string;
   label: string;

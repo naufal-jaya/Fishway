@@ -9,7 +9,7 @@ import ProductImageManager, { MAX_PRODUCT_IMAGE_SIZE_BYTES, ProductImageItem } f
 import { createClient } from "@/utils/supabase/supabaseClient";
 import { ChevronLeft, X } from "lucide-react";
 import { useToast } from "@/components/ToastContext";
-
+import { PRODUCT_CATEGORIES } from "@/lib/data";
 const MAX_PRODUCT_IMAGES = 10;
 
 export default function AddProductPage() {
@@ -201,10 +201,11 @@ export default function AddProductPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">Kategori</label>
                 <select name="category" value={formData.category} onChange={handleChange} className="w-full border rounded-lg p-2">
                   <option value="">Pilih Kategori...</option>
-                  <option value="Ikan Air Tawar">Ikan Air Tawar</option>
-                  <option value="Ikan Laut">Ikan Laut</option>
-                  <option value="Seafood">Seafood</option>
-                  <option value="Ikan Hias">Ikan Hias</option>
+                  {PRODUCT_CATEGORIES.map((cat) => (
+                    <option key={cat} value={cat}>
+                      {cat}
+                    </option>
+                  ))}
                 </select>
               </div>
 

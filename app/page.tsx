@@ -1,17 +1,10 @@
 import Container from "@/components/Container";
 import ProductCard from "@/components/ProductCard";
-import { Product } from "@/lib/data";
+import { Product, PRODUCT_CATEGORIES } from "@/lib/data";
 import Navbar from "@/components/Navbar";
 import CategoryFilter from "@/components/CategoryFilter";
 import { createClient } from "@/utils/supabase/server";
 import { cookies } from "next/headers";
-
-const CATEGORIES = [
-  "Semua",
-  "Ikan Air Asin",
-  "Ikan Air Tawar",
-  "Ikan Hias",
-];
 
 export default async function HomePage() {
   const supabase = createClient(cookies());
