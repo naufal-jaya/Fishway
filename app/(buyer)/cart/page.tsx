@@ -24,7 +24,8 @@ export default async function CartPage() {
         quantity,
         products (
           id, name, type, price, unit, stock, gambar, location,
-          stores (id, name)
+          stores (id, name),
+          product_images (url, sort_order)
         ),
         price_options (
           id, label, price, stock
@@ -45,6 +46,11 @@ export default async function CartPage() {
     const itemUnit = product?.type === 0 ? product.unit : variant?.label || "unit";
     const itemStock = product?.type === 0 ? (product?.stock ?? 99) : (variant?.stock ?? 99);
 
+    const productImageList = Array.isArray(product?.product_images) ? product.product_images : [];
+    const firstImage = productImageList.length > 0
+      ? [...productImageList].sort((a: any, b: any) => (a.sort_order || 0) - (b.sort_order || 0))[0]?.url
+      : null;
+
     return {
       id: item.id,
       productId: product?.id,
@@ -52,7 +58,7 @@ export default async function CartPage() {
       seller: store?.name || "Penjual",
       storeId: store?.id,
       location: product?.location || "-",
-      gambar: product?.gambar || "/images/default.png",
+      gambar: firstImage || product?.gambar || "/images/default.png",
       qty: item.quantity,
       price: itemPrice,
       unit: itemUnit,

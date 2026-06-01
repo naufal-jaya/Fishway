@@ -38,7 +38,7 @@ export default async function SellerProductsPage({ searchParams }: { searchParam
     // 1. Fetch products
     const { data: productsData } = await supabase
       .from("products")
-      .select("*, price_options(*)")
+      .select("*, price_options(*), product_images(*)")
       .eq("store_id", store.id)
       .order("created_at", { ascending: false });
 
@@ -167,7 +167,11 @@ export default async function SellerProductsPage({ searchParams }: { searchParam
                   >
                     <div className="w-24 h-24 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0 relative">
                       <Image
-                        src={product.gambar || "/images/default.png"}
+                        src={
+                          (Array.isArray(product.product_images) && product.product_images.length > 0)
+                            ? [...product.product_images].sort((a: any, b: any) => (a.sort_order || 0) - (b.sort_order || 0))[0]?.url
+                            : (product.gambar || "/images/default.png")
+                        }
                         alt={product.name || "product"}
                         fill
                         className="object-cover"

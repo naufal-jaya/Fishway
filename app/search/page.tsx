@@ -17,7 +17,7 @@ export default async function SearchPage({
 
   let dbQuery = supabase
     .from("products")
-    .select("*, stores(name, phone), price_options(*)")
+    .select("*, stores(name, phone), price_options(*), product_images(*)")
     .order("created_at", { ascending: false });
 
   if (query) {
@@ -38,7 +38,9 @@ export default async function SearchPage({
       seller: (Array.isArray(p.stores) ? p.stores[0]?.name : p.stores?.name) || "Penjual",
       location: p.location || "Lokasi tidak diketahui",
       description: p.description || "",
-      gambar: p.gambar || "/images/default.png",
+      gambar: (Array.isArray(p.product_images) && p.product_images.length > 0) 
+        ? [...p.product_images].sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0))[0]?.url 
+        : (p.gambar || "/images/default.png"),
       jenis: p.jenis || "",
       condition: p.condition || "",
       origin: p.origin || "",

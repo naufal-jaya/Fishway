@@ -7,7 +7,7 @@ import Navbar from "@/components/Navbar";
 import Container from "@/components/Container";
 import ProductImageManager, { MAX_PRODUCT_IMAGE_SIZE_BYTES, ProductImageItem } from "@/components/ProductImageManager";
 import { createClient } from "@/utils/supabase/supabaseClient";
-import { ChevronLeft } from "lucide-react";
+import { ChevronLeft, X } from "lucide-react";
 import { useToast } from "@/components/ToastContext";
 
 const MAX_PRODUCT_IMAGES = 10;
@@ -31,13 +31,18 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
   const imagesRef = useRef<ProductImageItem[]>([]);
 
   useEffect(() => { imagesRef.current = images; }, [images]);
+
   useEffect(() => {
     return () => { imagesRef.current.forEach((image) => { if (image.file) URL.revokeObjectURL(image.previewUrl); }); };
   }, []);
 
   useEffect(() => {
     async function fetchProduct() {
-      const { data, error } = await supabase.from("products").select("*, price_options(*), product_images(*)").eq("id", params.id).single();
+      const { data, error } = await supabase
+        .from("products")
+        .select("*, price_options(*), product_images(*)")
+        .eq("id", params.id)
+        .single();
 
       if (data && !error) {
         setFormData({
@@ -54,13 +59,17 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
           : [];
 
         if (productImages.length > 0) {
-          setImages(productImages.map((image: any) => ({ id: image.id, url: image.url, previewUrl: image.url, caption: image.caption || "", sortOrder: image.sort_order || 0 })));
+          setImages(productImages.map((image: any) => ({
+            id: image.id, url: image.url, previewUrl: image.url, caption: image.caption || "", sortOrder: image.sort_order || 0,
+          })));
         } else if (data.gambar && data.gambar !== "/images/default.png") {
           setImages([{ url: data.gambar, previewUrl: data.gambar, caption: "", sortOrder: 0 }]);
         }
 
         if (data.type === 1 && data.price_options?.length > 0) {
-          setVariants(data.price_options.map((v: any) => ({ id: v.id, label: v.label, price: v.price?.toString() || "", stock: v.stock?.toString() || "" })));
+          setVariants(data.price_options.map((v: any) => ({
+            id: v.id, label: v.label, price: v.price?.toString() || "", stock: v.stock?.toString() || ""
+          })));
         }
       }
       setFetching(false);
@@ -78,7 +87,21 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
     setVariants(newVariants);
   };
 
-  const addVariant = () => setVariants([...variants, { id: "", label: "", price: "", stock: "" }]);
+  const adjustPrice = (fieldName: string, amount: number) => {
+    const current = Number(formData[fieldName as keyof typeof formData]) || 0;
+    const next = current + amount;
+    setFormData({ ...formData, [fieldName]: String(next >= 0 ? next : 0) });
+  };
+
+  const adjustVariantPrice = (index: number, amount: number) => {
+    const current = Number(variants[index].price) || 0;
+    const next = current + amount;
+    handleVariantChange(index, 'price', String(next >= 0 ? next : 0));
+  };
+
+  const addVariant = () => {
+    setVariants([...variants, { id: "", label: "", price: "", stock: "" }]);
+  };
 
   const removeVariant = async (index: number) => {
     if (variants.length > 1) {
@@ -95,13 +118,15 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
     setImages((currentImages) => {
       const remainingSlots = MAX_PRODUCT_IMAGES - currentImages.length;
       if (remainingSlots <= 0) {
-        showToast({ type: "warning", message: "Maksimal 10 foto produk." });
+        showToast({ type: "warning", message: "Maksimal 10 foto produk" });
         return currentImages;
       }
       if (files.length > remainingSlots) {
         showToast({ type: "warning", message: `Maksimal 10 foto produk. Hanya ${remainingSlots} foto yang ditambahkan.` });
       }
-      const nextImages = files.slice(0, remainingSlots).map((file) => ({ file, previewUrl: URL.createObjectURL(file), caption: "" }));
+      const nextImages = files.slice(0, remainingSlots).map((file) => ({
+        file, previewUrl: URL.createObjectURL(file), caption: "",
+      }));
       return [...currentImages, ...nextImages];
     });
   };
@@ -143,7 +168,6 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
       if (!user) throw new Error("Not authenticated");
 
       const savedImages = [];
-
       for (let index = 0; index < images.length; index += 1) {
         const image = images[index];
         if (image.file) {
@@ -233,6 +257,7 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
                 <label className="block text-sm font-medium text-gray-700 mb-1">Nama Produk</label>
                 <input required type="text" name="name" value={formData.name} onChange={handleChange} className="w-full border rounded-lg p-2" />
               </div>
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Kategori</label>
                 <select name="category" value={formData.category} onChange={handleChange} className="w-full border rounded-lg p-2">
@@ -263,7 +288,11 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Harga (Rp)</label>
-                      <input required type="number" min="0" name="price" value={formData.price} onChange={handleChange} className="w-full border rounded-lg p-2" />
+                      <div className="flex items-center">
+                        <input required type="number" min="0" step="any" name="price" value={formData.price} onChange={handleChange} className="w-full border rounded-l-lg border-gray-300 p-2 text-center focus:ring-primary focus:border-primary appearance-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none" />
+                        <button type="button" onClick={() => adjustPrice('price', -1000)} className="px-4 py-2 bg-gray-100 hover:bg-gray-200 border border-r-0 border-gray-300 text-gray-600 transition-colors focus:outline-none font-bold">-</button>
+                        <button type="button" onClick={() => adjustPrice('price', 1000)} className="px-4 py-2 bg-gray-100 hover:bg-gray-200 border border-l-0 border-gray-300 rounded-r-lg text-gray-600 transition-colors focus:outline-none font-bold">+</button>
+                      </div>
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Satuan</label>
@@ -291,18 +320,26 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
                       </div>
                       <div className="flex-1">
                         <label className="block text-xs font-medium text-gray-500 mb-1">Harga (Rp)</label>
-                        <input required type="number" min="0" value={variant.price} onChange={(e) => handleVariantChange(index, 'price', e.target.value)} className="w-full border rounded-lg p-2 text-sm" />
+                        <div className="flex items-center">
+                          <input required type="number" min="0" step="any" value={variant.price} onChange={(e) => handleVariantChange(index, 'price', e.target.value)} className="w-full border rounded-l-lg border-gray-300 p-2 text-center text-sm focus:ring-primary focus:border-primary appearance-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none" />
+                          <button type="button" onClick={() => adjustVariantPrice(index, -1000)} className="px-4 py-2 bg-gray-100 hover:bg-gray-200 border border-r-0 border-gray-300 text-gray-600 transition-colors focus:outline-none font-bold text-sm">-</button>
+                          <button type="button" onClick={() => adjustVariantPrice(index, 1000)} className="px-4 py-2 bg-gray-100 hover:bg-gray-200 border border-l-0 border-gray-300 rounded-r-lg text-gray-600 transition-colors focus:outline-none font-bold text-sm">+</button>
+                        </div>
                       </div>
                       <div className="w-24">
                         <label className="block text-xs font-medium text-gray-500 mb-1">Stok</label>
                         <input required type="number" min="0" step="1" value={variant.stock} onChange={(e) => handleVariantChange(index, 'stock', e.target.value)} className="w-full border rounded-lg p-2 text-sm" />
                       </div>
                       {variants.length > 1 && (
-                        <button type="button" onClick={() => removeVariant(index)} className="mt-6 text-red-500 p-2 hover:bg-red-50 rounded-lg">X</button>
+                        <button type="button" onClick={() => removeVariant(index)} className="mt-6 text-red-500 p-2 hover:bg-red-50 rounded-lg" title="Hapus varian">
+                          <X size={18} />
+                        </button>
                       )}
                     </div>
                   ))}
-                  <button type="button" onClick={addVariant} className="text-sm font-semibold text-primary hover:underline">+ Tambah Varian</button>
+                  <button type="button" onClick={addVariant} className="text-sm font-semibold text-primary hover:underline">
+                    + Tambah Varian
+                  </button>
                 </div>
               )}
 
