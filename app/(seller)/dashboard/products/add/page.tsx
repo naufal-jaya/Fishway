@@ -12,6 +12,20 @@ import { useToast } from "@/components/ToastContext";
 import { PRODUCT_CATEGORIES } from "@/lib/data";
 const MAX_PRODUCT_IMAGES = 10;
 
+const getAvailableUnits = (category: string) => {
+  switch (category) {
+    case "Ikan Tangkapan Laut":
+    case "Ikan Air Tawar":
+      return ["kg", "gr"];
+    case "Ikan Hias":
+      return ["ekor"];
+    case "Produk Olahan":
+      return ["piece"];
+    default:
+      return [];
+  }
+};
+
 export default function AddProductPage() {
   const router = useRouter();
   const supabase = createClient();
@@ -35,7 +49,24 @@ export default function AddProductPage() {
   }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    if (name === "category") {
+      let nextUnit = formData.unit;
+      if (value === "Ikan Hias") {
+        nextUnit = "ekor";
+      } else if (value === "Produk Olahan") {
+        nextUnit = "piece";
+      } else if (value === "Ikan Tangkapan Laut" || value === "Ikan Air Tawar") {
+        if (formData.unit !== "kg" && formData.unit !== "gr") {
+          nextUnit = "";
+        }
+      } else {
+        nextUnit = "";
+      }
+      setFormData((prev) => ({ ...prev, category: value, unit: nextUnit }));
+    } else {
+      setFormData((prev) => ({ ...prev, [name]: value }));
+    }
   };
 
   const handleVariantChange = (index: number, field: string, value: string) => {
@@ -237,10 +268,18 @@ export default function AddProductPage() {
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Satuan</label>
                       <select required name="unit" value={formData.unit} onChange={handleChange} className="w-full border rounded-lg p-2 bg-white">
-                        <option value="">Pilih Satuan...</option>
-                        <option value="kg">kg</option>
-                        <option value="gr">gr</option>
-                        <option value="ekor">ekor</option>
+                        {!formData.category ? (
+                          <option value="">Pilih Kategori Terlebih Dahulu...</option>
+                        ) : (
+                          <>
+                            <option value="">Pilih Satuan...</option>
+                            {getAvailableUnits(formData.category).map((u) => (
+                              <option key={u} value={u}>
+                                {u}
+                              </option>
+                            ))}
+                          </>
+                        )}
                       </select>
                     </div>
                   </div>
