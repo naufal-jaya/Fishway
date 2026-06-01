@@ -1,425 +1,326 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback } from "react";
-import Image from "next/image";
-import Link from "next/link";
+import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
+import Navbar from "@/components/Navbar";
+import Container from "@/components/Container";
+import ProductImageManager, { MAX_PRODUCT_IMAGE_SIZE_BYTES, ProductImageItem } from "@/components/ProductImageManager";
 import { createClient } from "@/utils/supabase/supabaseClient";
+import { ChevronLeft, X } from "lucide-react";
 import { useToast } from "@/components/ToastContext";
+import { PRODUCT_CATEGORIES } from "@/lib/data";
+const MAX_PRODUCT_IMAGES = 10;
 
-type AccountType = "buyer" | "seller";
-
-export default function SignupPage() {
+export default function AddProductPage() {
   const router = useRouter();
-  const supabase = useMemo(() => createClient(), []);
+  const supabase = createClient();
+  const [loading, setLoading] = useState(false);
   const { showToast } = useToast();
 
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [agree, setAgree] = useState(false);
-  const [accountType, setAccountType] = useState<AccountType>("buyer");
-  const [fullName, setFullName] = useState("");
-  const [phone, setPhone] = useState("");
-  const [storeName, setStoreName] = useState("");
-  const [storeDescription, setStoreDescription] = useState("");
-  const [isProfileStep, setIsProfileStep] = useState(false);
-  const [errors, setErrors] = useState<Record<string, string>>({});
-  const [isLoading, setIsLoading] = useState(false);
+  const [formData, setFormData] = useState({
+    name: "", category: "", description: "", jenis: "", condition: "",
+    origin: "", food: "", price: "", unit: "", stock: "",
+  });
+  
+  const [productType, setProductType] = useState<0 | 1>(0);
+  const [variants, setVariants] = useState([{ label: "", price: "", stock: "" }]);
+  const [images, setImages] = useState<ProductImageItem[]>([]);
+  const imagesRef = useRef<ProductImageItem[]>([]);
+
+  useEffect(() => { imagesRef.current = images; }, [images]);
 
   useEffect(() => {
-    const loadUser = async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+    return () => { imagesRef.current.forEach((image) => { if (image.file) URL.revokeObjectURL(image.previewUrl); }); };
+  }, []);
 
-      if (!user) return;
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
 
-      const [{ data: buyer }, { data: seller }] = await Promise.all([
-        supabase.from("buyers").select("id").eq("id", user.id).maybeSingle(),
-        supabase.from("sellers").select("id").eq("id", user.id).maybeSingle(),
-      ]);
+  const handleVariantChange = (index: number, field: string, value: string) => {
+    const newVariants = [...variants];
+    newVariants[index] = { ...newVariants[index], [field]: value };
+    setVariants(newVariants);
+  };
 
-      if (buyer || seller) {
-        router.replace("/");
-        return;
+  const adjustPrice = (fieldName: string, amount: number) => {
+    const current = Number(formData[fieldName as keyof typeof formData]) || 0;
+    const next = current + amount;
+    setFormData({ ...formData, [fieldName]: String(next >= 0 ? next : 0) });
+  };
+
+  const adjustVariantPrice = (index: number, amount: number) => {
+    const current = Number(variants[index].price) || 0;
+    const next = current + amount;
+    handleVariantChange(index, 'price', String(next >= 0 ? next : 0));
+  };
+
+  const addVariant = () => {
+    setVariants([...variants, { label: "", price: "", stock: "" }]);
+  };
+
+  const removeVariant = (index: number) => {
+    if (variants.length > 1) {
+      setVariants(variants.filter((_, i) => i !== index));
+    }
+  };
+
+  const handleAddImages = (files: File[]) => {
+    if (files.length === 0) return;
+    setImages((currentImages) => {
+      const remainingSlots = MAX_PRODUCT_IMAGES - currentImages.length;
+      if (remainingSlots <= 0) {
+        showToast({ type: "warning", message: "Maksimal 10 foto produk" });
+        return currentImages;
       }
-
-      setFullName(
-        user.user_metadata?.full_name ||
-          user.user_metadata?.name ||
-          user.email?.split("@")[0] ||
-          "",
-      );
-      setIsProfileStep(true);
-    };
-
-    loadUser();
-  }, [router, supabase]);
-
-  const validateEmail = (value: string) =>
-    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
-
-  const validatePhone = (value: string) =>
-    /^(\+62|62|0)[0-9]{8,13}$/.test(value.replace(/\s/g, ""));
-
-  const handleGoogleSignup = async () => {
-    setErrors({});
-    setIsLoading(true);
-
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: {
-        redirectTo: `${window.location.origin}/auth/callback?next=/signup`,
-      },
+      if (files.length > remainingSlots) {
+        showToast({ type: "warning", message: `Maksimal 10 foto produk. Hanya ${remainingSlots} foto yang ditambahkan.` });
+      }
+      const nextImages = files.slice(0, remainingSlots).map((file) => ({
+        file, previewUrl: URL.createObjectURL(file), caption: "",
+      }));
+      return [...currentImages, ...nextImages];
     });
-
-    if (error) {
-      setErrors({ email: error.message });
-      setIsLoading(false);
-    }
   };
 
-  const handleSignupSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    const nextErrors: Record<string, string> = {};
-
-    if (!email) nextErrors.email = "Email tidak boleh kosong";
-    else if (!validateEmail(email))
-      nextErrors.email = "Format email tidak valid";
-
-    if (!password) nextErrors.password = "Password tidak boleh kosong";
-    else if (password.length < 8)
-      nextErrors.password = "Password minimal 8 karakter";
-
-    if (!confirmPassword)
-      nextErrors.confirmPassword = "Konfirmasi password tidak boleh kosong";
-    else if (password !== confirmPassword)
-      nextErrors.confirmPassword = "Password tidak cocok";
-
-    if (!agree) nextErrors.agree = "Anda harus menyetujui syarat & ketentuan";
-
-    setErrors(nextErrors);
-    if (Object.keys(nextErrors).length > 0) return;
-
-    try {
-      setIsLoading(true);
-
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-      });
-
-      if (error) {
-        setErrors({ email: error.message });
-        return;
-      }
-
-      if (!data.session) {
-        showToast({
-          type: "info",
-          message: "Akun berhasil dibuat! Cek email Anda untuk konfirmasi login.",
-          actionLabel: "Ke halaman login",
-          actionHref: "/login",
-          duration: 6000,
-        });
-        router.replace("/login");
-        return;
-      }
-
-      setFullName(email.split("@")[0]);
-      setIsProfileStep(true);
-    } catch (err) {
-      console.error(err);
-      setErrors({ email: "Terjadi kesalahan, coba lagi" });
-    } finally {
-      setIsLoading(false);
-    }
+  const handleCaptionChange = (index: number, caption: string) => {
+    setImages((currentImages) => currentImages.map((image, imageIndex) => imageIndex === index ? { ...image, caption } : image));
   };
 
-  const handleProfileSubmit = async (e: React.FormEvent) => {
+  const handleRemoveImage = (index: number) => {
+    setImages((currentImages) => {
+      const image = currentImages[index];
+      if (image?.file) URL.revokeObjectURL(image.previewUrl);
+      return currentImages.filter((_, imageIndex) => imageIndex !== index);
+    });
+  };
+
+  const parseStock = (value: string) => { const s = Number(value); return Number.isInteger(s) && s >= 0 ? s : null; };
+  const parsePrice = (value: string) => { const p = Number(value); return !isNaN(p) && p >= 0 ? p : null; };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    const nextErrors: Record<string, string> = {};
-
-    if (!fullName.trim())
-      nextErrors.fullName = "Nama lengkap tidak boleh kosong";
-    if (!phone) nextErrors.phone = "Nomor telepon tidak boleh kosong";
-    else if (!validatePhone(phone))
-      nextErrors.phone = "Format nomor telepon tidak valid";
-    if (accountType === "seller" && !storeName.trim())
-      nextErrors.storeName = "Nama toko tidak boleh kosong";
-
-    setErrors(nextErrors);
-    if (Object.keys(nextErrors).length > 0) return;
+    setLoading(true);
 
     try {
-      setIsLoading(true);
+      if (!/^[a-zA-Z\s]+$/.test(formData.name.trim())) throw new Error("Nama produk hanya boleh berisi huruf dan spasi");
 
-      const {
-        data: { user },
-        error: userError,
-      } = await supabase.auth.getUser();
+      const stockValue = productType === 0 ? parseStock(formData.stock) : null;
+      const variantStockValues = productType === 1 ? variants.map((v) => parseStock(v.stock)) : [];
+      const priceValue = productType === 0 ? parsePrice(formData.price) : null;
+      const variantPriceValues = productType === 1 ? variants.map((v) => parsePrice(v.price)) : [];
 
-      if (userError || !user) {
-        setErrors({ fullName: "Session login tidak ditemukan" });
-        return;
+      if (productType === 0 && priceValue === null) throw new Error("Harga harus berupa angka minimal 0");
+      if (productType === 1 && variantPriceValues.some((p) => p === null)) throw new Error("Harga varian harus berupa angka minimal 0");
+      if (productType === 0 && stockValue === null) throw new Error("Stok harus berupa angka bulat minimal 0");
+      if (productType === 1 && variantStockValues.some((s) => s === null)) throw new Error("Stok varian harus berupa angka bulat minimal 0");
+      if (images.some((image) => image.file && image.file.size > MAX_PRODUCT_IMAGE_SIZE_BYTES)) throw new Error("Ukuran setiap foto maksimal 10 MB");
+
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      const { data: store } = await supabase.from("stores").select("id").eq("seller_id", user.id).single();
+      if (!store) throw new Error("Store not found for this user");
+
+      const uploadedImages = [];
+      for (let index = 0; index < images.length; index += 1) {
+        const image = images[index];
+        if (!image.file) continue;
+        const fileExt = image.file.name.split(".").pop();
+        const fileName = `${crypto.randomUUID()}.${fileExt}`;
+        const filePath = `${user.id}/${fileName}`;
+        const { error: uploadError } = await supabase.storage.from("product-images").upload(filePath, image.file);
+        if (uploadError) throw uploadError;
+        const { data: { publicUrl } } = supabase.storage.from("product-images").getPublicUrl(filePath);
+        uploadedImages.push({ url: publicUrl, caption: image.caption.trim() || null, sort_order: index });
       }
 
-      const { error: accountError } = await supabase.from("accounts").upsert(
-        {
-          id: user.id,
-          name: fullName.trim(),
-          address: null,
-        },
-        { onConflict: "id" },
-      );
+      const imageUrl = uploadedImages[0]?.url || "/images/default.png";
 
-      if (accountError) {
-        console.error(accountError);
-        setErrors({ fullName: "Gagal menyimpan data akun" });
-        return;
+      const productPayload = {
+        store_id: store.id,
+        name: formData.name, category: formData.category, description: formData.description,
+        jenis: formData.jenis, condition: formData.condition, origin: formData.origin,
+        food: formData.food, type: productType, gambar: imageUrl, image: imageUrl,
+        ...(productType === 0 ? { price: priceValue, unit: formData.unit, stock: stockValue } : { price: null, unit: null, stock: null })
+      };
+
+      const { data: newProduct, error: insertError } = await supabase.from("products").insert(productPayload).select().single();
+      if (insertError) throw insertError;
+
+      if (newProduct && uploadedImages.length > 0) {
+        const { error: imageError } = await supabase.from("product_images").insert(uploadedImages.map((image) => ({ product_id: newProduct.id, ...image })));
+        if (imageError) throw imageError;
       }
 
-      if (accountType === "buyer") {
-        const { error: buyerError } = await supabase.from("buyers").upsert(
-          {
-            id: user.id,
-            phone,
-          },
-          { onConflict: "id" },
-        );
-
-        if (buyerError) {
-          console.error(buyerError);
-          setErrors({ phone: "Gagal menyimpan data pembeli" });
-          return;
-        }
-      } else {
-        const { error: sellerError } = await supabase.from("sellers").upsert(
-          {
-            id: user.id,
-          },
-          { onConflict: "id" },
-        );
-
-        if (sellerError) {
-          console.error(sellerError);
-          setErrors({ storeName: "Gagal menyimpan data penjual" });
-          return;
-        }
-
-        const { error: storeError } = await supabase.from("stores").upsert(
-          {
-            seller_id: user.id,
-            name: storeName.trim(),
-            description: storeDescription.trim() || null,
-            phone,
-          },
-          { onConflict: "seller_id" },
-        );
-
-        if (storeError) {
-          console.error(storeError);
-          setErrors({ storeName: "Gagal menyimpan data toko" });
-          return;
-        }
+      if (productType === 1 && newProduct) {
+        const variantsPayload = variants.map((v, index) => ({
+          product_id: newProduct.id, label: v.label, price: variantPriceValues[index], stock: variantStockValues[index],
+        }));
+        const { error: variantError } = await supabase.from("price_options").insert(variantsPayload);
+        if (variantError) throw variantError;
       }
 
-      router.replace("/");
+      showToast({ type: "success", message: "Produk berhasil ditambahkan!", actionLabel: "Lihat Daftar Produk", actionHref: "/dashboard/products", duration: 5000 });
+      router.push("/dashboard/products");
       router.refresh();
-    } catch (err) {
-      console.error(err);
-      setErrors({ fullName: "Terjadi kesalahan, coba lagi" });
+      
+    } catch (error: any) {
+      console.error(error);
+      showToast({ type: "error", message: error.message || "Terjadi kesalahan saat menambahkan produk", duration: 5000 });
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
-  const handleCancelProfile = async () => {
-    setIsLoading(true);
-    try {
-      await supabase.auth.signOut();
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setIsLoading(false);
-      router.replace("/login");
-    }
-  };
-
-  const GoogleIcon = () => (
-    <svg className="w-5 h-5" viewBox="0 0 24 24">
-      <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
-      <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
-      <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
-      <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
-    </svg>
-  );
-
-  const EyeIcon = ({ open }: { open: boolean }) =>
-    open ? (
-      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
-      </svg>
-    ) : (
-      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-      </svg>
-    );
-
-  // JSX is identical to original — only alert() calls were removed above
   return (
-    <div className="flex bg-[#F7FBFF] min-h-screen lg:h-screen lg:overflow-hidden">
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <svg className="absolute bottom-0 left-0 w-full z-0" viewBox="0 0 1440 320">
-          <path d="M0 37C0 37 114 -42 167 73C219 189 311 106 400 119C489 132 510 197 614 173C730 145 741 277 862 199C962 133 1001 211 1102 199C1201 186 1217 116 1325 173C1433 229 1446 0 1523 0V420H0V37Z" fill="#A2D2FF" fillOpacity="0.4" />
-        </svg>
-        <svg className="absolute -bottom-20 left-0 w-full z-10" viewBox="0 0 1440 320">
-          <path d="M0 37C0 37 118 -34 167 73C219 189 311 106 400 119C489 132 510 197 614 173C747 119 813 115 1004 189C1097 225 1194 116 1302 173C1410 229 1446 0 1523 0V253H0V37Z" fill="#A2D2FF" fillOpacity="0.5" />
-        </svg>
-        <svg className="absolute -bottom-[180px] left-0 w-full z-20" viewBox="0 0 1440 320">
-          <path d="M0 10C0 10 130 -32 226 57C322 145 442 53 532 67C621 80 667 136 771 111C904 58 886 48 1077 122C1170 158 1194 73 1302 130C1410 186 1455 47 1532 47V184H3L0 10Z" fill="#689DD1" />
-        </svg>
-      </div>
+    <div>
+      <Navbar />
+      <Container>
+        <div className="max-w-6xl mx-auto relative min-h-screen">
+          <div className="fixed top-0 left-0 h-full pointer-events-none z-0" style={{ backgroundImage: "url('/images/latar.png')", backgroundRepeat: "no-repeat", backgroundSize: "contain", backgroundPosition: "left center", width: "1300px", opacity: 1 }} />
+          <div className="relative z-10">
+            <div className="mb-6">
+              <Link href="/dashboard/products" className="inline-flex items-center text-gray-400 hover:text-[#407BB5]">
+                <ChevronLeft className="w-5 h-5" />
+              </Link>
+              <h1 className="text-2xl font-bold text-gray-800 mt-1">Tambah Produk Baru</h1>
+            </div>
+          
+          <form onSubmit={handleSubmit} className="grid gap-6 lg:grid-cols-[minmax(280px,360px)_1fr] items-start">
+            <ProductImageManager images={images} onAdd={handleAddImages} onCaptionChange={handleCaptionChange} onRemove={handleRemoveImage} maxImages={MAX_PRODUCT_IMAGES} />
 
-      <div className="hidden lg:flex flex-col w-[45%] items-center relative p-12 z-30">
-        <div className="relative mt-36 z-10">
-          <h1 className="text-4xl font-bold text-[#3E6BAF] leading-tight mb-4">
-            Belanja Ikan Segar<br />Mudah & Terpercaya
-          </h1>
-          <p className="text-[#3E6BAF] text-lg leading-relaxed">
-            Fishway hadir untuk memberikan<br />ikan terbaik untuk Anda
-          </p>
-        </div>
-      </div>
-
-      <div className="flex-1 min-h-screen flex items-center justify-center px-4 sm:px-8 py-10 z-30">
-        <div className="w-full bg-white rounded-3xl shadow-[0_1px_3px_rgba(0,0,0,0.25)] my-auto py-6 px-4 sm:py-10 sm:px-16 max-w-[300px] sm:max-w-[480px]">
-          <div className="flex justify-center mb-2">
-            <Image src="/images/logo2_blue.png" alt="Fishway" width={100} height={32} className="sm:w-[140px] sm:h-[44px]" />
-          </div>
-
-          <div className="text-center mb-2">
-            <h2 className="text-lg sm:text-2xl font-bold text-gray-800">
-              {isProfileStep ? "Lengkapi Profil" : "Buat Akun"}
-            </h2>
-            <p className="text-gray-400 text-sm mt-1">
-              {isProfileStep ? "Pilih jenis akun dan isi data yang dibutuhkan" : "Buat akun dulu, lalu lengkapi profil Anda"}
-            </p>
-          </div>
-
-          {isProfileStep ? (
-            <form onSubmit={handleProfileSubmit} noValidate className="space-y-1 sm:space-y-4">
-              <div className="grid grid-cols-2 gap-2">
-                <button type="button" onClick={() => setAccountType("buyer")} className={`rounded-2xl border px-4 py-3 text-sm font-semibold transition ${accountType === "buyer" ? "border-[#568EC5] bg-[#568EC5] text-white" : "border-gray-200 bg-gray-50 text-gray-700 hover:border-[#568EC5]"}`}>Pembeli</button>
-                <button type="button" onClick={() => setAccountType("seller")} className={`rounded-2xl border px-4 py-3 text-sm font-semibold transition ${accountType === "seller" ? "border-[#568EC5] bg-[#568EC5] text-white" : "border-gray-200 bg-gray-50 text-gray-700 hover:border-[#568EC5]"}`}>Penjual</button>
+            <div className="card p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Nama Produk</label>
+                <input required type="text" name="name" value={formData.name} onChange={handleChange} className="w-full border rounded-lg p-2" />
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1.5">Nama Lengkap</label>
-                <input type="text" value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Masukkan nama lengkap Anda" className={`w-full px-4 py-3 rounded-xl border text-sm outline-none transition-all ${errors.fullName ? "border-red-400 bg-red-50 focus:ring-2 focus:ring-red-200" : "border-gray-200 bg-gray-50 focus:border-[#568EC5] focus:ring-2 focus:ring-blue-100 focus:bg-white"}`} />
-                {errors.fullName && <p className="text-red-500 text-xs mt-1.5">{errors.fullName}</p>}
+                <label className="block text-sm font-medium text-gray-700 mb-1">Kategori</label>
+                <select name="category" value={formData.category} onChange={handleChange} className="w-full border rounded-lg p-2">
+                  <option value="">Pilih Kategori...</option>
+                  {PRODUCT_CATEGORIES.map((cat) => (
+                    <option key={cat} value={cat}>
+                      {cat}
+                    </option>
+                  ))}
+                </select>
               </div>
 
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1.5">{accountType === "seller" ? "Telepon Toko" : "No. Telepon"}</label>
-                <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Masukkan nomor telepon" className={`w-full px-4 py-3 rounded-xl border text-sm outline-none transition-all ${errors.phone ? "border-red-400 bg-red-50 focus:ring-2 focus:ring-red-200" : "border-gray-200 bg-gray-50 focus:border-[#568EC5] focus:ring-2 focus:ring-blue-100 focus:bg-white"}`} />
-                {errors.phone && <p className="text-red-500 text-xs mt-1.5">{errors.phone}</p>}
+              <div className="border-b pb-4 mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Tipe Produk</label>
+                <div className="flex flex-col gap-3 sm:flex-row sm:gap-4">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input type="radio" name="productType" checked={productType === 0} onChange={() => setProductType(0)} className="accent-primary" />
+                    <span>Berdasarkan Berat (Satuan)</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input type="radio" name="productType" checked={productType === 1} onChange={() => setProductType(1)} className="accent-primary" />
+                    <span>Buat Kategori (Varian)</span>
+                  </label>
+                </div>
               </div>
 
-              {accountType === "seller" && (
+              {productType === 0 ? (
                 <>
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1.5">Nama Toko</label>
-                    <input type="text" value={storeName} onChange={(e) => setStoreName(e.target.value)} placeholder="Masukkan nama toko" className={`w-full px-4 py-3 rounded-xl border text-sm outline-none transition-all ${errors.storeName ? "border-red-400 bg-red-50 focus:ring-2 focus:ring-red-200" : "border-gray-200 bg-gray-50 focus:border-[#568EC5] focus:ring-2 focus:ring-blue-100 focus:bg-white"}`} />
-                    {errors.storeName && <p className="text-red-500 text-xs mt-1.5">{errors.storeName}</p>}
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Harga (Rp)</label>
+                      <div className="flex items-center">
+                        <input required type="number" min="0" step="any" name="price" value={formData.price} onChange={handleChange} className="w-full border rounded-l-lg border-gray-300 p-2 text-center focus:ring-primary focus:border-primary appearance-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none" />
+                        <button type="button" onClick={() => adjustPrice('price', -1000)} className="px-4 py-2 bg-gray-100 hover:bg-gray-200 border border-r-0 border-gray-300 text-gray-600 transition-colors focus:outline-none font-bold">-</button>
+                        <button type="button" onClick={() => adjustPrice('price', 1000)} className="px-4 py-2 bg-gray-100 hover:bg-gray-200 border border-l-0 border-gray-300 rounded-r-lg text-gray-600 transition-colors focus:outline-none font-bold">+</button>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Satuan</label>
+                      <select required name="unit" value={formData.unit} onChange={handleChange} className="w-full border rounded-lg p-2 bg-white">
+                        <option value="">Pilih Satuan...</option>
+                        <option value="kg">kg</option>
+                        <option value="gr">gr</option>
+                        <option value="ekor">ekor</option>
+                      </select>
+                    </div>
                   </div>
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1.5">Deskripsi Toko</label>
-                    <textarea value={storeDescription} onChange={(e) => setStoreDescription(e.target.value)} placeholder="Tambahkan deskripsi toko (opsional)" rows={4} className="w-full resize-none rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm outline-none transition-all focus:border-[#568EC5] focus:ring-2 focus:ring-blue-100 focus:bg-white" />
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Stok Total</label>
+                    <input required type="number" min="0" step="1" name="stock" value={formData.stock} onChange={handleChange} className="w-full border rounded-lg p-2" />
                   </div>
                 </>
+              ) : (
+                <div className="space-y-4 bg-gray-50 p-4 rounded-xl border">
+                  <h3 className="font-semibold text-gray-800">Varian Produk</h3>
+                  {variants.map((variant, index) => (
+                    <div key={index} className="grid gap-2 sm:grid-cols-[1fr_1fr_6rem_auto] sm:items-start">
+                      <div className="flex-1">
+                        <label className="block text-xs font-medium text-gray-500 mb-1">Nama Varian (mis. 1 Ons)</label>
+                        <input required type="text" value={variant.label} onChange={(e) => handleVariantChange(index, 'label', e.target.value)} className="w-full border rounded-lg p-2 text-sm" />
+                      </div>
+                      <div className="flex-1">
+                        <label className="block text-xs font-medium text-gray-500 mb-1">Harga (Rp)</label>
+                        <div className="flex items-center">
+                          <input required type="number" min="0" step="any" value={variant.price} onChange={(e) => handleVariantChange(index, 'price', e.target.value)} className="w-full border rounded-l-lg border-gray-300 p-2 text-center text-sm focus:ring-primary focus:border-primary appearance-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none" />
+                          <button type="button" onClick={() => adjustVariantPrice(index, -1000)} className="px-4 py-2 bg-gray-100 hover:bg-gray-200 border border-r-0 border-gray-300 text-gray-600 transition-colors focus:outline-none font-bold text-sm">-</button>
+                          <button type="button" onClick={() => adjustVariantPrice(index, 1000)} className="px-4 py-2 bg-gray-100 hover:bg-gray-200 border border-l-0 border-gray-300 rounded-r-lg text-gray-600 transition-colors focus:outline-none font-bold text-sm">+</button>
+                        </div>
+                      </div>
+                      <div className="w-24">
+                        <label className="block text-xs font-medium text-gray-500 mb-1">Stok</label>
+                        <input required type="number" min="0" step="1" value={variant.stock} onChange={(e) => handleVariantChange(index, 'stock', e.target.value)} className="w-full border rounded-lg p-2 text-sm" />
+                      </div>
+                      {variants.length > 1 && (
+                        <button type="button" onClick={() => removeVariant(index)} className="mt-6 text-red-500 p-2 hover:bg-red-50 rounded-lg" title="Hapus varian">
+                          <X size={18} />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                  <button type="button" onClick={addVariant} className="text-sm font-semibold text-primary hover:underline">
+                    + Tambah Varian
+                  </button>
+                </div>
               )}
 
-              <div className="grid gap-3">
-                <button type="submit" disabled={isLoading} className="w-full py-3 rounded-xl bg-[#568EC5] text-white font-semibold text-sm transition-all duration-200 hover:bg-[#4578b0] active:scale-[0.98] disabled:opacity-70">
-                  {isLoading ? "Menyimpan..." : "Simpan dan lanjut"}
-                </button>
-                <button type="button" onClick={handleCancelProfile} disabled={isLoading} className="w-full py-3 rounded-xl border border-gray-200 bg-white text-gray-700 font-semibold text-sm transition-all duration-200 hover:border-[#568EC5] hover:text-[#568EC5] disabled:opacity-70">
-                  Batalkan registrasi
-                </button>
-              </div>
-            </form>
-          ) : (
-            <>
-              <form onSubmit={handleSignupSubmit} noValidate className="space-y-4">
+              <div className="grid gap-4 sm:grid-cols-2">
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">Email</label>
-                  <input type="email" value={email} onChange={(e) => { setEmail(e.target.value); if (errors.email) setErrors((prev) => ({ ...prev, email: "" })); }} placeholder="Masukkan email Anda" className={`w-full px-4 py-3 rounded-xl border text-sm outline-none transition-all ${errors.email ? "border-red-400 bg-red-50 focus:ring-2 focus:ring-red-200" : "border-gray-200 bg-gray-50 focus:border-[#568EC5] focus:ring-2 focus:ring-blue-100 focus:bg-white"}`} />
-                  {errors.email && <p className="text-red-500 text-xs mt-1.5">{errors.email}</p>}
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Jenis</label>
+                  <input type="text" name="jenis" value={formData.jenis} onChange={handleChange} className="w-full border rounded-lg p-2" />
                 </div>
-
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">Password</label>
-                  <div className="relative">
-                    <input type={showPassword ? "text" : "password"} value={password} onChange={(e) => { setPassword(e.target.value); if (errors.password) setErrors((prev) => ({ ...prev, password: "" })); }} placeholder="Buat password" className={`w-full rounded-xl border px-4 py-3 pr-11 text-sm outline-none transition-all ${errors.password ? "border-red-400 bg-red-50 focus:ring-2 focus:ring-red-200" : "border-gray-200 bg-gray-50 focus:border-[#568EC5] focus:ring-2 focus:ring-blue-100 focus:bg-white"}`} />
-                    <button type="button" onClick={() => setShowPassword((v) => !v)} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 transition-colors hover:text-[#568EC5]" aria-label={showPassword ? "Sembunyikan password" : "Tampilkan password"}><EyeIcon open={showPassword} /></button>
-                  </div>
-                  {errors.password && <p className="text-red-500 text-xs mt-1.5">{errors.password}</p>}
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Kondisi (mis. Segar, Hidup)</label>
+                  <input type="text" name="condition" value={formData.condition} onChange={handleChange} className="w-full border rounded-lg p-2" />
                 </div>
-
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">Konfirmasi Password</label>
-                  <div className="relative">
-                    <input type={showConfirmPassword ? "text" : "password"} value={confirmPassword} onChange={(e) => { setConfirmPassword(e.target.value); if (errors.confirmPassword) setErrors((prev) => ({ ...prev, confirmPassword: "" })); }} placeholder="Konfirmasi password Anda" className={`w-full rounded-xl border px-4 py-3 pr-11 text-sm outline-none transition-all ${errors.confirmPassword ? "border-red-400 bg-red-50 focus:ring-2 focus:ring-red-200" : "border-gray-200 bg-gray-50 focus:border-[#568EC5] focus:ring-2 focus:ring-blue-100 focus:bg-white"}`} />
-                    <button type="button" onClick={() => setShowConfirmPassword((v) => !v)} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 transition-colors hover:text-[#568EC5]" aria-label={showConfirmPassword ? "Sembunyikan konfirmasi password" : "Tampilkan konfirmasi password"}><EyeIcon open={showConfirmPassword} /></button>
-                  </div>
-                  {errors.confirmPassword && <p className="text-red-500 text-xs mt-1.5">{errors.confirmPassword}</p>}
-                </div>
-
-                <div>
-                  <label className="flex items-start gap-2.5 cursor-pointer">
-                    <input type="checkbox" checked={agree} onChange={(e) => { setAgree(e.target.checked); if (errors.agree) setErrors((prev) => ({ ...prev, agree: "" })); }} className="mt-0.5 w-4 h-4 rounded accent-[#568EC5]" />
-                    <span className="text-sm text-gray-600">
-                      Saya setuju dengan{" "}
-                      <Link href="/syarat-ketentuan" className="text-[#568EC5] font-medium hover:underline">Syarat & Ketentuan</Link>{" "}
-                      dan{" "}
-                      <Link href="/kebijakan-privasi" className="text-[#568EC5] font-medium hover:underline">Kebijakan Privasi</Link>
-                    </span>
-                  </label>
-                  {errors.agree && <p className="text-red-500 text-xs mt-1.5 ml-6">{errors.agree}</p>}
-                </div>
-
-                <button type="submit" disabled={isLoading} className="w-full py-3 rounded-xl bg-[#568EC5] text-white font-semibold text-sm transition-all duration-200 hover:bg-[#4578b0] active:scale-[0.98] disabled:opacity-70">
-                  {isLoading ? "Memproses..." : "Buat akun"}
-                </button>
-              </form>
-
-              <div className="flex items-center gap-3 my-2">
-                <div className="flex-1 h-px bg-gray-200" />
-                <span className="text-xs text-gray-400">atau daftar dengan</span>
-                <div className="flex-1 h-px bg-gray-200" />
               </div>
 
-              <div className="flex gap-3 justify-center">
-                <button type="button" onClick={handleGoogleSignup} disabled={isLoading} className="flex items-center justify-center w-16 h-12 rounded-xl border border-gray-200 hover:border-[#568EC5] hover:bg-blue-50 transition-all duration-150 disabled:opacity-70" aria-label="Google">
-                  <GoogleIcon />
-                </button>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Asal</label>
+                  <input type="text" name="origin" value={formData.origin} onChange={handleChange} className="w-full border rounded-lg p-2" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Pakan (jika ada)</label>
+                  <input type="text" name="food" value={formData.food} onChange={handleChange} className="w-full border rounded-lg p-2" />
+                </div>
               </div>
 
-              <p className="text-center text-sm text-gray-500 mt-2">
-                Sudah punya akun?{" "}
-                <Link href="/login" className="font-semibold text-[#568EC5] hover:underline">Masuk sekarang</Link>
-              </p>
-            </>
-          )}
+              <div>
+                <div className="flex justify-between items-center mb-1">
+                  <label className="block text-sm font-medium text-gray-700">Deskripsi</label>
+                  <span className={`text-xs ${formData.description.length > 800 ? "text-red-800" : "text-gray-700"}`}>{formData.description.length}/1000</span>
+                </div>
+                <textarea name="description" value={formData.description} onChange={handleChange} rows={4} maxLength={1000} className="w-full border rounded-lg p-2" />
+              </div>
+
+              <button disabled={loading} type="submit" className="w-full btn-primary py-3 rounded-xl mt-4">
+                {loading ? "Menyimpan..." : "Tambah Produk"}
+              </button>
+            </div>
+          </form>
+          </div>
         </div>
-      </div>
+      </Container>
     </div>
   );
 }

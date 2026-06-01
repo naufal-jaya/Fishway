@@ -202,7 +202,7 @@ export default async function ProductDetailPage({
                 <div className="w-full md:w-1/2">
                   <ProductGallery
                     mainImage={product.gambar || "/images/default.png"}
-                    extraImages={[product.image, product.gambar].filter(Boolean) as string[]}
+                    images={galleryImages}
                     name={product.name}
                   />
                 </div>

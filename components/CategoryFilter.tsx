@@ -2,15 +2,11 @@
 
 import { useState } from "react";
 import ProductCard from "@/components/ProductCard";
-import { Product } from "@/lib/data";
+import { Product, PRODUCT_CATEGORIES } from "@/lib/data";
 
 const CATEGORIES = [
   "Semua",
-  "Ikan Laut",
-  "Udang",
-  "Cumi",
-  "Kepiting",
-  "Ikan Air Tawar",
+  ...PRODUCT_CATEGORIES,
 ];
 
 export default function CategoryFilter({ products }: { products: Product[] }) {

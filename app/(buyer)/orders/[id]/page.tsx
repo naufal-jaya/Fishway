@@ -42,7 +42,7 @@ export default async function BuyerOrderDetailPage({ params }: { params: { id: s
         id,
         quantity,
         price,
-        products ( name, gambar, unit )
+        products ( name, gambar, unit, product_images(url, sort_order) )
       )
     `)
     .eq("id", params.id)
@@ -153,11 +153,15 @@ Mohon diproses ya. Terima kasih!`;
               <div className="space-y-4">
                 {order.order_items.map((item: any) => {
                   const productInfo = Array.isArray(item.products) ? item.products[0] : item.products;
+                  const pImages = Array.isArray(productInfo?.product_images) ? productInfo.product_images : [];
+                  const firstImage = pImages.length > 0
+                    ? [...pImages].sort((a: any, b: any) => (a.sort_order || 0) - (b.sort_order || 0))[0]?.url
+                    : null;
                   return (
                     <div key={item.id} className="flex gap-4 items-center p-3 border border-gray-100 rounded-xl hover:bg-gray-50 transition-colors">
                       <div className="w-16 h-16 bg-blue-50 rounded-lg overflow-hidden relative flex-shrink-0">
                         <Image 
-                          src={productInfo?.gambar || "/images/default.png"} 
+                          src={firstImage || productInfo?.gambar || "/images/default.png"} 
                           alt={productInfo?.name || "Produk"}
                           fill
                           className="object-cover"

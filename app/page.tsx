@@ -1,17 +1,10 @@
 import Container from "@/components/Container";
 import ProductCard from "@/components/ProductCard";
-import { Product } from "@/lib/data";
+import { Product, PRODUCT_CATEGORIES } from "@/lib/data";
 import Navbar from "@/components/Navbar";
 import CategoryFilter from "@/components/CategoryFilter";
 import { createClient } from "@/utils/supabase/server";
 import { cookies } from "next/headers";
-
-const CATEGORIES = [
-  "Semua",
-  "Ikan Air Asin",
-  "Ikan Air Tawar",
-  "Ikan Hias",
-];
 
 export default async function HomePage() {
   const supabase = createClient(cookies());
@@ -29,7 +22,7 @@ export default async function HomePage() {
 
   const { data: rawProducts, error } = await supabase
     .from("products")
-    .select("*, stores(name, phone), price_options(*)")
+    .select("*, stores(name, phone), price_options(*), product_images(*)")
     .order("created_at", { ascending: false });
 
   if (error) {
@@ -44,7 +37,9 @@ export default async function HomePage() {
       seller: (Array.isArray(p.stores) ? p.stores[0]?.name : p.stores?.name) || "Penjual",
       location: p.location || "Lokasi tidak diketahui",
       description: p.description || "",
-      gambar: p.gambar || "/images/default.png",
+      gambar: (Array.isArray(p.product_images) && p.product_images.length > 0) 
+        ? [...p.product_images].sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0))[0]?.url 
+        : (p.gambar || "/images/default.png"),
       jenis: p.jenis || "",
       condition: p.condition || "",
       origin: p.origin || "",

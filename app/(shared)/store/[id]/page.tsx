@@ -28,7 +28,7 @@ export default async function StorePage({
   // Fetch Products
   const { data: rawProducts, error: productsError } = await supabase
     .from("products")
-    .select("*, stores(name, phone), price_options(*)")
+    .select("*, stores(name, phone), price_options(*), product_images(*)")
     .eq("store_id", params.id)
     .order("created_at", { ascending: false });
 
@@ -44,7 +44,9 @@ export default async function StorePage({
       seller: (Array.isArray(p.stores) ? p.stores[0]?.name : p.stores?.name) || "Penjual",
       location: p.location || "Lokasi tidak diketahui",
       description: p.description || "",
-      gambar: p.gambar || "/images/default.png",
+      gambar: (Array.isArray(p.product_images) && p.product_images.length > 0) 
+        ? [...p.product_images].sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0))[0]?.url 
+        : (p.gambar || "/images/default.png"),
       jenis: p.jenis || "",
       condition: p.condition || "",
       origin: p.origin || "",
