@@ -81,7 +81,7 @@ export default function LoginPage() {
 
       console.log("login success", data);
 
-      router.replace("/");
+      window.location.href = "/";
     } catch (err) {
       console.error(err);
       setErrors({
@@ -207,11 +207,10 @@ export default function LoginPage() {
                       setErrors((prev) => ({ ...prev, email: undefined }));
                   }}
                   placeholder="Masukkan email Anda"
-                  className={`w-full pl-10 pr-4 py-3 rounded-xl border text-xs sm:text-sm outline-none transition-all ${
-                    errors.email
+                  className={`w-full pl-10 pr-4 py-3 rounded-xl border text-xs sm:text-sm outline-none transition-all ${errors.email
                       ? "border-red-400 bg-red-50 focus:ring-2 focus:ring-red-200"
                       : "border-gray-200 bg-gray-50 focus:border-[#568EC5] focus:ring-2 focus:ring-blue-100 focus:bg-white"
-                  }`}
+                    }`}
                 />
               </div>
               {errors.email && (
@@ -250,11 +249,10 @@ export default function LoginPage() {
                       setErrors((prev) => ({ ...prev, password: undefined }));
                   }}
                   placeholder="Masukkan password Anda"
-                  className={`w-full pl-10 pr-11 py-3 rounded-xl border text-xs sm:text-sm outline-none transition-all ${
-                    errors.password
+                  className={`w-full pl-10 pr-11 py-3 rounded-xl border text-xs sm:text-sm outline-none transition-all ${errors.password
                       ? "border-red-400 bg-red-50 focus:ring-2 focus:ring-red-200"
                       : "border-gray-200 bg-gray-50 focus:border-[#568EC5] focus:ring-2 focus:ring-blue-100 focus:bg-white"
-                  }`}
+                    }`}
                 />
                 <button
                   type="button"
