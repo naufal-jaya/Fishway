@@ -6,7 +6,9 @@ import { cookies } from "next/headers";
 import { formatPrice } from "@/lib/data";
 import { notFound } from "next/navigation";
 import Image from "next/image";
-import { Phone, MessageCircle, ChevronLeft} from "lucide-react";
+import { Phone, MessageCircle, ChevronLeft, X } from "lucide-react";
+import AcceptCancelButton from "./AcceptCancelButton";
+import { revalidatePath } from "next/cache";
 
 const STATUS_COLOR: Record<string, string> = {
   "Menunggu Pembayaran": "bg-yellow-100 text-yellow-600",
@@ -14,6 +16,7 @@ const STATUS_COLOR: Record<string, string> = {
   "Diproses": "bg-blue-100 text-blue-500",
   "Dikirim": "bg-purple-100 text-purple-500",
   "Selesai": "bg-green-100 text-green-500",
+  "Proses Pembatalan": "bg-red-50 text-red-600",
   "Dibatalkan": "bg-red-100 text-red-500",
 };
 
@@ -39,7 +42,8 @@ export default async function BuyerOrderDetailPage({ params }: { params: { id: s
       buyer_note,
       created_at,
       notes,
-      stores ( name, phone ),
+      cancel_reason,
+      stores ( id, name, phone ),
       order_items (
         id,
         quantity,
@@ -67,12 +71,12 @@ export default async function BuyerOrderDetailPage({ params }: { params: { id: s
   const sellerInfo = Array.isArray(order.stores) ? order.stores[0] : order.stores;
   const waNumber = (sellerInfo as any)?.phone || "6281234567890";
   const sellerName = (sellerInfo as any)?.name || "Penjual";
-  
+
   let itemsList = "";
   order.order_items.forEach((item: any, index: number) => {
     itemsList += `${index + 1}. ${item.products?.name} - ${item.quantity} x ${formatPrice(item.price)}\n`;
   });
-  
+
   const waMessage = `Halo ${sellerName}, saya ingin konfirmasi pesanan saya:
 ID Pesanan: ${order.id}
 Tanggal: ${orderDate}
@@ -83,7 +87,45 @@ Total Pembayaran (termasuk ongkir): ${formatPrice(order.total_amount + order.shi
 
 Mohon diproses ya. Terima kasih!`;
 
-  const waLink = `https://wa.me/${waNumber}?text=${encodeURIComponent(waMessage)}`;
+  const waLink = `https://wa.me/${waNumber.replace(/\D/g, '')}?text=${encodeURIComponent(waMessage)}`;
+
+  const waRefundMessage = `Hai, saya mau konfirmasi pembatalan pesanan ${order.id}, tolong kirim ke rekening saya saya dengan detail:
+Bank: 
+No Rek: 
+A/N: `;
+
+  const waRefundLink = `https://wa.me/${waNumber.replace(/\D/g, '')}?text=${encodeURIComponent(waRefundMessage)}`;
+
+  // Server action: accept cancellation
+  async function acceptCancel() {
+    "use server";
+
+    if (!order) return;
+
+    const supabaseAdmin = createClient(cookies());
+    await supabaseAdmin
+      .from("orders")
+      .update({ status: "Dibatalkan" })
+      .eq("id", params.id);
+
+    // Notify seller
+    const { data: storeOwner } = await supabaseAdmin
+      .from("stores")
+      .select("seller_id")
+      .eq("id", order.stores ? (Array.isArray(order.stores) ? (order.stores as any)[0]?.id : (order.stores as any).id) : null)
+      .maybeSingle();
+
+    if (storeOwner?.seller_id) {
+      await supabaseAdmin.from("notifications").insert({
+        user_id: storeOwner.seller_id,
+        title: "Pembatalan Disetujui",
+        message: `Pembeli telah menyetujui pembatalan pesanan ${params.id}.`,
+        link: `/dashboard/orders/${params.id}`,
+      });
+    }
+
+    revalidatePath(`/orders/${params.id}`);
+  }
 
   return (
     <div>
@@ -93,7 +135,7 @@ Mohon diproses ya. Terima kasih!`;
           <Link href="/orders" className="inline-flex items-center text-gray-400 hover:text-[#407BB5] mb-6">
             <ChevronLeft className="w-5 h-5" />
           </Link>
-          
+
           <div className="card p-6 md:p-8">
             <div className="flex flex-col md:flex-row justify-between md:items-center gap-4 mb-8 border-b pb-6">
               <div>
@@ -114,13 +156,41 @@ Mohon diproses ya. Terima kasih!`;
               </div>
             </div>
 
+            {order.status === "Proses Pembatalan" && (
+              <div className="mb-8 p-5 bg-red-50 border border-red-200 rounded-xl">
+                <div className="flex items-start gap-3">
+                  <div className="bg-red-100 p-2 rounded-full text-red-600 mt-0.5">
+                    <X size={20} className="lucide lucide-x-circle" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-red-800 font-bold text-lg mb-1">Menunggu Persetujuan Pembatalan</h3>
+                    <p className="text-sm text-red-700 mb-4 leading-relaxed">
+                      Ups! pesanan kamu terkendala, <strong>{order.cancel_reason || "Penjual mengajukan pembatalan"}</strong>. Hubungi penjual untuk refund.
+                    </p>
+                    <div className="flex flex-col sm:flex-row gap-3">
+                      <a
+                        href={waRefundLink}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-semibold flex items-center justify-center gap-2 transition-colors"
+                      >
+                        <MessageCircle size={16} />
+                        Hubungi Penjual (Refund)
+                      </a>
+                      <AcceptCancelButton action={acceptCancel} />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
             <div className="mb-8">
               <h2 className="text-lg font-bold text-gray-800 mb-4">Informasi Toko</h2>
               <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
                 <p className="font-semibold text-gray-800 text-lg">{sellerName}</p>
-                  <p className="text-sm text-gray-500 mt-1 flex items-center gap-2">
-                    <Phone size={14} /> {waNumber}
-                  </p>
+                <p className="text-sm text-gray-500 mt-1 flex items-center gap-2">
+                  <Phone size={14} /> {waNumber}
+                </p>
               </div>
             </div>
 
@@ -162,8 +232,8 @@ Mohon diproses ya. Terima kasih!`;
                   return (
                     <div key={item.id} className="flex gap-4 items-center p-3 border border-gray-100 rounded-xl hover:bg-gray-50 transition-colors">
                       <div className="w-16 h-16 bg-blue-50 rounded-lg overflow-hidden relative flex-shrink-0">
-                        <Image 
-                          src={firstImage || productInfo?.gambar || "/images/default.png"} 
+                        <Image
+                          src={firstImage || productInfo?.gambar || "/images/default.png"}
                           alt={productInfo?.name || "Produk"}
                           fill
                           className="object-cover"
@@ -208,18 +278,18 @@ Mohon diproses ya. Terima kasih!`;
                 <p className="font-semibold text-gray-800 mb-1">Butuh bantuan pesanan?</p>
                 <p className="text-sm text-gray-600">Hubungi penjual melalui WhatsApp untuk konfirmasi pembayaran atau pengiriman.</p>
               </div>
-                <Link 
-                  href={waLink}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="bg-green-500 hover:bg-green-600 text-white whitespace-nowrap px-6 py-3 rounded-xl flex items-center gap-2 w-full md:w-auto justify-center font-medium transition"
-                >
-                  <svg className="w-5 h-5 fill-white" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
-                    <path d="M12 0C5.373 0 0 5.373 0 12c0 2.124.558 4.17 1.541 5.943L.057 23.571a.5.5 0 00.6.633l5.782-1.457A11.944 11.944 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.894a9.877 9.877 0 01-5.031-1.378l-.36-.214-3.733.941.993-3.608-.235-.372A9.833 9.833 0 012.106 12C2.106 6.533 6.533 2.106 12 2.106S21.894 6.533 21.894 12 17.467 21.894 12 21.894z"/>
-                  </svg>
-                  Hubungi Penjual
-                </Link>
+              <Link
+                href={waLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="bg-green-500 hover:bg-green-600 text-white whitespace-nowrap px-6 py-3 rounded-xl flex items-center gap-2 w-full md:w-auto justify-center font-medium transition"
+              >
+                <svg className="w-5 h-5 fill-white" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z" />
+                  <path d="M12 0C5.373 0 0 5.373 0 12c0 2.124.558 4.17 1.541 5.943L.057 23.571a.5.5 0 00.6.633l5.782-1.457A11.944 11.944 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.894a9.877 9.877 0 01-5.031-1.378l-.36-.214-3.733.941.993-3.608-.235-.372A9.833 9.833 0 012.106 12C2.106 6.533 6.533 2.106 12 2.106S21.894 6.533 21.894 12 17.467 21.894 12 21.894z" />
+                </svg>
+                Hubungi Penjual
+              </Link>
             </div>
           </div>
         </div>

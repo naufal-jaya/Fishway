@@ -9,7 +9,7 @@ import OrderTableHeader from "@/components/OrderTableHeader";
 import OrderPagination from "@/components/OrderPagination";
 import { Suspense } from "react";
 
-const STATUS_TABS = ["Semua", "Menunggu Pembayaran", "Menunggu Konfirmasi", "Diproses", "Dikirim", "Selesai", "Dibatalkan"];
+const STATUS_TABS = ["Semua", "Menunggu Pembayaran", "Menunggu Konfirmasi", "Diproses", "Dikirim", "Selesai", "Proses Pembatalan", "Dibatalkan"];
 
 const STATUS_COLOR: Record<string, string> = {
   "Menunggu Pembayaran": "bg-yellow-100 text-yellow-600",
@@ -17,6 +17,7 @@ const STATUS_COLOR: Record<string, string> = {
   "Diproses": "bg-blue-100 text-blue-500",
   "Dikirim": "bg-purple-100 text-purple-500",
   "Selesai": "bg-green-100 text-green-500",
+  "Proses Pembatalan": "bg-red-50 text-red-600",
   "Dibatalkan": "bg-red-100 text-red-500", 
 };
 

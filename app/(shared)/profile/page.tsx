@@ -13,6 +13,7 @@ const STATUS_COLOR: Record<string, string> = {
   "Diproses": "bg-blue-100 text-blue-500",
   "Dikirim": "bg-purple-100 text-purple-500",
   "Selesai": "bg-green-100 text-green-500",
+  "Proses Pembatalan": "bg-red-50 text-red-600",
   "Dibatalkan": "bg-red-100 text-red-500",
 };
 

@@ -86,6 +86,9 @@ export default function CheckoutClient({
   const router = useRouter();
   const { showToast } = useToast();
 
+  const [showWarningModal, setShowWarningModal] = useState(false);
+  const [hideWarningChecked, setHideWarningChecked] = useState(false);
+
   // Address Selection
   const primaryAddress = addresses.find((a) => a.is_primary) || addresses[0];
   const [selectedAddressId, setSelectedAddressId] = useState(primaryAddress?.id || "");
@@ -244,7 +247,7 @@ export default function CheckoutClient({
     });
   }, [stores, selectedShipping, storeShippingOptions, storeDistances]);
 
-  const handleConfirm = async () => {
+  const handleConfirmClick = () => {
     if (loading) return;
     if (isAnyStoreOutOfRange) {
       showToast({
@@ -254,7 +257,18 @@ export default function CheckoutClient({
       });
       return;
     }
+
+    const hideWarning = localStorage.getItem("hideCancelWarning") === "true";
+    if (!hideWarning) {
+      setShowWarningModal(true);
+    } else {
+      processCheckout();
+    }
+  };
+
+  const processCheckout = async () => {
     setLoading(true);
+    setShowWarningModal(false);
     try {
       // Build shippingDetails untuk disimpan di orders
       const shippingDetails: Record<string, { method: string; ratePerKm?: number; distanceKm?: number }> = {};
@@ -663,7 +677,7 @@ export default function CheckoutClient({
           {/* Checkout Button */}
           <div className="card p-5 mt-4">
             <button
-              onClick={handleConfirm}
+              onClick={handleConfirmClick}
               disabled={loading || isAnyStoreOutOfRange}
               className="btn-primary w-full py-3 rounded-xl text-base disabled:opacity-50 flex items-center justify-center gap-2"
             >
@@ -688,6 +702,54 @@ export default function CheckoutClient({
           </div>
         </div>
       </div>
+
+      {/* Warning Modal */}
+      {showWarningModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 px-4">
+          <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl relative">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="bg-amber-100 p-2 rounded-full text-amber-600">
+                <AlertTriangle size={24} />
+              </div>
+              <h3 className="text-lg font-bold text-gray-800">Pemberitahuan</h3>
+            </div>
+            
+            <p className="text-sm text-gray-600 mb-6 leading-relaxed">
+              Pemesanan produk dapat dibatalkan dengan alasan tertentu, Anda dapat mengkomunikasikannya dengan penjual.
+            </p>
+
+            <label className="flex items-center gap-2 text-sm text-gray-600 mb-6 cursor-pointer">
+              <input 
+                type="checkbox" 
+                className="rounded text-primary focus:ring-primary accent-primary w-4 h-4"
+                checked={hideWarningChecked}
+                onChange={(e) => setHideWarningChecked(e.target.checked)}
+              />
+              Jangan tampilkan ini lagi
+            </label>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowWarningModal(false)}
+                className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-gray-600 bg-gray-100 hover:bg-gray-200 transition-colors"
+              >
+                Batal
+              </button>
+              <button
+                onClick={() => {
+                  if (hideWarningChecked) {
+                    localStorage.setItem("hideCancelWarning", "true");
+                  }
+                  processCheckout();
+                }}
+                className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-white bg-primary hover:bg-primary/90 transition-colors"
+              >
+                Mengerti & Lanjut
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

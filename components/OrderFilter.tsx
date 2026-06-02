@@ -11,10 +11,11 @@ const STATUS_COLOR: Record<string, string> = {
   "Diproses": "bg-blue-100 text-blue-500",
   "Dikirim": "bg-purple-100 text-purple-500",
   "Selesai": "bg-green-100 text-green-500",
+  "Proses Pembatalan": "bg-red-50 text-red-600",
   "Dibatalkan": "bg-red-100 text-red-500",
 };
 
-const STATUSES = ["Semua", "Menunggu Pembayaran", "Menunggu Konfirmasi", "Diproses", "Dikirim", "Selesai", "Dibatalkan"];
+const STATUSES = ["Semua", "Menunggu Pembayaran", "Menunggu Konfirmasi", "Diproses", "Dikirim", "Selesai", "Proses Pembatalan", "Dibatalkan"];
 
 const STATUS_ICON: Record<string, React.ReactNode> = {
   "Menunggu Pembayaran": <Clock size={14} className="text-yellow-500" />,
@@ -22,6 +23,7 @@ const STATUS_ICON: Record<string, React.ReactNode> = {
   "Diproses": <Package size={14} className="text-blue-500" />,
   "Dikirim": <Truck size={14} className="text-purple-500" />,
   "Selesai": <Check size={14} className="text-green-500" />,
+  "Proses Pembatalan": <X size={14} className="text-red-600" />,
   "Dibatalkan": <X size={14} className="text-red-500" />,
 };
 

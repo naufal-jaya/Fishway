@@ -16,6 +16,7 @@ const STATUS_COLOR: Record<string, string> = {
   "Diproses": "bg-blue-100 text-blue-500",
   "Dikirim": "bg-purple-100 text-purple-500",
   "Selesai": "bg-green-100 text-green-500",
+  "Proses Pembatalan": "bg-red-50 text-red-600",
   "Dibatalkan": "bg-red-100 text-red-500",
 };
 
@@ -140,14 +141,17 @@ export default async function SellerOrderDetailPage({ params }: { params: { id: 
 
     await supabaseAdmin
       .from("orders")
-      .update({ status: "Dibatalkan" })
+      .update({ 
+        status: "Proses Pembatalan",
+        cancel_reason: reason || "Tidak ada keterangan" 
+      })
       .eq("id", params.id);
 
     if (currentOrder.buyer_id) {
       await supabaseAdmin.from("notifications").insert({
         user_id: currentOrder.buyer_id,
-        title: "Pesanan Dibatalkan",
-        message: `Pesanan Anda telah dibatalkan oleh penjual. Alasan: ${reason || "Tidak ada keterangan"}`,
+        title: "Persetujuan Pembatalan Pesanan",
+        message: `Penjual mengajukan pembatalan pesanan Anda. Alasan: ${reason || "Tidak ada keterangan"}. Harap periksa detail pesanan.`,
         link: `/orders/${params.id}`,
       });
     }
@@ -302,7 +306,7 @@ export default async function SellerOrderDetailPage({ params }: { params: { id: 
             </div>
 
             {(order.status === "Menunggu Konfirmasi" || order.status === "Dikirim") && (
-              <CancelOrderButton action={cancelOrder} />
+              <CancelOrderButton action={cancelOrder} buyerPhone={buyerPhone} orderId={order.id} />
             )}
           </div>
         </div>
