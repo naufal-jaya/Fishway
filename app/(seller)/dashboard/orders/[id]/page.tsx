@@ -11,11 +11,12 @@ import CancelOrderButton from "./CancelOrderButton";
 import { Phone, MapPin, XCircle, ChevronLeft } from "lucide-react";
 
 const STATUS_COLOR: Record<string, string> = {
-  "Menunggu Konfirmasi": "bg-gray-100 text-gray-700",
-  "Diproses": "bg-yellow-100 text-yellow-700",
-  "Dikirim": "bg-blue-100 text-blue-700",
-  "Selesai": "bg-green-100 text-green-700",
-  "Dibatalkan": "bg-red-100 text-red-700",
+  "Menunggu Pembayaran": "bg-yellow-100 text-yellow-600",
+  "Menunggu Konfirmasi": "bg-orange-100 text-orange-500",
+  "Diproses": "bg-blue-100 text-blue-500",
+  "Dikirim": "bg-purple-100 text-purple-500",
+  "Selesai": "bg-green-100 text-green-500",
+  "Dibatalkan": "bg-red-100 text-red-500",
 };
 
 const ALL_STATUSES = ["Menunggu Konfirmasi", "Diproses", "Dikirim", "Selesai"];

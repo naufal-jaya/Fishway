@@ -8,6 +8,7 @@ import { LogOut, Package, Truck, Check, ClipboardList, MapPin, User, Clock, X } 
 import LogoutButton from "@/components/LogoutButton";
 
 const STATUS_COLOR: Record<string, string> = {
+  "Menunggu Pembayaran": "bg-yellow-100 text-yellow-600",
   "Menunggu Konfirmasi": "bg-orange-100 text-orange-500",
   "Diproses": "bg-blue-100 text-blue-500",
   "Dikirim": "bg-purple-100 text-purple-500",

@@ -6,6 +6,7 @@ import Link from "next/link";
 import { formatPrice } from "@/lib/data";
 
 const STATUS_COLOR: Record<string, string> = {
+  "Menunggu Pembayaran": "bg-yellow-100 text-yellow-600",
   "Menunggu Konfirmasi": "bg-orange-100 text-orange-500",
   "Diproses": "bg-blue-100 text-blue-500",
   "Dikirim": "bg-purple-100 text-purple-500",
@@ -13,9 +14,10 @@ const STATUS_COLOR: Record<string, string> = {
   "Dibatalkan": "bg-red-100 text-red-500",
 };
 
-const STATUSES = ["Semua", "Menunggu Konfirmasi", "Diproses", "Dikirim", "Selesai", "Dibatalkan"];
+const STATUSES = ["Semua", "Menunggu Pembayaran", "Menunggu Konfirmasi", "Diproses", "Dikirim", "Selesai", "Dibatalkan"];
 
 const STATUS_ICON: Record<string, React.ReactNode> = {
+  "Menunggu Pembayaran": <Clock size={14} className="text-yellow-500" />,
   "Menunggu Konfirmasi": <Clock size={14} className="text-orange-400" />,
   "Diproses": <Package size={14} className="text-blue-500" />,
   "Dikirim": <Truck size={14} className="text-purple-500" />,
@@ -69,10 +71,17 @@ export default function OrderFilter({ orders, initialStatus }: { orders: any[], 
         <div className="space-y-4">
           {filtered.map((order: any) => {
             const orderDate = new Date(order.created_at).toLocaleDateString('id-ID', {
+              timeZone: 'Asia/Jakarta',
               year: 'numeric',
               month: 'long',
               day: 'numeric',
             });
+            const orderTime = new Date(order.created_at).toLocaleTimeString('id-ID', {
+              timeZone: 'Asia/Jakarta',
+              hour: '2-digit',
+              minute: '2-digit',
+              hour12: false,
+            }).replace('.', ':') + ' WIB';
 
             const storeName = (Array.isArray(order.stores) ? order.stores[0]?.name : order.stores?.name) || "Toko";
             const shippingMethod = order.shipping_method || null;
@@ -87,7 +96,7 @@ export default function OrderFilter({ orders, initialStatus }: { orders: any[], 
                       <Store size={14} className="text-primary" />
                       <p className="text-sm font-semibold text-primary">{storeName}</p>
                     </div>
-                    <p className="text-xs text-gray-400">{orderDate}</p>
+                    <p className="text-xs text-gray-400">{orderDate} • {orderTime}</p>
                     <p className="font-mono text-xs text-gray-300 mt-0.5">#{order.id.split("-")[0].toUpperCase()}</p>
                   </div>
                   <span className={`text-xs px-3 py-1 rounded-full font-medium flex items-center gap-1 ${STATUS_COLOR[order.status] || "bg-gray-100 text-gray-700"}`}>

@@ -9,9 +9,10 @@ import OrderTableHeader from "@/components/OrderTableHeader";
 import OrderPagination from "@/components/OrderPagination";
 import { Suspense } from "react";
 
-const STATUS_TABS = ["Semua", "Menunggu Konfirmasi", "Diproses", "Dikirim", "Selesai", "Dibatalkan"];
+const STATUS_TABS = ["Semua", "Menunggu Pembayaran", "Menunggu Konfirmasi", "Diproses", "Dikirim", "Selesai", "Dibatalkan"];
 
 const STATUS_COLOR: Record<string, string> = {
+  "Menunggu Pembayaran": "bg-yellow-100 text-yellow-600",
   "Menunggu Konfirmasi": "bg-orange-100 text-orange-500",
   "Diproses": "bg-blue-100 text-blue-500",
   "Dikirim": "bg-purple-100 text-purple-500",
@@ -162,10 +163,17 @@ const paginatedOrders = filteredOrders.slice(
             <div>
               {paginatedOrders.map((order: any) => {
                 const orderDate = new Date(order.created_at).toLocaleDateString("id-ID", {
+                  timeZone: 'Asia/Jakarta',
                   day: "2-digit",
                   month: "short",
                   year: "numeric",
                 });
+                const orderTime = new Date(order.created_at).toLocaleTimeString("id-ID", {
+                  timeZone: 'Asia/Jakarta',
+                  hour: "2-digit",
+                  minute: "2-digit",
+                  hour12: false,
+                }).replace(".", ":") + " WIB";
                 const productsStr = order.order_items.map((i: any) => {
                   const productInfo = Array.isArray(i.products) ? i.products[0] : i.products;
                   return `${productInfo?.name || "Produk"} (${i.quantity})`;
@@ -180,7 +188,7 @@ const paginatedOrders = filteredOrders.slice(
   <div className="md:hidden p-4">
     <div className="flex items-start justify-between mb-2">
       <div>
-        <p className="text-sm font-medium text-gray-800">{orderDate}</p>
+        <p className="text-sm font-medium text-gray-800">{orderDate} • {orderTime}</p>
         <p className="text-xs text-gray-400 font-mono">#{order.id.split("-")[0].toUpperCase()}</p>
       </div>
       <span className={`inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full font-medium ${STATUS_COLOR[order.status] || "bg-gray-100 text-gray-700"}`}>
@@ -208,11 +216,7 @@ const paginatedOrders = filteredOrders.slice(
     <div className="col-span-2">
       <p className="text-sm font-medium text-gray-800">{orderDate}</p>
       <p className="text-xs text-gray-400">
-        {new Date(order.created_at).toLocaleTimeString("id-ID", {
-          hour: "2-digit",
-          minute: "2-digit",
-          hour12: false,
-        }).replace(".", ":")}
+        {orderTime}
       </p>
     </div>
     <div className="text-center">
