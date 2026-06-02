@@ -84,7 +84,7 @@ export default function Navbar() {
 
   return (
     <>
-      <nav className="bg-[#407BB5] text-white shadow-md fixed top-0 w-full z-[100]">
+      <nav className="bg-[#407BB5] text-white shadow-md fixed top-0 left-0 w-full z-[100]">
         <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
           {/* Logo */}
           <Link href={userInfo.role === "Penjual" ? "/dashboard" : "/"}>

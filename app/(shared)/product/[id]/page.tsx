@@ -129,8 +129,10 @@ export default async function ProductDetailPage({
       .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0))
       .map((image) => ({ url: image.url, caption: image.caption }))
     : [{ url: product.gambar || "/images/default.png", caption: null }];
+  const trimCat = product.category ? product.category.trim() : "";
+  const categoryNormalized = (trimCat === "Ikan Tangkapan Laut" || trimCat === "Ikan Air Laut" || trimCat === "Ikan Laut") ? "Ikan Air Asin" : (trimCat === "Ikan Ternak" ? "Ikan Air Tawar" : (trimCat === "Olahan Ikan" ? "Produk Olahan" : trimCat));
   const attrs = [
-    { icon: <FishSymbol className="w-4 h-4" />, label: "Jenis", value: product.jenis || product.category },
+    { icon: <FishSymbol className="w-4 h-4" />, label: "Jenis", value: product.jenis || categoryNormalized },
     { icon: <Activity className="w-4 h-4" />, label: "Kondisi", value: product.condition },
     { icon: <Globe className="w-4 h-4" />, label: "Asal", value: product.origin },
     { icon: <HandPlatter className="w-4 h-4" />, label: "Pakan", value: product.food },
@@ -167,13 +169,12 @@ export default async function ProductDetailPage({
     <div className="min-h-screen bg-gray-50 overflow-x-hidden">
 
       <div
-        className="fixed top-0 left-0 h-full pointer-events-none z-0"
+        className="fixed top-0 left-0 h-full pointer-events-none z-0 w-full max-w-[1300px]"
         style={{
           backgroundImage: "url('/images/latar.png')",
           backgroundRepeat: "no-repeat",
           backgroundSize: "contain",
           backgroundPosition: "left center",
-          width: "1300px",
           opacity: 1,
         }}
       />

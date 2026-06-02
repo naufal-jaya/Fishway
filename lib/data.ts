@@ -1,7 +1,7 @@
 export const PRODUCT_CATEGORIES = [
-  "Ikan Tangkapan Laut",
-  "Ikan Air Tawar",
   "Ikan Hias",
+  "Ikan Air Tawar",
+  "Ikan Air Asin",
   "Produk Olahan",
 ] as const;
 

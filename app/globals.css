@@ -11,6 +11,11 @@
   --font-inter-sans: 'Inter';
 }
 
+html, body {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
 body {
   background-color: var(--bg);
   color: #1a1a1a;

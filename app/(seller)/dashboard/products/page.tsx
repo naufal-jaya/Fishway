@@ -119,13 +119,12 @@ export default async function SellerProductsPage({ searchParams }: { searchParam
       <Container>
         <div className="max-w-6xl mx-auto relative min-h-screen">
           <div
-            className="fixed top-0 left-0 h-full pointer-events-none z-0"
+            className="fixed top-0 left-0 h-full pointer-events-none z-0 w-full max-w-[1300px]"
             style={{
               backgroundImage: "url('/images/latar.png')",
               backgroundRepeat: "no-repeat",
               backgroundSize: "contain",
               backgroundPosition: "left center",
-              width: "1300px",
               opacity: 1,
             }}
           />

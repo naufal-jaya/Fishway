@@ -14,7 +14,7 @@ const MAX_PRODUCT_IMAGES = 10;
 
 const getAvailableUnits = (category: string) => {
   switch (category) {
-    case "Ikan Tangkapan Laut":
+    case "Ikan Air Asin":
     case "Ikan Air Tawar":
       return ["kg", "gr"];
     case "Ikan Hias":
@@ -99,7 +99,7 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
         nextUnit = "ekor";
       } else if (value === "Produk Olahan") {
         nextUnit = "piece";
-      } else if (value === "Ikan Tangkapan Laut" || value === "Ikan Air Tawar") {
+      } else if (value === "Ikan Air Asin" || value === "Ikan Air Tawar") {
         if (formData.unit !== "kg" && formData.unit !== "gr") {
           nextUnit = "";
         }
@@ -271,7 +271,7 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
       <Navbar />
       <Container>
         <div className="max-w-6xl mx-auto relative min-h-screen">
-          <div className="fixed top-0 left-0 h-full pointer-events-none z-0" style={{ backgroundImage: "url('/images/latar.png')", backgroundRepeat: "no-repeat", backgroundSize: "contain", backgroundPosition: "left center", width: "1300px", opacity: 1 }} />
+          <div className="fixed top-0 left-0 h-full pointer-events-none z-0 w-full max-w-[1300px]" style={{ backgroundImage: "url('/images/latar.png')", backgroundRepeat: "no-repeat", backgroundSize: "contain", backgroundPosition: "left center", opacity: 1 }} />
           <div className="relative z-10">
             <div className="mb-6">
               <Link href="/dashboard/products" className="inline-flex items-center text-gray-400 hover:text-[#407BB5]">
