@@ -103,7 +103,7 @@ export default function CheckoutClient({
         opts.push({ id: "gosend", label: "GoSend", desc: "Ongkir dibayar terpisah", maxKm: store.maxDistance ?? 10 });
       }
       if (store.shippingAmbil !== false) {
-        opts.push({ id: "ambil", label: "Ambil Sendiri", desc: "Ambil langsung ke toko" });
+        opts.push({ id: "ambil", label: "Ambil Sendiri", desc: "Ambil langsung ke toko", maxKm: store.maxDistance ?? 10 });
       }
       if (store.shippingPenjual) {
         opts.push({
