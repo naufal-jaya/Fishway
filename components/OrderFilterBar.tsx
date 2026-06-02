@@ -4,7 +4,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { SlidersHorizontal } from "lucide-react";
 
-const STATUS_TABS = ["Semua", "Menunggu Konfirmasi", "Diproses", "Dikirim", "Selesai", "Dibatalkan"];
+const STATUS_TABS = ["Semua", "Menunggu Pembayaran", "Menunggu Konfirmasi", "Diproses", "Dikirim", "Selesai", "Dibatalkan"];
 const DATE_OPTIONS = [
   { label: "Semua Tanggal", value: "" },
   { label: "Hari ini", value: "today" },

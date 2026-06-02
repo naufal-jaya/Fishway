@@ -9,10 +9,12 @@ import Image from "next/image";
 import { Phone, MessageCircle, ChevronLeft} from "lucide-react";
 
 const STATUS_COLOR: Record<string, string> = {
+  "Menunggu Pembayaran": "bg-yellow-100 text-yellow-600",
   "Menunggu Konfirmasi": "bg-orange-100 text-orange-500",
   "Diproses": "bg-blue-100 text-blue-500",
-  "Dikirim": "bg-indigo-100 text-indigo-500",
+  "Dikirim": "bg-purple-100 text-purple-500",
   "Selesai": "bg-green-100 text-green-500",
+  "Dibatalkan": "bg-red-100 text-red-500",
 };
 
 export default async function BuyerOrderDetailPage({ params }: { params: { id: string } }) {

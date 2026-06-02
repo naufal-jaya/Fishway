@@ -281,7 +281,7 @@ export async function checkoutCart(
       .insert({
         buyer_id: user.id,
         store_id: storeId,
-        status: "Menunggu Konfirmasi",
+        status: "Menunggu Pembayaran",
         total_amount: totalAmount,
         shipping_cost: shippingCost,
         notes: noteForStore,

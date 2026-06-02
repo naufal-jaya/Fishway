@@ -20,8 +20,15 @@ import {
   ChevronLeft,
   ClipboardList,
   CreditCard,
-  Smartphone,
 } from "lucide-react";
+
+// Add window.snap type
+declare global {
+  interface Window {
+    snap: any;
+  }
+}
+
 
 /** Icon per metode pengiriman */
 const SHIPPING_ICONS: Record<string, React.ReactNode> = {
@@ -127,6 +134,20 @@ export default function CheckoutClient({
     });
     setSelectedShipping(initialShipping);
   }, [stores, storeShippingOptions]);
+
+  // Load Midtrans Snap Script
+  useEffect(() => {
+    const snapScript = "https://app.sandbox.midtrans.com/snap/snap.js";
+    const clientKey = process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY || "";
+    
+    if (!document.querySelector(`script[src="${snapScript}"]`)) {
+      const script = document.createElement("script");
+      script.src = snapScript;
+      script.setAttribute("data-client-key", clientKey);
+      script.async = true;
+      document.body.appendChild(script);
+    }
+  }, []);
 
   // Distance state per store: { storeId: { distance, loading, failed } }
   const [storeDistances, setStoreDistances] = useState<Record<string, { distance: number | null; loading: boolean; failed: boolean }>>({});
@@ -249,24 +270,60 @@ export default function CheckoutClient({
         };
       });
 
+      // 1. Simpan pesanan ke database
       const result = await checkoutCart(storeShippingCosts, notes, selectedItemIds, selectedAddressId, shippingDetails);
 
-      if (result.error) {
-        showToast({ type: "error", message: result.error, duration: 5000 });
+      if (result.error || !result.orderIds) {
+        showToast({ type: "error", message: result.error || "Gagal membuat pesanan", duration: 5000 });
         setLoading(false);
         return;
       }
-      showToast({
-        type: "success",
-        message: "Pesanan berhasil dibuat!",
-        actionLabel: "Lihat Pesanan",
-        actionHref: "/orders",
-        duration: 6000,
+
+      // 2. Dapatkan token Midtrans
+      const response = await fetch("/api/payment", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          orderIds: result.orderIds,
+          totalAmount: totalPay,
+          customerDetails: {
+            first_name: selectedAddress?.recipient_name || "Guest",
+            phone: selectedAddress?.phone || "",
+          },
+        }),
       });
-      router.push("/orders");
-      router.refresh();
-    } catch {
-      showToast({ type: "error", message: "Terjadi kesalahan saat memproses pesanan.", duration: 5000 });
+
+      const paymentData = await response.json();
+
+      if (!response.ok || !paymentData.token) {
+        throw new Error(paymentData.error || "Gagal mendapatkan token pembayaran");
+      }
+
+      // 3. Tampilkan popup Snap Midtrans
+      window.snap.pay(paymentData.token, {
+        onSuccess: function (result: any) {
+          showToast({ type: "success", message: "Pembayaran berhasil!", duration: 5000 });
+          router.push("/orders");
+          router.refresh();
+        },
+        onPending: function (result: any) {
+          showToast({ type: "info", message: "Menunggu pembayaran diselesaikan", duration: 5000 });
+          router.push("/orders");
+          router.refresh();
+        },
+        onError: function (result: any) {
+          showToast({ type: "error", message: "Pembayaran gagal!", duration: 5000 });
+          setLoading(false);
+        },
+        onClose: function () {
+          showToast({ type: "warning", message: "Anda menutup popup sebelum menyelesaikan pembayaran.", duration: 5000 });
+          router.push("/orders");
+          router.refresh();
+        },
+      });
+
+    } catch (error: any) {
+      showToast({ type: "error", message: error.message || "Terjadi kesalahan saat memproses pesanan.", duration: 5000 });
       setLoading(false);
     }
   };
@@ -603,38 +660,30 @@ export default function CheckoutClient({
             </div>
           </div>
 
-          {/* QRIS Payment Card */}
-          <div className="card p-5 text-center">
-            <h2 className="font-bold text-gray-800 mb-3 flex items-center justify-center gap-2">
-              <CreditCard size={18} className="text-primary" /> Pembayaran QRIS
-            </h2>
-            <div className="bg-gray-100 rounded-xl w-40 h-40 mx-auto flex items-center justify-center mb-3 border-2 border-dashed border-gray-300">
-              <Smartphone size={48} className="text-gray-400" />
-            </div>
-            <p className="text-sm text-gray-500 mb-1">
-              Scan QR Code dengan e-wallet atau mobile banking
-            </p>
-            <p className="font-bold text-primary text-lg">{formatPrice(totalPay)}</p>
-            <p className="text-xs text-gray-400 mt-1">Berlaku 15 menit</p>
-          </div>
-
           {/* Checkout Button */}
-          <div>
+          <div className="card p-5 mt-4">
             <button
               onClick={handleConfirm}
               disabled={loading || isAnyStoreOutOfRange}
               className="btn-primary w-full py-3 rounded-xl text-base disabled:opacity-50 flex items-center justify-center gap-2"
             >
-              <CheckCircle size={18} />
-              {loading ? "Memproses..." : "Sudah Scan, Konfirmasi Pembayaran"}
+              {loading ? (
+                <>
+                  <Loader2 size={18} className="animate-spin" /> Memproses...
+                </>
+              ) : (
+                <>
+                  <CreditCard size={18} /> Pilih Metode Pembayaran
+                </>
+              )}
             </button>
             {isAnyStoreOutOfRange && (
-              <p className="text-xs text-center text-red-500 mt-1.5">
-                Ada pengiriman toko di luar radius layanan. Harap ubah metode pengiriman toko tersebut.
+              <p className="text-xs text-center text-red-500 mt-2">
+                Ada pengiriman toko di luar radius layanan. Harap ubah metode pengiriman.
               </p>
             )}
-            <p className="text-xs text-center text-gray-400 mt-2">
-              Karena ini versi demo, konfirmasi akan langsung berhasil dan mengosongkan keranjang.
+            <p className="text-xs text-center text-gray-400 mt-3">
+              Kamu akan diarahkan ke halaman pembayaran aman oleh Midtrans.
             </p>
           </div>
         </div>
