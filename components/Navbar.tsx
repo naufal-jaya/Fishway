@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import Image from "next/image";
-import { Home, LogOut, LogIn, ShoppingCart, User, Search, Package, ClipboardList, Menu, X } from "lucide-react";
+import { LogOut, LogIn, ShoppingCart, User, Search, Package, ClipboardList, Menu, X } from "lucide-react";
 import { createClient } from "@/utils/supabase/supabaseClient";
 import NotificationDropdown from "./NotificationDropdown";
 
@@ -121,18 +121,14 @@ export default function Navbar() {
                   <>
                     <Link href="/dashboard/products" className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${pathname === "/dashboard/products" ? "bg-white/20 text-white" : "hover:bg-white/10 text-white/90"}`}><Package size={18} /> <span className="hidden lg:inline">Produk Saya</span></Link>
                     <Link href="/dashboard/orders" className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${pathname === "/dashboard/orders" ? "bg-white/20 text-white" : "hover:bg-white/10 text-white/90"}`}><ClipboardList size={18} /> <span className="hidden lg:inline">Pesanan</span></Link>
-
                   </>
                 ) : userInfo.role === "Pembeli" ? (
                   <>
-                    <Link href="/" className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${pathname === "/" ? "bg-white/20 text-white" : "hover:bg-white/10 text-white/90"}`}><Home size={18} /> <span className="hidden lg:inline">Home</span></Link>
                     <Link href="/cart" className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${pathname === "/cart" ? "bg-white/20 text-white" : "hover:bg-white/10 text-white/90"}`}><ShoppingCart size={18} /> <span className="hidden lg:inline">Keranjang</span></Link>
                     <Link href="/orders" className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${pathname === "/orders" ? "bg-white/20 text-white" : "hover:bg-white/10 text-white/90"}`}><ClipboardList size={18} /> <span className="hidden lg:inline">Orders</span></Link>
                   </>
                 ) : (
-                  <>
-                    <Link href="/" className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${pathname === "/" ? "bg-white/20 text-white" : "hover:bg-white/10 text-white/90"}`}><Home size={18} /> <span className="hidden lg:inline">Home</span></Link>
-                  </>
+                  <></>
                 )}
 
                 {userInfo.name ? (
@@ -211,12 +207,11 @@ export default function Navbar() {
                   </>
                 ) : userInfo.role === "Pembeli" ? (
                   <>
-                    <Link href="/" onClick={() => setDrawerOpen(false)} className={`flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/10 text-sm font-medium ${pathname === "/" ? "bg-white/20" : ""}`}><Home size={18} /> Home</Link>
                     <Link href="/cart" onClick={() => setDrawerOpen(false)} className={`flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/10 text-sm font-medium ${pathname === "/cart" ? "bg-white/20" : ""}`}><ShoppingCart size={18} /> Keranjang</Link>
                     <Link href="/orders" onClick={() => setDrawerOpen(false)} className={`flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/10 text-sm font-medium ${pathname === "/orders" ? "bg-white/20" : ""}`}><ClipboardList size={18} /> Orders</Link>
                   </>
                 ) : (
-                  <Link href="/" onClick={() => setDrawerOpen(false)} className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/10 text-sm font-medium"><Home size={18} /> Home</Link>
+                  <></>
                 )}
               </div>
 

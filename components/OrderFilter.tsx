@@ -85,7 +85,9 @@ export default function OrderFilter({ orders, initialStatus }: { orders: any[], 
               hour12: false,
             }).replace('.', ':') + ' WIB';
 
-            const storeName = (Array.isArray(order.stores) ? order.stores[0]?.name : order.stores?.name) || "Toko";
+            const storeData = Array.isArray(order.stores) ? order.stores[0] : order.stores;
+            const storeName = storeData?.name || "Toko";
+            const storeId = storeData?.id || order.store_id || null;
             const shippingMethod = order.shipping_method || null;
 
             return (
@@ -93,10 +95,19 @@ export default function OrderFilter({ orders, initialStatus }: { orders: any[], 
                 {/* Header: toko + tanggal + status */}
                 <div className="flex justify-between items-start mb-4 border-b pb-4">
                   <div>
-                    {/* Nama toko prominent */}
+                    {/* Nama toko sebagai link */}
                     <div className="flex items-center gap-1.5 mb-1">
                       <Store size={14} className="text-primary" />
-                      <p className="text-sm font-semibold text-primary">{storeName}</p>
+                      {storeId ? (
+                        <Link
+                          href={`/store/${storeId}`}
+                          className="text-sm font-semibold text-primary hover:underline"
+                        >
+                          {storeName}
+                        </Link>
+                      ) : (
+                        <p className="text-sm font-semibold text-primary">{storeName}</p>
+                      )}
                     </div>
                     <p className="text-xs text-gray-400">{orderDate} • {orderTime}</p>
                     <p className="font-mono text-xs text-gray-300 mt-0.5">#{order.id.split("-")[0].toUpperCase()}</p>
