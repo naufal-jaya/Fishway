@@ -313,19 +313,44 @@ export default function CheckoutClient({
         throw new Error(paymentData.error || "Gagal mendapatkan token pembayaran");
       }
 
+      // Simpan transaction_id ke localStorage agar poller bisa cek statusnya langsung ke Midtrans
+      if (paymentData.transaction_id && result.orderIds) {
+        try {
+          const savedIds = JSON.parse(localStorage.getItem("midtrans_tx_ids") || "{}");
+          result.orderIds.forEach((id: string) => {
+            savedIds[id] = paymentData.transaction_id;
+          });
+          localStorage.setItem("midtrans_tx_ids", JSON.stringify(savedIds));
+        } catch (e) {
+          console.error("Gagal menyimpan transaction_id ke localStorage:", e);
+        }
+      }
+
       // 3. Tampilkan popup Snap Midtrans
       window.snap.pay(paymentData.token, {
-        onSuccess: function (result: any) {
+        onSuccess: async function (snapResult: any) {
           showToast({ type: "success", message: "Pembayaran berhasil!", duration: 5000 });
+          
+          if (result.orderIds && result.orderIds.length > 0) {
+            try {
+              const midtransId = paymentData.transaction_id;
+              await fetch(`/api/order-status/${result.orderIds[0]}?midtrans_id=${midtransId}`);
+            } catch (e) {
+              console.error("Gagal mengupdate status pesanan:", e);
+            }
+          }
+
           router.push("/orders");
           router.refresh();
+          window.location.reload();
         },
-        onPending: function (result: any) {
+        onPending: function (snapResult: any) {
           showToast({ type: "info", message: "Menunggu pembayaran diselesaikan", duration: 5000 });
           router.push("/orders");
           router.refresh();
+          window.location.reload();
         },
-        onError: function (result: any) {
+        onError: function (snapResult: any) {
           showToast({ type: "error", message: "Pembayaran gagal!", duration: 5000 });
           setLoading(false);
         },
@@ -333,6 +358,7 @@ export default function CheckoutClient({
           showToast({ type: "warning", message: "Anda menutup popup sebelum menyelesaikan pembayaran.", duration: 5000 });
           router.push("/orders");
           router.refresh();
+          window.location.reload();
         },
       });
 

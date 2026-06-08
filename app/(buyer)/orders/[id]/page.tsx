@@ -8,6 +8,8 @@ import { notFound } from "next/navigation";
 import Image from "next/image";
 import { Phone, MessageCircle, ChevronLeft, X } from "lucide-react";
 import AcceptCancelButton from "./AcceptCancelButton";
+import ContinuePaymentButton from "@/components/ContinuePaymentButton";
+import OrderStatusPoller from "@/components/OrderStatusPoller";
 import { revalidatePath } from "next/cache";
 
 const STATUS_COLOR: Record<string, string> = {
@@ -136,6 +138,11 @@ A/N: `;
             <ChevronLeft className="w-5 h-5" />
           </Link>
 
+          {/* Polling otomatis saat status masih Menunggu Pembayaran */}
+          {order.status === "Menunggu Pembayaran" && (
+            <OrderStatusPoller orderId={order.id} />
+          )}
+
           <div className="card p-6 md:p-8">
             <div className="flex flex-col md:flex-row justify-between md:items-center gap-4 mb-8 border-b pb-6">
               <div>
@@ -155,6 +162,26 @@ A/N: `;
                 </span>
               </div>
             </div>
+
+          {/* Banner Lanjutkan Pembayaran */}
+          {order.status === "Menunggu Pembayaran" && (
+            <div className="mb-8 p-5 bg-yellow-50 border border-yellow-200 rounded-xl">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div>
+                  <h3 className="text-yellow-800 font-bold text-base mb-1">Pesanan Belum Dibayar</h3>
+                  <p className="text-sm text-yellow-700">
+                    Selesaikan pembayaran sekarang untuk memproses pesananmu.
+                  </p>
+                </div>
+                <ContinuePaymentButton
+                  orderId={order.id}
+                  totalAmount={order.total_amount + order.shipping_cost + 5000}
+                  customerName={order.shipping_name || undefined}
+                  customerPhone={order.shipping_phone || undefined}
+                />
+              </div>
+            </div>
+          )}
 
             {order.status === "Proses Pembatalan" && (
               <div className="mb-8 p-5 bg-red-50 border border-red-200 rounded-xl">

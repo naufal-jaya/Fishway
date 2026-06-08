@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { createClient } from "@supabase/supabase-js";
-// @ts-ignore
-import midtransClient from "midtrans-client";
+
+const midtransClient = require("midtrans-client");
+
 
 // Initialize Supabase Client with service role to bypass RLS for webhook
 const supabaseAdmin = createClient(
@@ -62,6 +64,15 @@ export async function POST(req: Request) {
         console.error("Supabase update error:", error);
         return NextResponse.json({ error: error.message }, { status: 500 });
       }
+
+      // Revalidate cached pages so status change is reflected immediately
+      orderIds.forEach((id: string) => {
+        revalidatePath(`/orders/${id}`);
+        revalidatePath(`/dashboard/orders/${id}`);
+      });
+      revalidatePath("/orders");
+      revalidatePath("/dashboard/orders");
+      revalidatePath("/dashboard");
     }
 
     return NextResponse.json({ status: "success" }, { status: 200 });

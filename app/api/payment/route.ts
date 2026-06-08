@@ -20,23 +20,46 @@ export async function POST(req: Request) {
       );
     }
 
-    // Midtrans only accepts 1 string for order_id per transaction.
-    // We generate a unique transaction ID.
-    // And pass the array of Supabase order IDs as custom_field1 so we can retrieve them in the webhook.
-    const transactionId = `PAY-${Date.now()}`;
+    const baseId = Array.isArray(orderIds) ? orderIds[0] : orderIds;
     const orderIdsString = Array.isArray(orderIds) ? orderIds.join(",") : orderIds;
 
-    let parameter = {
-      transaction_details: {
-        order_id: transactionId,
-        gross_amount: totalAmount,
-      },
-      customer_details: customerDetails,
-      item_details: itemDetails,
-      custom_field1: orderIdsString, // max 255 chars
-    };
+    let transaction = null;
+    let transactionId = baseId;
+    let attempts = 0;
 
-    const transaction = await snap.createTransaction(parameter);
+    while (attempts < 5) {
+      try {
+        const id = attempts === 0 ? baseId : `${baseId}-${attempts}`;
+        let parameter = {
+          transaction_details: {
+            order_id: id,
+            gross_amount: totalAmount,
+          },
+          customer_details: customerDetails,
+          item_details: itemDetails,
+          custom_field1: orderIdsString, // max 255 chars
+        };
+        transaction = await snap.createTransaction(parameter);
+        transactionId = id;
+        break; // Success!
+      } catch (error: any) {
+        const errMsg = error.message || "";
+        if (
+          errMsg.includes("already been used") || 
+          errMsg.includes("sudah pernah digunakan") || 
+          errMsg.includes("400") || 
+          errMsg.includes("406")
+        ) {
+          attempts++;
+        } else {
+          throw error;
+        }
+      }
+    }
+
+    if (!transaction) {
+      throw new Error("Gagal membuat transaksi di Midtrans setelah beberapa percobaan.");
+    }
 
     return NextResponse.json({
       token: transaction.token,
