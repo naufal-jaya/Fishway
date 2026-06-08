@@ -92,7 +92,7 @@ export default async function HomePage() {
         <Container className="flex-grow">
           {/* Welcoming Header */}
           <h1 className="text-xl sm:text-4xl font-bold my-6 sm:my-8 flex flex-wrap items-center gap-2 text-gray-800">
-            Selamat Datang di Fishway, {displayName}
+            Selamat Datang di Fishway{user ? `, ${displayName}` : ""}
           </h1>
           
           {/* Section Title */}
