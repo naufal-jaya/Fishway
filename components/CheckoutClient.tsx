@@ -644,42 +644,44 @@ export default function CheckoutClient({
             <h2 className="font-bold text-gray-800 mb-3 border-b pb-2 flex items-center gap-2">
               <ClipboardList size={18} className="text-primary" /> Ringkasan Pesanan
             </h2>
-            <div className="space-y-3">
-              {stores.map((store) => {
-                const sub = storeSubtotals[store.id] || 0;
-                const ship = storeShippingCosts[store.id] || 0;
-                const methodId = selectedShipping[store.id];
-                const dist = storeDistances[store.id]?.distance;
-                const isPenjual = methodId === "penjual";
+            <div>
+              <div className="space-y-3">
+                {stores.map((store) => {
+                  const sub = storeSubtotals[store.id] || 0;
+                  const ship = storeShippingCosts[store.id] || 0;
+                  const methodId = selectedShipping[store.id];
+                  const dist = storeDistances[store.id]?.distance;
+                  const isPenjual = methodId === "penjual";
 
-                return (
-                  <div key={store.id} className="text-xs space-y-1 border-b pb-2 last:border-0 last:pb-0">
-                    <p className="font-bold text-gray-700">{store.name}</p>
-                    <div className="flex justify-between text-gray-500">
-                      <span>Subtotal Produk</span>
-                      <span>{formatPrice(sub)}</span>
-                    </div>
-                    <div className="flex justify-between text-gray-500">
-                      <span>Ongkir Toko</span>
-                      <span>{formatPrice(ship)}</span>
-                    </div>
-                    {/* Detail tarif per km untuk pengiriman penjual */}
-                    {isPenjual && dist != null && (
-                      <div className="flex justify-between text-blue-500 text-[10px]">
-                        <span>
-                          Rp{(store.pricePerKm ?? 3000).toLocaleString("id-ID")}/km × {dist} km
-                        </span>
-                        <span>{formatPrice(Math.round(dist * (store.pricePerKm ?? 3000)))}</span>
+                  return (
+                    <div key={store.id} className="text-xs space-y-1 border-b pb-2 last:border-0 last:pb-0">
+                      <p className="font-bold text-gray-700">{store.name}</p>
+                      <div className="flex justify-between text-gray-500">
+                        <span>Subtotal Produk</span>
+                        <span>{formatPrice(sub)}</span>
                       </div>
-                    )}
-                    {isPenjual && dist == null && (
-                      <p className="text-[10px] text-amber-600">Pilih alamat untuk menghitung ongkir</p>
-                    )}
-                  </div>
-                );
-              })}
+                      <div className="flex justify-between text-gray-500">
+                        <span>Ongkir Toko</span>
+                        <span>{formatPrice(ship)}</span>
+                      </div>
+                      {/* Detail tarif per km untuk pengiriman penjual */}
+                      {isPenjual && dist != null && (
+                        <div className="flex justify-between text-blue-500 text-[10px]">
+                          <span>
+                            Rp{(store.pricePerKm ?? 3000).toLocaleString("id-ID")}/km × {dist} km
+                          </span>
+                          <span>{formatPrice(Math.round(dist * (store.pricePerKm ?? 3000)))}</span>
+                        </div>
+                      )}
+                      {isPenjual && dist == null && (
+                        <p className="text-[10px] text-amber-600">Pilih alamat untuk menghitung ongkir</p>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
 
-              <div className="space-y-1.5 pt-2 text-xs border-t">
+              <div className="space-y-1.5 pt-2 mt-2 text-xs border-t">
                 <div className="flex justify-between text-gray-600">
                   <span>Subtotal Produk (Semua)</span>
                   <span>{formatPrice(productSubtotal)}</span>

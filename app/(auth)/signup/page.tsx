@@ -274,19 +274,7 @@ export default function SignupPage() {
 
   // JSX is identical to original — only alert() calls were removed above
   return (
-    <div className="flex bg-[#F7FBFF] min-h-screen lg:h-screen lg:overflow-hidden">
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <svg className="absolute bottom-0 left-0 w-full z-0" viewBox="0 0 1440 320">
-          <path d="M0 37C0 37 114 -42 167 73C219 189 311 106 400 119C489 132 510 197 614 173C730 145 741 277 862 199C962 133 1001 211 1102 199C1201 186 1217 116 1325 173C1433 229 1446 0 1523 0V420H0V37Z" fill="#A2D2FF" fillOpacity="0.4" />
-        </svg>
-        <svg className="absolute -bottom-20 left-0 w-full z-10" viewBox="0 0 1440 320">
-          <path d="M0 37C0 37 118 -34 167 73C219 189 311 106 400 119C489 132 510 197 614 173C747 119 813 115 1004 189C1097 225 1194 116 1302 173C1410 229 1446 0 1523 0V253H0V37Z" fill="#A2D2FF" fillOpacity="0.5" />
-        </svg>
-        <svg className="absolute -bottom-[180px] left-0 w-full z-20" viewBox="0 0 1440 320">
-          <path d="M0 10C0 10 130 -32 226 57C322 145 442 53 532 67C621 80 667 136 771 111C904 58 886 48 1077 122C1170 158 1194 73 1302 130C1410 186 1455 47 1532 47V184H3L0 10Z" fill="#689DD1" />
-        </svg>
-      </div>
-
+    <div className="flex min-h-screen lg:h-screen lg:overflow-hidden">
       <div className="hidden lg:flex flex-col w-[45%] items-center relative p-12 z-30">
         <div className="relative mt-36 z-10">
           <h1 className="text-4xl font-bold text-[#3E6BAF] leading-tight mb-4">

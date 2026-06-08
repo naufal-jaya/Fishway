@@ -3,19 +3,9 @@
 import { useState, useEffect } from "react";
 import { Package, Truck, Check, Clock, PackageOpen, X, Bike, Store } from "lucide-react";
 import Link from "next/link";
-import { formatPrice } from "@/lib/data";
+import { formatPrice, ORDER_STATUS_COLORS, ORDER_STATUSES } from "@/lib/data";
 
-const STATUS_COLOR: Record<string, string> = {
-  "Menunggu Pembayaran": "bg-yellow-100 text-yellow-600",
-  "Menunggu Konfirmasi": "bg-orange-100 text-orange-500",
-  "Diproses": "bg-blue-100 text-blue-500",
-  "Dikirim": "bg-purple-100 text-purple-500",
-  "Selesai": "bg-green-100 text-green-500",
-  "Proses Pembatalan": "bg-red-50 text-red-600",
-  "Dibatalkan": "bg-red-100 text-red-500",
-};
-
-const STATUSES = ["Semua", "Menunggu Pembayaran", "Menunggu Konfirmasi", "Diproses", "Dikirim", "Selesai", "Proses Pembatalan", "Dibatalkan"];
+const STATUSES = ["Semua", ...ORDER_STATUSES];
 
 const STATUS_ICON: Record<string, React.ReactNode> = {
   "Menunggu Pembayaran": <Clock size={14} className="text-yellow-500" />,
@@ -112,7 +102,7 @@ export default function OrderFilter({ orders, initialStatus }: { orders: any[], 
                     <p className="text-xs text-gray-400">{orderDate} • {orderTime}</p>
                     <p className="font-mono text-xs text-gray-300 mt-0.5">#{order.id.split("-")[0].toUpperCase()}</p>
                   </div>
-                  <span className={`text-xs px-3 py-1 rounded-full font-medium flex items-center gap-1 ${STATUS_COLOR[order.status] || "bg-gray-100 text-gray-700"}`}>
+                  <span className={`text-xs px-3 py-1 rounded-full font-medium flex items-center gap-1 ${ORDER_STATUS_COLORS[order.status] || "bg-gray-100 text-gray-700"}`}>
                     {STATUS_ICON[order.status] || null}
                     {order.status}
                   </span>
