@@ -5,9 +5,9 @@ import Navbar from "@/components/Navbar";
 import CategoryFilter from "@/components/CategoryFilter";
 import { createClient } from "@/utils/supabase/server";
 import { cookies } from "next/headers";
-import { Hand } from "lucide-react";
 import { getCityFromCoords } from "@/lib/geocoding";
 import FooterSection from "@/components/FooterSection";
+
 
 function normalizeCategory(category: string | null | undefined): string {
   if (!category) return "";
@@ -93,7 +93,6 @@ export default async function HomePage() {
           {/* Welcoming Header */}
           <h1 className="text-xl sm:text-4xl font-bold my-6 sm:my-8 flex flex-wrap items-center gap-2 text-gray-800">
             Selamat Datang di Fishway, {displayName}
-            <Hand className="text-yellow-500 animate-bounce shrink-0 w-6 h-6 sm:w-8 sm:h-8" />
           </h1>
           
           {/* Section Title */}
