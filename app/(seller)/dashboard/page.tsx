@@ -5,7 +5,17 @@ import Navbar from "@/components/Navbar";
 import { createClient } from "@/utils/supabase/server";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { Package, ShoppingBag, Clock, Wallet, Phone } from "lucide-react";
+import { Package, ShoppingBag, Clock, Wallet, Phone, Truck, Check, X, ChevronRight, Banknote } from "lucide-react";
+
+const STATUS_COLOR: Record<string, string> = {
+  "Menunggu Pembayaran": "bg-yellow-100 text-yellow-600",
+  "Menunggu Konfirmasi": "bg-orange-100 text-orange-500",
+  "Diproses": "bg-blue-100 text-blue-500",
+  "Dikirim": "bg-purple-100 text-purple-500",
+  "Selesai": "bg-green-100 text-green-500",
+  "Proses Pembatalan": "bg-red-50 text-red-600",
+  "Dibatalkan": "bg-red-100 text-red-500",
+};
 
 export default async function SellerDashboardPage() {
   const supabase = createClient(cookies());
@@ -59,6 +69,58 @@ export default async function SellerDashboardPage() {
     .reduce((sum, o) => sum + o.total_amount, 0) || 0;
 
   const recentOrders = orders?.slice(0, 3) || [];
+
+  const menungguBayarOrders = orders?.filter(o => o.status === "Menunggu Pembayaran").length || 0;
+  const menungguOrders = orders?.filter(o => o.status === "Menunggu Konfirmasi").length || 0;
+  const diprosesOrders = orders?.filter(o => o.status === "Diproses").length || 0;
+  const dikirimOrders = orders?.filter(o => o.status === "Dikirim").length || 0;
+  const selesaiOrders = orders?.filter(o => o.status === "Selesai").length || 0;
+  const dibatalkanOrders = orders?.filter(o => o.status === "Dibatalkan").length || 0;
+
+  const orderStatusItems = [
+    {
+      label: "Menunggu Pembayaran",
+      value: menungguBayarOrders,
+      icon: <Banknote size={28} className="text-yellow-500 mx-auto" />,
+      href: "/dashboard/orders?status=Menunggu+Pembayaran",
+      highlightClass: "border-transparent",
+    },
+    {
+      label: "Menunggu Konfirmasi",
+      value: menungguOrders,
+      icon: <Clock size={28} className="text-orange-400 mx-auto" />,
+      href: "/dashboard/orders?status=Menunggu+Konfirmasi",
+      highlightClass: "border-transparent",
+    },
+    {
+      label: "Diproses",
+      value: diprosesOrders,
+      icon: <Package size={28} className="text-blue-500 mx-auto" />,
+      href: "/dashboard/orders?status=Diproses",
+      highlightClass: "border-transparent",
+    },
+    {
+      label: "Dikirim",
+      value: dikirimOrders,
+      icon: <Truck size={28} className="text-indigo-500 mx-auto" />,
+      href: "/dashboard/orders?status=Dikirim",
+      highlightClass: "border-transparent",
+    },
+    {
+      label: "Selesai",
+      value: selesaiOrders,
+      icon: <Check size={28} className="text-green-500 mx-auto" />,
+      href: "/dashboard/orders?status=Selesai",
+      highlightClass: "border-transparent",
+    },
+    {
+      label: "Dibatalkan",
+      value: dibatalkanOrders,
+      icon: <X size={28} className="text-red-500 mx-auto" />,
+      href: "/dashboard/orders?status=Dibatalkan",
+      highlightClass: "border-transparent",
+    },
+  ];
 
   const stats = [
     {
@@ -152,6 +214,32 @@ export default async function SellerDashboardPage() {
             </Link>
           </div>
 
+          {/* Manajemen Pesanan */}
+          <div className="card p-5 mb-8">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="font-bold text-gray-800 flex items-center gap-2">
+                <ShoppingBag size={18} className="text-primary" />
+                Manajemen Pesanan
+              </h2>
+              <Link href="/dashboard/orders" className="text-sm text-primary hover:underline flex items-center gap-1">
+                Kelola semua <ChevronRight className="w-4 h-4" />
+              </Link>
+            </div>
+            <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
+              {orderStatusItems.map((item) => (
+                <Link
+                  key={item.label}
+                  href={item.href}
+                  className={`card p-4 text-center hover:shadow-md hover:scale-[1.02] transition-all cursor-pointer border ${item.highlightClass}`}
+                >
+                  <p className="text-2xl mb-1">{item.icon}</p>
+                  <p className="text-2xl font-bold text-primary">{item.value}</p>
+                  <p className="text-xs text-gray-500 leading-tight">{item.label}</p>
+                </Link>
+              ))}
+            </div>
+          </div>
+
           {/* Recent Orders */}
           <div className="card p-5">
             <div className="flex justify-between items-center mb-4">
@@ -194,15 +282,7 @@ export default async function SellerDashboardPage() {
                           {formatPrice(order.total_amount + order.shipping_cost)}
                         </p>
                         <span
-                          className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${
-                            order.status === "Selesai"
-                              ? "bg-green-100 text-green-700"
-                              : order.status === "Dikirim"
-                              ? "bg-blue-100 text-blue-700"
-                              : order.status === "Menunggu Konfirmasi"
-                              ? "bg-orange-100 text-orange-600"
-                              : "bg-yellow-100 text-yellow-700"
-                          }`}
+                          className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${STATUS_COLOR[order.status] || "bg-gray-100 text-gray-700"}`}
                         >
                           {order.status}
                         </span>

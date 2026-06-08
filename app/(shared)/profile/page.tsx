@@ -4,7 +4,7 @@ import Navbar from "@/components/Navbar";
 import { createClient } from "@/utils/supabase/server";
 import { cookies } from "next/headers";
 import { formatPrice } from "@/lib/data";
-import { LogOut, Package, Truck, Check, ClipboardList, MapPin, User, Clock, X } from "lucide-react";
+import { LogOut, Package, Truck, Check, ClipboardList, MapPin, User, Clock, X, Banknote } from "lucide-react";
 import LogoutButton from "@/components/LogoutButton";
 
 const STATUS_COLOR: Record<string, string> = {
@@ -76,63 +76,64 @@ const { data: addressesData } = !isSeller ? await supabase
 
   const addresses = (addressesData || []) as Address[];
 
-  // Fetch orders — seller pakai store_id, pembeli pakai buyer_id
-  const { data: orders } = isSeller
+  // Fetch orders — hanya untuk pembeli (seller sudah punya di dashboard)
+  const { data: orders } = !isSeller
     ? await supabase
         .from("orders")
         .select("id, status, total_amount, created_at, stores(name)")
-        .eq("store_id", store!.id)
-        .order("created_at", { ascending: false })
-    : await supabase
-        .from("orders")
-        .select("id, status, total_amount, created_at, stores(name)")
         .eq("buyer_id", user.id)
-        .order("created_at", { ascending: false });
+        .order("created_at", { ascending: false })
+    : { data: null };
 
+  const menungguBayarOrders = orders?.filter(o => o.status === "Menunggu Pembayaran").length || 0;
   const menungguOrders = orders?.filter(o => o.status === "Menunggu Konfirmasi").length || 0;
   const diprosesOrders = orders?.filter(o => o.status === "Diproses").length || 0;
   const dikirimOrders = orders?.filter(o => o.status === "Dikirim").length || 0;
   const selesaiOrders = orders?.filter(o => o.status === "Selesai").length || 0;
-const dibatalkanOrders = orders?.filter(o => o.status === "Dibatalkan").length || 0;
+  const dibatalkanOrders = orders?.filter(o => o.status === "Dibatalkan").length || 0;
   const recentOrders = orders?.slice(0, 3) || [];
 
   const joinDate = account?.created_at
     ? new Date(account.created_at).toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })
     : "-";
 
-  // Stats config — beda href untuk seller vs pembeli
+  // Stats — hanya untuk pembeli
   const stats = [
     {
-      label: "Menunggu",
+      label: "Menunggu Pembayaran",
+      value: menungguBayarOrders,
+      icon: <Banknote size={28} className="text-yellow-500 mx-auto" />,
+      href: "/orders?status=Menunggu%20Pembayaran",
+    },
+    {
+      label: "Menunggu Konfirmasi",
       value: menungguOrders,
       icon: <Clock size={28} className="text-orange-400 mx-auto" />,
-      href: isSeller
-        ? "/dashboard/orders?status=Menunggu+Konfirmasi"
-        : "/orders?status=Menunggu%20Konfirmasi",
+      href: "/orders?status=Menunggu%20Konfirmasi",
     },
     {
       label: "Diproses",
       value: diprosesOrders,
       icon: <Package size={28} className="text-blue-500 mx-auto" />,
-      href: isSeller ? "/dashboard/orders?status=Diproses" : "/orders?status=Diproses",
+      href: "/orders?status=Diproses",
     },
     {
       label: "Dikirim",
       value: dikirimOrders,
       icon: <Truck size={28} className="text-indigo-500 mx-auto" />,
-      href: isSeller ? "/dashboard/orders?status=Dikirim" : "/orders?status=Dikirim",
+      href: "/orders?status=Dikirim",
     },
     {
       label: "Selesai",
       value: selesaiOrders,
       icon: <Check size={28} className="text-green-500 mx-auto" />,
-      href: isSeller ? "/dashboard/orders?status=Selesai" : "/orders?status=Selesai",
+      href: "/orders?status=Selesai",
     },
     {
       label: "Dibatalkan",
       value: dibatalkanOrders,
       icon: <X size={28} className="text-red-500 mx-auto" />,
-      href: isSeller ? "/dashboard/orders?status=Dibatalkan" : "/orders?status=Dibatalkan",
+      href: "/orders?status=Dibatalkan",
     },
   ];
 
@@ -163,8 +164,9 @@ const dibatalkanOrders = orders?.filter(o => o.status === "Dibatalkan").length |
             </div>
           </div>
 
-          {/* Stats */}
-          <div className="grid grid-cols-3 md:grid-cols-5 gap-3">
+          {/* Stats — hanya untuk pembeli */}
+          {!isSeller && (
+          <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
             {stats.map((stat) => (
               <Link
                 key={stat.label}
@@ -173,10 +175,11 @@ const dibatalkanOrders = orders?.filter(o => o.status === "Dibatalkan").length |
               >
                 <p className="text-2xl mb-1">{stat.icon}</p>
                 <p className="text-2xl font-bold text-primary">{stat.value}</p>
-                <p className="text-xs text-gray-500">{stat.label}</p>
+                <p className="text-xs text-gray-500 leading-tight">{stat.label}</p>
               </Link>
             ))}
           </div>
+          )}
 
           {/* Address — beda tampilan seller vs buyer */}
           <div className="card p-5">
@@ -216,7 +219,8 @@ const dibatalkanOrders = orders?.filter(o => o.status === "Dibatalkan").length |
             )}
           </div>
 
-          {/* Order History */}
+          {/* Order History — hanya untuk pembeli */}
+          {!isSeller && (
           <div className="card p-5">
             <div className="flex justify-between items-center mb-4">
               <h2 className="font-bold text-gray-800 flex items-center gap-2">
@@ -224,7 +228,7 @@ const dibatalkanOrders = orders?.filter(o => o.status === "Dibatalkan").length |
                 Pesanan Terakhir
               </h2>
               <Link
-                href={isSeller ? "/dashboard/orders" : "/orders"}
+                href="/orders"
                 className="text-sm text-primary hover:underline"
               >
                 Lihat Semua
@@ -236,9 +240,7 @@ const dibatalkanOrders = orders?.filter(o => o.status === "Dibatalkan").length |
               ) : (
                 recentOrders.map((order) => {
                   const oDate = new Date(order.created_at).toLocaleDateString('id-ID');
-                  const detailHref = isSeller
-                    ? `/dashboard/orders/${order.id}`
-                    : `/orders/${order.id}`;
+                  const detailHref = `/orders/${order.id}`;
                   return (
                     <Link
                       key={order.id}
@@ -269,6 +271,7 @@ const dibatalkanOrders = orders?.filter(o => o.status === "Dibatalkan").length |
               )}
             </div>
           </div>
+          )}
 
           {/* Logout */}
           <div className="pt-8 flex justify-center">
