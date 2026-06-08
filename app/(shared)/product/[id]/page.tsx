@@ -166,18 +166,7 @@ export default async function ProductDetailPage({
   const isOutOfRange = userDistance !== null && userDistance > maxDistanceLimit;
 
   return (
-    <div className="min-h-screen bg-gray-50 overflow-x-hidden">
-
-      <div
-        className="fixed top-0 left-0 h-full pointer-events-none z-0 w-full max-w-[1300px]"
-        style={{
-          backgroundImage: "url('/images/latar.png')",
-          backgroundRepeat: "no-repeat",
-          backgroundSize: "contain",
-          backgroundPosition: "left center",
-          opacity: 1,
-        }}
-      />
+    <div className="min-h-screen overflow-x-hidden">
       <div className="relative z-10">
         <Navbar />
         <Container>

@@ -271,7 +271,6 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
       <Navbar />
       <Container>
         <div className="max-w-6xl mx-auto relative min-h-screen">
-          <div className="fixed top-0 left-0 h-full pointer-events-none z-0 w-full max-w-[1300px]" style={{ backgroundImage: "url('/images/latar.png')", backgroundRepeat: "no-repeat", backgroundSize: "contain", backgroundPosition: "left center", opacity: 1 }} />
           <div className="relative z-10">
             <div className="mb-6">
               <Link href="/dashboard/products" className="inline-flex items-center text-gray-400 hover:text-[#407BB5]">

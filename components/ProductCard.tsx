@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { MapPin } from 'lucide-react';
+import { MapPin, Store } from 'lucide-react';
 import { Product, formatPrice } from "@/lib/data";
 import Image from "next/image";
 
@@ -21,9 +21,10 @@ export default function ProductCard({ product }: { product: Product }) {
         {/* CONTENT ROW */}
         <div className="p-3 sm:p-4 flex-1 flex flex-col justify-between min-w-0">
           <div className="min-w-0">
-            <p className="text-[10px] sm:text-xs text-gray-400 uppercase tracking-wide truncate">
-              {product.category}
-            </p>
+            <div className="text-[10px] sm:text-xs text-gray-500 tracking-wide truncate flex items-center gap-1">
+              <Store className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-gray-500 shrink-0" />
+              <span>{product.seller}</span>
+            </div>
 
             <h3 className="font-semibold text-gray-800 text-sm sm:text-base group-hover:text-primary transition-colors line-clamp-1 mt-0.5">
               {product.name}

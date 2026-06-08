@@ -7,7 +7,7 @@
 :root {
   --primary: #407BB5;
   --primary-dark: #2f5d8a;
-  --bg: #F9F9F9;
+  --bg: #e8f4fd;
   --font-inter-sans: 'Inter';
 }
 
@@ -17,7 +17,7 @@ html, body {
 }
 
 body {
-  background-color: var(--bg);
+  background-color: #ffffff;
   color: #1a1a1a;
 }
 
@@ -32,6 +32,7 @@ body {
     @apply bg-white rounded-xl shadow-sm border border-gray-100;
   }
 }
+
 input[type="checkbox"] {
   -webkit-appearance: none;
   appearance: none;
