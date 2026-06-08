@@ -4,22 +4,12 @@ import Navbar from "@/components/Navbar";
 import { createClient } from "@/utils/supabase/server";
 import { createClient as createSupabaseAdminClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
-import { formatPrice } from "@/lib/data";
+import { formatPrice, ORDER_STATUS_COLORS } from "@/lib/data";
 import { notFound } from "next/navigation";
 import Image from "next/image";
 import { Phone, MessageCircle, ChevronLeft, X } from "lucide-react";
 import AcceptCancelButton from "./AcceptCancelButton";
 import { revalidatePath } from "next/cache";
-
-const STATUS_COLOR: Record<string, string> = {
-  "Menunggu Pembayaran": "bg-yellow-100 text-yellow-600",
-  "Menunggu Konfirmasi": "bg-orange-100 text-orange-500",
-  "Diproses": "bg-blue-100 text-blue-500",
-  "Dikirim": "bg-purple-100 text-purple-500",
-  "Selesai": "bg-green-100 text-green-500",
-  "Proses Pembatalan": "bg-red-50 text-red-600",
-  "Dibatalkan": "bg-red-100 text-red-500",
-};
 
 export default async function BuyerOrderDetailPage({ params }: { params: { id: string } }) {
   const supabase = createClient(cookies());
@@ -181,7 +171,7 @@ A/N: `;
                 )}
               </div>
               <div className="text-right">
-                <span className={`px-4 py-2 rounded-full font-semibold text-sm inline-block ${STATUS_COLOR[order.status] || "bg-gray-100 text-gray-700"}`}>
+                <span className={`px-4 py-2 rounded-full font-semibold text-sm inline-block ${ORDER_STATUS_COLORS[order.status] || "bg-gray-100 text-gray-700"}`}>
                   {order.status}
                 </span>
               </div>

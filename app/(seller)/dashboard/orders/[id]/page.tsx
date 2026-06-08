@@ -3,31 +3,14 @@ import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import { createClient } from "@/utils/supabase/server";
 import { cookies } from "next/headers";
-import { formatPrice } from "@/lib/data";
+import { formatPrice, ORDER_STATUSES, ORDER_STATUS_TRANSITIONS } from "@/lib/data";
 import { notFound } from "next/navigation";
 import Image from "next/image";
 import { revalidatePath } from "next/cache";
 import CancelOrderButton from "./CancelOrderButton";
 import { Phone, MapPin, XCircle, ChevronLeft } from "lucide-react";
 
-const STATUS_COLOR: Record<string, string> = {
-  "Menunggu Pembayaran": "bg-yellow-100 text-yellow-600",
-  "Menunggu Konfirmasi": "bg-orange-100 text-orange-500",
-  "Diproses": "bg-blue-100 text-blue-500",
-  "Dikirim": "bg-purple-100 text-purple-500",
-  "Selesai": "bg-green-100 text-green-500",
-  "Proses Pembatalan": "bg-red-50 text-red-600",
-  "Dibatalkan": "bg-red-100 text-red-500",
-};
 
-const ALL_STATUSES = ["Menunggu Konfirmasi", "Diproses", "Dikirim", "Selesai"];
-
-const STATUS_ORDER: Record<string, number> = {
-  "Menunggu Konfirmasi": 0,
-  "Diproses": 1,
-  "Dikirim": 2,
-  "Selesai": 3,
-};
 
 export default async function SellerOrderDetailPage({ params }: { params: { id: string } }) {
   const supabase = createClient(cookies());
@@ -91,7 +74,7 @@ export default async function SellerOrderDetailPage({ params }: { params: { id: 
   async function updateStatus(formData: FormData) {
     "use server";
     const newStatus = formData.get("status") as string;
-    if (!newStatus || !ALL_STATUSES.includes(newStatus)) return;
+    if (!newStatus || !ORDER_STATUSES.includes(newStatus as any)) return;
 
     const supabaseAdmin = createClient(cookies());
 
@@ -103,7 +86,8 @@ export default async function SellerOrderDetailPage({ params }: { params: { id: 
 
     if (!currentOrder) return;
 
-    if (STATUS_ORDER[newStatus] <= STATUS_ORDER[currentOrder.status]) return;
+    const allowedNextStatuses = ORDER_STATUS_TRANSITIONS[currentOrder.status] || [];
+    if (!allowedNextStatuses.includes(newStatus as any)) return;
 
     await supabaseAdmin
       .from("orders")
@@ -177,36 +161,47 @@ export default async function SellerOrderDetailPage({ params }: { params: { id: 
                 <p className="text-sm text-gray-500 mt-1">Dibuat pada: {orderDate}</p>
               </div>
 
-              {order.status !== "Dibatalkan" && (
-                <div className="bg-gray-50 p-3 rounded-xl border border-gray-200">
-                  <form action={updateStatus} className="flex items-center gap-3">
-                    <label htmlFor="status" className="text-sm font-semibold text-gray-700">Status:</label>
-                    <select
-                      name="status"
-                      id="status"
-                      defaultValue={order.status}
-                      className="border-gray-300 rounded-lg text-sm bg-white focus:ring-primary focus:border-primary"
-                    >
-                      {ALL_STATUSES.map(s => (
-                        <option
-                          key={s}
-                          value={s}
-                          disabled={STATUS_ORDER[s] <= STATUS_ORDER[order.status]}
+              {(() => {
+                const allowedTransitions = ORDER_STATUS_TRANSITIONS[order.status] || [];
+                
+                if (allowedTransitions.length > 0) {
+                  return (
+                    <div className="bg-gray-50 p-3 rounded-xl border border-gray-200">
+                      <form action={updateStatus} className="flex items-center gap-3">
+                        <label htmlFor="status" className="text-sm font-semibold text-gray-700">Status:</label>
+                        <select
+                          name="status"
+                          id="status"
+                          defaultValue={order.status}
+                          className="border-gray-300 rounded-lg text-sm bg-white focus:ring-primary focus:border-primary"
                         >
-                          {s}
-                        </option>
-                      ))}
-                    </select>
-                    <button type="submit" className="btn-primary py-1.5 px-3 text-xs rounded-lg">Update</button>
-                  </form>
-                </div>
-              )}
+                          <option value={order.status} disabled>{order.status}</option>
+                          {allowedTransitions.map((s) => (
+                            <option key={s} value={s}>{s}</option>
+                          ))}
+                        </select>
+                        <button type="submit" className="btn-primary py-1.5 px-3 text-xs rounded-lg">Update</button>
+                      </form>
+                    </div>
+                  );
+                }
 
-              {order.status === "Dibatalkan" && (
-                <span className="inline-flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-full font-semibold bg-red-100 text-red-700">
-                  <XCircle className="w-4 h-4" /> Pesanan Dibatalkan
-                </span>
-              )}
+                if (order.status === "Menunggu Pembayaran") {
+                   return <span className="text-sm font-semibold text-yellow-600 bg-yellow-50 px-3 py-1.5 rounded-full border border-yellow-200">Menunggu pembayaran pembeli</span>;
+                } else if (order.status === "Dibatalkan") {
+                   return (
+                     <span className="inline-flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-full font-semibold bg-red-100 text-red-700">
+                       <XCircle className="w-4 h-4" /> Pesanan Dibatalkan
+                     </span>
+                   );
+                } else if (order.status === "Proses Pembatalan") {
+                   return <span className="text-sm font-semibold text-red-600 bg-red-50 px-3 py-1.5 rounded-full border border-red-200">Proses Pembatalan</span>;
+                } else if (order.status === "Selesai") {
+                   return <span className="text-sm font-semibold text-green-600 bg-green-50 px-3 py-1.5 rounded-full border border-green-200">Pesanan Selesai</span>;
+                }
+
+                return null;
+              })()}
             </div>
 
             {/* Informasi Pembeli */}

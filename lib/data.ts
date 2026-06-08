@@ -5,6 +5,38 @@ export const PRODUCT_CATEGORIES = [
   "Produk Olahan",
 ] as const;
 
+export const ORDER_STATUSES = [
+  "Menunggu Pembayaran",
+  "Menunggu Konfirmasi",
+  "Diproses",
+  "Dikirim",
+  "Selesai",
+  "Proses Pembatalan",
+  "Dibatalkan",
+] as const;
+
+export type OrderStatus = typeof ORDER_STATUSES[number];
+
+export const ORDER_STATUS_COLORS: Record<string, string> = {
+  "Menunggu Pembayaran": "bg-yellow-100 text-yellow-600",
+  "Menunggu Konfirmasi": "bg-orange-100 text-orange-500",
+  "Diproses": "bg-blue-100 text-blue-500",
+  "Dikirim": "bg-purple-100 text-purple-500",
+  "Selesai": "bg-green-100 text-green-500",
+  "Proses Pembatalan": "bg-red-50 text-red-600",
+  "Dibatalkan": "bg-red-100 text-red-500",
+};
+
+export const ORDER_STATUS_TRANSITIONS: Record<string, OrderStatus[]> = {
+  "Menunggu Pembayaran": [],
+  "Menunggu Konfirmasi": ["Diproses"],
+  "Diproses": ["Dikirim"],
+  "Dikirim": ["Selesai"],
+  "Selesai": [],
+  "Proses Pembatalan": [],
+  "Dibatalkan": [],
+};
+
 export type ProductCategory = typeof PRODUCT_CATEGORIES[number];
 
 export type PriceOption = {

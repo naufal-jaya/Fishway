@@ -1,5 +1,5 @@
 import Container from "@/components/Container";
-import { formatPrice } from "@/lib/data";
+import { formatPrice, ORDER_STATUS_COLORS, ORDER_STATUSES } from "@/lib/data";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import { createClient } from "@/utils/supabase/server";
@@ -9,17 +9,7 @@ import OrderTableHeader from "@/components/OrderTableHeader";
 import OrderPagination from "@/components/OrderPagination";
 import { Suspense } from "react";
 
-const STATUS_TABS = ["Semua", "Menunggu Pembayaran", "Menunggu Konfirmasi", "Diproses", "Dikirim", "Selesai", "Proses Pembatalan", "Dibatalkan"];
-
-const STATUS_COLOR: Record<string, string> = {
-  "Menunggu Pembayaran": "bg-yellow-100 text-yellow-600",
-  "Menunggu Konfirmasi": "bg-orange-100 text-orange-500",
-  "Diproses": "bg-blue-100 text-blue-500",
-  "Dikirim": "bg-purple-100 text-purple-500",
-  "Selesai": "bg-green-100 text-green-500",
-  "Proses Pembatalan": "bg-red-50 text-red-600",
-  "Dibatalkan": "bg-red-100 text-red-500", 
-};
+const STATUS_TABS = ["Semua", ...ORDER_STATUSES];
 
 export default async function SellerOrdersPage({ searchParams }: { searchParams: { status?: string; q?: string; date?: string; page?: string } }) {
   const supabase = createClient(cookies());
@@ -192,7 +182,7 @@ const paginatedOrders = filteredOrders.slice(
         <p className="text-sm font-medium text-gray-800">{orderDate} • {orderTime}</p>
         <p className="text-xs text-gray-400 font-mono">#{order.id.split("-")[0].toUpperCase()}</p>
       </div>
-      <span className={`inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full font-medium ${STATUS_COLOR[order.status] || "bg-gray-100 text-gray-700"}`}>
+      <span className={`inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full font-medium ${ORDER_STATUS_COLORS[order.status] || "bg-gray-100 text-gray-700"}`}>
         <span>•</span><span>{order.status}</span>
       </span>
     </div>
@@ -235,7 +225,7 @@ const paginatedOrders = filteredOrders.slice(
       </p>
     </div>
     <div className="flex justify-center">
-    <span className={`inline-flex items-center gap-1 text-xs px-3 py-1 rounded-full font-medium ${STATUS_COLOR[order.status] || "bg-gray-100 text-gray-700"}`}>
+    <span className={`inline-flex items-center gap-1 text-xs px-3 py-1 rounded-full font-medium ${ORDER_STATUS_COLORS[order.status] || "bg-gray-100 text-gray-700"}`}>
       <span>•</span><span>{order.status}</span>
     </span>
     </div>
