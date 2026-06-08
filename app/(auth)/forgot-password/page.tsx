@@ -151,7 +151,7 @@ export default function ForgotPasswordPage() {
   return (
     <div className="flex min-h-screen lg:h-screen lg:overflow-hidden">
       <div className="flex-1 min-h-screen flex items-center justify-center px-4 sm:px-8 py-10 z-30">
-        <div className="w-full bg-white rounded-3xl shadow-[0_1px_3px_rgba(0,0,0,0.25)] my-auto py-6 px-4 sm:py-10 sm:px-16 max-w-[300px] sm:max-w-[480px]">
+        <div className="w-full bg-white rounded-3xl shadow-[0_1px_3px_rgba(0,0,0,0.25)] py-6 px-4 sm:py-10 sm:px-16 max-w-[300px] sm:max-w-[480px]">
           <div className="flex justify-center mb-2">
             <Image
               src="/images/logo2_blue.png"

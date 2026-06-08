@@ -24,7 +24,8 @@ export default function SignupPage() {
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
   const [storeName, setStoreName] = useState("");
-  const [storeDescription, setStoreDescription] = useState("");
+  const [storeAddress, setStoreAddress] = useState("");
+  const [buyerAddress, setBuyerAddress] = useState("");
   const [isProfileStep, setIsProfileStep] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(false);
@@ -150,8 +151,14 @@ export default function SignupPage() {
     if (!phone) nextErrors.phone = "Nomor telepon tidak boleh kosong";
     else if (!validatePhone(phone))
       nextErrors.phone = "Format nomor telepon tidak valid";
-    if (accountType === "seller" && !storeName.trim())
-      nextErrors.storeName = "Nama toko tidak boleh kosong";
+    if (accountType === "buyer" && !buyerAddress.trim())
+      nextErrors.buyerAddress = "Alamat tidak boleh kosong";
+    if (accountType === "seller") {
+      if (!storeName.trim())
+        nextErrors.storeName = "Nama toko tidak boleh kosong";
+      if (!storeAddress.trim())
+        nextErrors.storeAddress = "Alamat toko tidak boleh kosong";
+    }
 
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0) return;
@@ -198,6 +205,21 @@ export default function SignupPage() {
           setErrors({ phone: "Gagal menyimpan data pembeli" });
           return;
         }
+
+        const { error: addressError } = await supabase.from("addresses").insert({
+          user_id: user.id,
+          label: "Alamat Utama",
+          recipient_name: fullName.trim(),
+          phone: phone.trim(),
+          address: buyerAddress.trim(),
+          is_primary: true,
+        });
+
+        if (addressError) {
+          console.error(addressError);
+          setErrors({ buyerAddress: "Gagal menyimpan alamat pembeli" });
+          return;
+        }
       } else {
         const { error: sellerError } = await supabase.from("sellers").upsert(
           {
@@ -216,7 +238,7 @@ export default function SignupPage() {
           {
             seller_id: user.id,
             name: storeName.trim(),
-            description: storeDescription.trim() || null,
+            address: storeAddress.trim(),
             phone,
           },
           { onConflict: "seller_id" },
@@ -287,7 +309,7 @@ export default function SignupPage() {
       </div>
 
       <div className="flex-1 min-h-screen flex items-center justify-center px-4 sm:px-8 py-10 z-30">
-        <div className="w-full bg-white rounded-3xl shadow-[0_1px_3px_rgba(0,0,0,0.25)] my-auto py-6 px-4 sm:py-10 sm:px-16 max-w-[300px] sm:max-w-[480px]">
+        <div className="w-full bg-white rounded-3xl shadow-[0_1px_3px_rgba(0,0,0,0.25)] py-6 px-4 sm:py-10 sm:px-16 max-w-[300px] sm:max-w-[480px]">
           <div className="flex justify-center mb-2">
             <Image src="/images/logo2_blue.png" alt="Fishway" width={100} height={32} className="sm:w-[140px] sm:h-[44px]" />
           </div>
@@ -314,13 +336,20 @@ export default function SignupPage() {
                 {errors.fullName && <p className="text-red-500 text-xs mt-1.5">{errors.fullName}</p>}
               </div>
 
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1.5">{accountType === "seller" ? "Telepon Toko" : "No. Telepon"}</label>
-                <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Masukkan nomor telepon" className={`w-full px-4 py-3 rounded-xl border text-sm outline-none transition-all ${errors.phone ? "border-red-400 bg-red-50 focus:ring-2 focus:ring-red-200" : "border-gray-200 bg-gray-50 focus:border-[#568EC5] focus:ring-2 focus:ring-blue-100 focus:bg-white"}`} />
-                {errors.phone && <p className="text-red-500 text-xs mt-1.5">{errors.phone}</p>}
-              </div>
-
-              {accountType === "seller" && (
+              {accountType === "buyer" ? (
+                <>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1.5">No. Telepon</label>
+                    <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Masukkan nomor telepon" className={`w-full px-4 py-3 rounded-xl border text-sm outline-none transition-all ${errors.phone ? "border-red-400 bg-red-50 focus:ring-2 focus:ring-red-200" : "border-gray-200 bg-gray-50 focus:border-[#568EC5] focus:ring-2 focus:ring-blue-100 focus:bg-white"}`} />
+                    {errors.phone && <p className="text-red-500 text-xs mt-1.5">{errors.phone}</p>}
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1.5">Alamat</label>
+                    <textarea value={buyerAddress} onChange={(e) => setBuyerAddress(e.target.value)} placeholder="Masukkan alamat lengkap Anda" rows={3} className={`w-full resize-none rounded-xl border px-4 py-3 text-sm outline-none transition-all ${errors.buyerAddress ? "border-red-400 bg-red-50 focus:ring-2 focus:ring-red-200" : "border-gray-200 bg-gray-50 focus:border-[#568EC5] focus:ring-2 focus:ring-blue-100 focus:bg-white"}`} />
+                    {errors.buyerAddress && <p className="text-red-500 text-xs mt-1.5">{errors.buyerAddress}</p>}
+                  </div>
+                </>
+              ) : (
                 <>
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-1.5">Nama Toko</label>
@@ -328,8 +357,14 @@ export default function SignupPage() {
                     {errors.storeName && <p className="text-red-500 text-xs mt-1.5">{errors.storeName}</p>}
                   </div>
                   <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1.5">Deskripsi Toko</label>
-                    <textarea value={storeDescription} onChange={(e) => setStoreDescription(e.target.value)} placeholder="Tambahkan deskripsi toko (opsional)" rows={4} className="w-full resize-none rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm outline-none transition-all focus:border-[#568EC5] focus:ring-2 focus:ring-blue-100 focus:bg-white" />
+                    <label className="block text-sm font-semibold text-gray-700 mb-1.5">Telepon Toko</label>
+                    <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Masukkan nomor telepon toko" className={`w-full px-4 py-3 rounded-xl border text-sm outline-none transition-all ${errors.phone ? "border-red-400 bg-red-50 focus:ring-2 focus:ring-red-200" : "border-gray-200 bg-gray-50 focus:border-[#568EC5] focus:ring-2 focus:ring-blue-100 focus:bg-white"}`} />
+                    {errors.phone && <p className="text-red-500 text-xs mt-1.5">{errors.phone}</p>}
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-1.5">Alamat Toko</label>
+                    <textarea value={storeAddress} onChange={(e) => setStoreAddress(e.target.value)} placeholder="Masukkan alamat lengkap toko" rows={3} className={`w-full resize-none rounded-xl border px-4 py-3 text-sm outline-none transition-all ${errors.storeAddress ? "border-red-400 bg-red-50 focus:ring-2 focus:ring-red-200" : "border-gray-200 bg-gray-50 focus:border-[#568EC5] focus:ring-2 focus:ring-blue-100 focus:bg-white"}`} />
+                    {errors.storeAddress && <p className="text-red-500 text-xs mt-1.5">{errors.storeAddress}</p>}
                   </div>
                 </>
               )}
