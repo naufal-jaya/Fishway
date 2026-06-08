@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useFormStatus } from "react-dom";
 import { AlertTriangle, X } from "lucide-react";
 
 export default function AcceptCancelButton({ action }: { action: (formData: FormData) => Promise<void> | void }) {
@@ -46,18 +47,26 @@ export default function AcceptCancelButton({ action }: { action: (formData: Form
                 Batal
               </button>
               <form action={action} className="flex-1">
-                <button
-                  type="submit"
-                  onClick={() => setIsOpen(false)}
-                  className="w-full py-2.5 rounded-xl text-sm font-semibold text-white bg-red-500 hover:bg-red-600 transition-colors"
-                >
-                  Ya, Setujui
-                </button>
+                <SubmitButton />
               </form>
             </div>
           </div>
         </div>
       )}
     </>
+  );
+}
+
+function SubmitButton() {
+  const { pending } = useFormStatus();
+
+  return (
+    <button
+      type="submit"
+      disabled={pending}
+      className="w-full py-2.5 rounded-xl text-sm font-semibold text-white bg-red-500 hover:bg-red-600 transition-colors disabled:opacity-60"
+    >
+      {pending ? "Memproses..." : "Ya, Setujui"}
+    </button>
   );
 }

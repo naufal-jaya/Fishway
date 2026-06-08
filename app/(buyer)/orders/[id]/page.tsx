@@ -2,6 +2,7 @@ import Container from "@/components/Container";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import { createClient } from "@/utils/supabase/server";
+import { createClient as createSupabaseAdminClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
 import { formatPrice } from "@/lib/data";
 import { notFound } from "next/navigation";
@@ -100,19 +101,46 @@ A/N: `;
   async function acceptCancel() {
     "use server";
 
-    if (!order) return;
+    const supabase = createClient(cookies());
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
 
-    const supabaseAdmin = createClient(cookies());
-    await supabaseAdmin
+    if (userError || !user) {
+      console.error("Accept cancel auth error:", userError);
+      return;
+    }
+
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    const supabaseAdmin = serviceRoleKey
+      ? createSupabaseAdminClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, serviceRoleKey)
+      : supabase;
+
+    const { data: updatedOrder, error: updateError } = await supabaseAdmin
       .from("orders")
       .update({ status: "Dibatalkan" })
-      .eq("id", params.id);
+      .eq("id", params.id)
+      .eq("buyer_id", user.id)
+      .eq("status", "Proses Pembatalan")
+      .select("id, store_id")
+      .maybeSingle();
+
+    if (updateError) {
+      console.error("Accept cancel update error:", updateError);
+      return;
+    }
+
+    if (!updatedOrder) {
+      console.error("Accept cancel update skipped: no matching order", {
+        orderId: params.id,
+        buyerId: user.id,
+      });
+      return;
+    }
 
     // Notify seller
     const { data: storeOwner } = await supabaseAdmin
       .from("stores")
       .select("seller_id")
-      .eq("id", order.stores ? (Array.isArray(order.stores) ? (order.stores as any)[0]?.id : (order.stores as any).id) : null)
+      .eq("id", updatedOrder.store_id)
       .maybeSingle();
 
     if (storeOwner?.seller_id) {
@@ -125,6 +153,9 @@ A/N: `;
     }
 
     revalidatePath(`/orders/${params.id}`);
+    revalidatePath("/orders");
+    revalidatePath(`/dashboard/orders/${params.id}`);
+    revalidatePath("/dashboard/orders");
   }
 
   return (
