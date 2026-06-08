@@ -2,23 +2,14 @@ import Container from "@/components/Container";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import { createClient } from "@/utils/supabase/server";
+import { createClient as createSupabaseAdminClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
-import { formatPrice } from "@/lib/data";
+import { formatPrice, ORDER_STATUS_COLORS } from "@/lib/data";
 import { notFound } from "next/navigation";
 import Image from "next/image";
 import { Phone, MessageCircle, ChevronLeft, X } from "lucide-react";
 import AcceptCancelButton from "./AcceptCancelButton";
 import { revalidatePath } from "next/cache";
-
-const STATUS_COLOR: Record<string, string> = {
-  "Menunggu Pembayaran": "bg-yellow-100 text-yellow-600",
-  "Menunggu Konfirmasi": "bg-orange-100 text-orange-500",
-  "Diproses": "bg-blue-100 text-blue-500",
-  "Dikirim": "bg-purple-100 text-purple-500",
-  "Selesai": "bg-green-100 text-green-500",
-  "Proses Pembatalan": "bg-red-50 text-red-600",
-  "Dibatalkan": "bg-red-100 text-red-500",
-};
 
 export default async function BuyerOrderDetailPage({ params }: { params: { id: string } }) {
   const supabase = createClient(cookies());
@@ -100,19 +91,46 @@ A/N: `;
   async function acceptCancel() {
     "use server";
 
-    if (!order) return;
+    const supabase = createClient(cookies());
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
 
-    const supabaseAdmin = createClient(cookies());
-    await supabaseAdmin
+    if (userError || !user) {
+      console.error("Accept cancel auth error:", userError);
+      return;
+    }
+
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    const supabaseAdmin = serviceRoleKey
+      ? createSupabaseAdminClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, serviceRoleKey)
+      : supabase;
+
+    const { data: updatedOrder, error: updateError } = await supabaseAdmin
       .from("orders")
       .update({ status: "Dibatalkan" })
-      .eq("id", params.id);
+      .eq("id", params.id)
+      .eq("buyer_id", user.id)
+      .eq("status", "Proses Pembatalan")
+      .select("id, store_id")
+      .maybeSingle();
+
+    if (updateError) {
+      console.error("Accept cancel update error:", updateError);
+      return;
+    }
+
+    if (!updatedOrder) {
+      console.error("Accept cancel update skipped: no matching order", {
+        orderId: params.id,
+        buyerId: user.id,
+      });
+      return;
+    }
 
     // Notify seller
     const { data: storeOwner } = await supabaseAdmin
       .from("stores")
       .select("seller_id")
-      .eq("id", order.stores ? (Array.isArray(order.stores) ? (order.stores as any)[0]?.id : (order.stores as any).id) : null)
+      .eq("id", updatedOrder.store_id)
       .maybeSingle();
 
     if (storeOwner?.seller_id) {
@@ -125,6 +143,9 @@ A/N: `;
     }
 
     revalidatePath(`/orders/${params.id}`);
+    revalidatePath("/orders");
+    revalidatePath(`/dashboard/orders/${params.id}`);
+    revalidatePath("/dashboard/orders");
   }
 
   return (
@@ -150,7 +171,7 @@ A/N: `;
                 )}
               </div>
               <div className="text-right">
-                <span className={`px-4 py-2 rounded-full font-semibold text-sm inline-block ${STATUS_COLOR[order.status] || "bg-gray-100 text-gray-700"}`}>
+                <span className={`px-4 py-2 rounded-full font-semibold text-sm inline-block ${ORDER_STATUS_COLORS[order.status] || "bg-gray-100 text-gray-700"}`}>
                   {order.status}
                 </span>
               </div>
