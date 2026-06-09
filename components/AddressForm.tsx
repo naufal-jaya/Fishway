@@ -33,6 +33,7 @@ export default function AddressForm({
   existing?: Address;
   onClose: () => void;
 }) {
+  const submittingRef = useRef(false);
   const [form, setForm] = useState<Address>(
     existing || { label: "", recipient_name: "", phone: "", address: "", is_primary: false, lat: null, lon: null }
   );
@@ -135,6 +136,7 @@ export default function AddressForm({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (submittingRef.current) return;
 
     const newErrors: { phone?: string; recipient_name?: string } = {};
 
@@ -156,6 +158,7 @@ export default function AddressForm({
     }
 
     setErrors({});
+    submittingRef.current = true;
     setLoading(true);
 
     const dataToSave = {
@@ -174,6 +177,7 @@ export default function AddressForm({
       await addAddress(dataToSave);
     }
     setLoading(false);
+    submittingRef.current = false;
     onClose();
   };
 

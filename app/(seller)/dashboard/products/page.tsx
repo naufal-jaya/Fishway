@@ -10,6 +10,7 @@ import { Pencil, Trash, ChevronLeft } from "lucide-react";
 import Image from "next/image";
 import DeleteProductButton from "@/components/DeleteProductButton";
 import ProductSearchBar from "@/components/ProductSearchBar";
+import BackButton from "@/components/BackButton";
 import { Suspense } from "react";
 
 export default async function SellerProductsPage({ searchParams }: { searchParams: { q?: string } }) {
@@ -58,15 +59,33 @@ export default async function SellerProductsPage({ searchParams }: { searchParam
         orders!inner (
           id,
           status,
-          store_id
+          store_id,
+          total_amount,
+          shipping_cost,
+          shipping_method,
+          cancel_reason
         )
       `)
       .eq("orders.store_id", store.id)
-      .neq("orders.status", "Dibatalkan");
+      .in("orders.status", ["Diproses", "Dikirim", "Selesai", "Proses Pembatalan"]);
 
     if (storeOrderItems) {
+      const uniqueOrders = new Map<string, { total_amount: number; shipping_cost: number; shipping_method: string | null; status: string; cancel_reason: string | null }>();
+      const orderItemsByOrderId = new Map<string, any[]>();
+
       storeOrderItems.forEach((item: any) => {
-        const qty = item.quantity || 0;
+        const o = item.orders;
+        let deadQty = 0;
+        if (o?.status === "Proses Pembatalan" && o.cancel_reason?.startsWith("JSON_DATA:")) {
+          try {
+            const deadItems = JSON.parse(o.cancel_reason.substring(10));
+            deadQty = deadItems[item.id] || 0;
+          } catch (e) {
+            console.error("Failed to parse cancel_reason JSON on products item parse:", e);
+          }
+        }
+
+        const qty = Math.max(0, (item.quantity || 0) - deadQty);
         const price = item.price || 0;
         const revenue = qty * price;
         
@@ -79,10 +98,49 @@ export default async function SellerProductsPage({ searchParams }: { searchParam
           variantSales[vId] = (variantSales[vId] || 0) + qty;
         }
 
-        totalStoreRevenue += revenue;
-        if (item.orders?.id) {
-          uniqueOrderIds.add(item.orders.id);
+        if (o) {
+          if (!uniqueOrders.has(o.id)) {
+            uniqueOrders.set(o.id, {
+              total_amount: o.total_amount || 0,
+              shipping_cost: o.shipping_cost || 0,
+              shipping_method: o.shipping_method,
+              status: o.status,
+              cancel_reason: o.cancel_reason
+            });
+            uniqueOrderIds.add(o.id);
+          }
+          if (!orderItemsByOrderId.has(o.id)) {
+            orderItemsByOrderId.set(o.id, []);
+          }
+          orderItemsByOrderId.get(o.id)!.push({
+            id: item.id,
+            price: item.price || 0,
+            quantity: item.quantity || 0
+          });
         }
+      });
+
+      uniqueOrders.forEach((o, orderId) => {
+        let currentTotal = o.total_amount;
+        if (o.status === "Proses Pembatalan" && o.cancel_reason?.startsWith("JSON_DATA:")) {
+          try {
+            const deadItems = JSON.parse(o.cancel_reason.substring(10));
+            let refundTotal = 0;
+            const items = orderItemsByOrderId.get(orderId) || [];
+            items.forEach((item) => {
+              const deadQty = deadItems[item.id];
+              if (deadQty) {
+                refundTotal += deadQty * item.price;
+              }
+            });
+            currentTotal = Math.max(0, currentTotal - refundTotal);
+          } catch (e) {
+            console.error("Failed to parse cancel_reason JSON on products page calculation:", e);
+          }
+        }
+        const netAmount = Math.max(0, currentTotal - 5000);
+        const shippingAdd = o.shipping_method === "penjual" ? (o.shipping_cost || 0) : 0;
+        totalStoreRevenue += netAmount + shippingAdd;
       });
     }
   }
@@ -121,9 +179,7 @@ export default async function SellerProductsPage({ searchParams }: { searchParam
           <div className="relative z-10">
             {/* HEADER */}
             <div className="mb-6">
-              <Link href="/dashboard" className="inline-flex items-center text-gray-400 hover:text-[#407BB5]">
-                <ChevronLeft className="w-5 h-5" />
-              </Link>
+              <BackButton href="/dashboard" />
               <h1 className="text-2xl font-bold text-gray-800 mt-1">
                 Produk Saya
               </h1>

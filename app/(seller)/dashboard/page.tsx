@@ -45,9 +45,9 @@ export default async function SellerDashboardPage() {
   const { data: orders } = await supabase
     .from("orders")
     .select(`
-      id, status, total_amount, shipping_cost, created_at,
+      id, status, total_amount, shipping_cost, shipping_method, created_at, cancel_reason,
       buyers ( accounts ( name ) ),
-      order_items ( products ( name ) )
+      order_items ( id, quantity, price, products ( name ) )
     `)
     .eq("store_id", store.id)
     .order("created_at", { ascending: false });
@@ -57,8 +57,28 @@ export default async function SellerDashboardPage() {
     o.status === "Menunggu Konfirmasi" || o.status === "Diproses"
   ).length || 0;
   const totalRevenue = orders
-    ?.filter(o => o.status === "Selesai")
-    .reduce((sum, o) => sum + o.total_amount, 0) || 0;
+    ?.filter(o => ["Diproses", "Dikirim", "Selesai", "Proses Pembatalan"].includes(o.status))
+    .reduce((sum, o) => {
+      let currentTotal = o.total_amount || 0;
+      if (o.status === "Proses Pembatalan" && o.cancel_reason?.startsWith("JSON_DATA:")) {
+        try {
+          const deadItems = JSON.parse(o.cancel_reason.substring(10));
+          let refundTotal = 0;
+          o.order_items.forEach((item: any) => {
+            const deadQty = deadItems[item.id];
+            if (deadQty) {
+              refundTotal += deadQty * (item.price || 0);
+            }
+          });
+          currentTotal = Math.max(0, currentTotal - refundTotal);
+        } catch (e) {
+          console.error("Failed to parse cancel_reason JSON on dashboard:", e);
+        }
+      }
+      const netAmount = Math.max(0, currentTotal - 5000);
+      const shippingAdd = o.shipping_method === "penjual" ? (o.shipping_cost || 0) : 0;
+      return sum + netAmount + shippingAdd;
+    }, 0) || 0;
 
   const recentOrders = orders?.slice(0, 3) || [];
 
@@ -271,7 +291,7 @@ export default async function SellerDashboardPage() {
                       </div>
                       <div className="text-right flex flex-col items-end gap-1">
                         <p className="font-bold text-gray-800">
-                          {formatPrice(order.total_amount + order.shipping_cost)}
+                          {formatPrice(order.total_amount + order.shipping_cost + 5000)}
                         </p>
                         <StatusBadge status={order.status} className="text-[10px] px-2 py-0.5" />
                       </div>

@@ -73,6 +73,7 @@ export async function POST(req: Request) {
       revalidatePath("/orders");
       revalidatePath("/dashboard/orders");
       revalidatePath("/dashboard");
+      revalidatePath("/dashboard/products");
     }
 
     return NextResponse.json({ status: "success" }, { status: 200 });

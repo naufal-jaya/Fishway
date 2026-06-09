@@ -5,6 +5,7 @@ import { createClient } from "@/utils/supabase/server";
 import { cookies } from "next/headers";
 import OrderFilter from "@/components/OrderFilter";
 import { PackageOpen } from "lucide-react";
+import BackButton from "@/components/BackButton";
 
 export default async function BuyerOrdersPage({ searchParams }: { searchParams: { status?: string } }) {
   const supabase = createClient(cookies());
@@ -47,19 +48,20 @@ export default async function BuyerOrdersPage({ searchParams }: { searchParams: 
     <div>
       <Navbar />
       <Container>
-        <div className="max-w-6xl mx-auto py-8">
-          <h1 className="text-2xl font-bold text-gray-800 mb-6">Pesanan Saya</h1>
-
-          {!orders || orders.length === 0 ? (
-            <div className="card p-12 text-center flex flex-col items-center">
-              <PackageOpen size={48} className="text-gray-300 mb-3" />
-              <p className="text-gray-500 mb-4">Belum ada pesanan</p>
-              <Link href="/" className="btn-primary inline-block">Mulai Belanja</Link>
-            </div>
-          ) : (
-            <OrderFilter orders={orders} initialStatus={searchParams.status} />
-          )}
+        <div className="flex items-center gap-3 mb-6">
+          <BackButton href="/" />
+          <h1 className="text-2xl font-bold text-gray-800">Pesanan Saya</h1>
         </div>
+
+        {!orders || orders.length === 0 ? (
+          <div className="card p-12 text-center flex flex-col items-center">
+            <PackageOpen size={48} className="text-gray-300 mb-3" />
+            <p className="text-gray-500 mb-4">Belum ada pesanan</p>
+            <Link href="/" className="btn-primary inline-block">Mulai Belanja</Link>
+          </div>
+        ) : (
+          <OrderFilter orders={orders} initialStatus={searchParams.status} />
+        )}
       </Container>
     </div>
   );

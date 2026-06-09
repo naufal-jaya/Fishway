@@ -11,6 +11,7 @@ import Image from "next/image";
 import { revalidatePath } from "next/cache";
 import CancelOrderButton from "./CancelOrderButton";
 import { Phone, MapPin, XCircle, ChevronLeft } from "lucide-react";
+import BackButton from "@/components/BackButton";
 
 
 
@@ -113,6 +114,9 @@ export default async function SellerOrderDetailPage({ params }: { params: { id: 
     }
 
     revalidatePath(`/dashboard/orders/${params.id}`);
+    revalidatePath("/dashboard");
+    revalidatePath("/dashboard/orders");
+    revalidatePath("/dashboard/products");
   }
 
   // Server action: cancel order
@@ -154,16 +158,16 @@ export default async function SellerOrderDetailPage({ params }: { params: { id: 
     }
 
     revalidatePath(`/dashboard/orders/${params.id}`);
+    revalidatePath("/dashboard");
+    revalidatePath("/dashboard/orders");
+    revalidatePath("/dashboard/products");
   }
 
   return (
     <div>
       <Navbar />
       <Container>
-        <div className="max-w-6xl mx-auto py-8">
-          <Link href="/dashboard/orders" className="inline-flex items-center text-gray-400 hover:text-[#407BB5] mb-6">
-            <ChevronLeft className="w-5 h-5" />
-          </Link>
+        <BackButton href="/dashboard/orders" className="mb-6" />
 
           <div className="card p-6 md:p-8">
             {/* Header */}
@@ -305,7 +309,6 @@ export default async function SellerOrderDetailPage({ params }: { params: { id: 
               <CancelOrderButton action={cancelOrder} buyerPhone={buyerPhone} orderId={order.id} orderItems={safeOrderItems} orderDate={orderDate} />
             )}
           </div>
-        </div>
       </Container>
     </div>
   );

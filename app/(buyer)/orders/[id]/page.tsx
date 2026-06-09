@@ -9,6 +9,7 @@ import { notFound } from "next/navigation";
 import Image from "next/image";
 import { Phone, MessageCircle, ChevronLeft, X } from "lucide-react";
 import StatusBadge from "@/components/StatusBadge";
+import BackButton from "@/components/BackButton";
 import AcceptCancelButton from "./AcceptCancelButton";
 import ContinuePaymentButton from "@/components/ContinuePaymentButton";
 import OrderStatusPoller from "@/components/OrderStatusPoller";
@@ -220,16 +221,15 @@ A/N: `;
     revalidatePath("/orders");
     revalidatePath(`/dashboard/orders/${params.id}`);
     revalidatePath("/dashboard/orders");
+    revalidatePath("/dashboard");
+    revalidatePath("/dashboard/products");
   }
 
   return (
     <div>
       <Navbar />
       <Container>
-        <div className="max-w-6xl mx-auto py-8">
-          <Link href="/orders" className="inline-flex items-center text-gray-400 hover:text-[#407BB5] mb-6">
-            <ChevronLeft className="w-5 h-5" />
-          </Link>
+        <BackButton href="/orders" className="mb-6" />
 
           {/* Polling otomatis saat status masih Menunggu Pembayaran */}
           {order.status === "Menunggu Pembayaran" && (
@@ -420,7 +420,6 @@ A/N: `;
               </Link>
             </div>
           </div>
-        </div>
       </Container>
     </div>
   );

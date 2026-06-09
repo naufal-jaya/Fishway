@@ -6,6 +6,7 @@ import Navbar from "@/components/Navbar";
 import { notFound } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
 import { cookies } from "next/headers";
+import BackButton from "@/components/BackButton";
 import {
   ChevronLeft,
   ChevronRight,
@@ -160,9 +161,7 @@ export default async function ProductDetailPage({
           <div className="max-w-6xl mx-auto py-6 relative z-10">
 
             {/* Breadcrumb */}
-            <Link href="/" className="inline-flex items-center text-gray-400 hover:text-[#407BB5] mb-4">
-              <ChevronLeft className="w-5 h-5" />
-            </Link>
+            <BackButton href="/" className="mb-4" />
             <nav className="flex items-center gap-1 text-sm text-gray-400 mb-5">
               <Link href="/" className="hover:text-[#407BB5] transition-colors">Home</Link>
               <ChevronRight className="w-3.5 h-3.5" />

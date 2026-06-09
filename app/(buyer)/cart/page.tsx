@@ -72,7 +72,7 @@ export default async function CartPage() {
       <div className="flex-1">
         <Container>
           <div className="flex items-center gap-3 mb-6">
-            <BackButton />
+            <BackButton href="/" />
             <h1 className="text-2xl font-bold text-gray-800">Keranjang</h1>
           </div>
           <CartClient items={formattedItems} />

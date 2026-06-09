@@ -8,6 +8,7 @@ import { cookies } from "next/headers";
 import { Pencil, Trash, ChevronLeft, ChevronRight, PackageOpen } from "lucide-react";
 import OrderTableHeader from "@/components/OrderTableHeader";
 import OrderPagination from "@/components/OrderPagination";
+import BackButton from "@/components/BackButton";
 import { Suspense } from "react";
 
 const STATUS_TABS = ["Semua", ...ORDER_STATUSES];
@@ -125,12 +126,9 @@ const paginatedOrders = filteredOrders.slice(
     <div>
       <Navbar />
       <Container>
-        <div className="max-w-6xl mx-auto py-8">
           {/* Header */}
           <div className="mb-6">
-          <Link href="/dashboard" className="inline-flex items-center text-gray-400 hover:text-[#407BB5]">
-            <ChevronLeft className="w-5 h-5" />
-          </Link>
+            <BackButton href="/dashboard" />
             <h1 className="text-2xl font-bold text-gray-800 mt-1">
               Manajemen Pesanan
             </h1>
@@ -195,7 +193,7 @@ const paginatedOrders = filteredOrders.slice(
       </div>
       <div className="flex items-center gap-2">
         <p className="text-sm font-bold text-gray-800">
-          {formatPrice(order.total_amount + order.shipping_cost)}
+          {formatPrice(order.total_amount + order.shipping_cost + 5000)}
         </p>
         <Link href={`/dashboard/orders/${order.id}`} className="text-gray-400 hover:text-primary transition-colors">
           <ChevronRight className="w-4 h-4" />
@@ -223,7 +221,7 @@ const paginatedOrders = filteredOrders.slice(
     </div>
     <div className="text-right">
       <p className="text-sm font-bold text-gray-800">
-        {formatPrice(order.total_amount + order.shipping_cost)}
+        {formatPrice(order.total_amount + order.shipping_cost + 5000)}
       </p>
     </div>
     <div className="flex justify-center">
@@ -265,7 +263,6 @@ const paginatedOrders = filteredOrders.slice(
             </p>
           </div>
         )}
-        </div>
       </Container>
     </div>
   );

@@ -139,6 +139,7 @@ export async function GET(
           revalidatePath("/orders");
           revalidatePath("/dashboard/orders");
           revalidatePath("/dashboard");
+          revalidatePath("/dashboard/products");
 
           return NextResponse.json({ status: updateStatus }, {
             headers: { "Cache-Control": "no-store, no-cache, must-revalidate" },

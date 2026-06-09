@@ -8,6 +8,7 @@ import Container from "@/components/Container";
 import ProductImageManager, { MAX_PRODUCT_IMAGE_SIZE_BYTES, ProductImageItem } from "@/components/ProductImageManager";
 import { createClient } from "@/utils/supabase/supabaseClient";
 import { ChevronLeft, X } from "lucide-react";
+import BackButton from "@/components/BackButton";
 import { useToast } from "@/components/ToastContext";
 import { PRODUCT_CATEGORIES } from "@/lib/data";
 const MAX_PRODUCT_IMAGES = 10;
@@ -212,9 +213,7 @@ export default function AddProductPage() {
         <div className="max-w-6xl mx-auto relative min-h-screen">
           <div className="relative z-10">
             <div className="mb-6">
-              <Link href="/dashboard/products" className="inline-flex items-center text-gray-400 hover:text-[#407BB5]">
-                <ChevronLeft className="w-5 h-5" />
-              </Link>
+              <BackButton href="/dashboard/products" />
               <h1 className="text-2xl font-bold text-gray-800 mt-1">Tambah Produk Baru</h1>
             </div>
           

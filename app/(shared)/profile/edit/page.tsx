@@ -10,6 +10,7 @@ import SellerAddressForm from "@/components/SellerAddressForm";
 import { getAddresses } from "@/lib/addresses";
 import { User } from "lucide-react";
 import { useToast } from "@/components/ToastContext";
+import BackButton from "@/components/BackButton";
 
 type Address = {
   id: string;
@@ -135,8 +136,10 @@ function EditProfileContent() {
     <div>
       <Navbar />
       <Container>
-        <div className="max-w-6xl mx-auto py-8">
-          <h1 className="text-2xl font-bold text-gray-800 mb-6">Edit Profil</h1>
+          <div className="flex items-center gap-3 mb-6">
+            <BackButton href="/profile" />
+            <h1 className="text-2xl font-bold text-gray-800">Edit Profil</h1>
+          </div>
 
           <div className="grid md:grid-cols-2 gap-6 items-start">
             {/* KIRI — Informasi Akun */}
@@ -188,7 +191,6 @@ function EditProfileContent() {
               </div>
             </div>
           </div>
-        </div>
       </Container>
     </div>
   );

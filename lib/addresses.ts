@@ -1,8 +1,17 @@
 "use server";
 
 import { createClient } from "@/utils/supabase/server";
+import { createClient as createSupabaseAdminClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
+
+const getAdminClient = () => {
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (serviceRoleKey) {
+    return createSupabaseAdminClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, serviceRoleKey);
+  }
+  return null;
+};
 
 export async function getAddresses() {
   const supabase = createClient(cookies());
@@ -32,8 +41,11 @@ export async function addAddress(formData: {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Not logged in" };
 
+  const adminClient = getAdminClient();
+  const db = adminClient || supabase;
+
   if (formData.is_primary) {
-    await supabase.from("addresses").update({ is_primary: false }).eq("user_id", user.id);
+    await db.from("addresses").update({ is_primary: false }).eq("user_id", user.id);
   }
 
   const { error } = await supabase.from("addresses").insert({
@@ -59,8 +71,11 @@ export async function updateAddress(id: string, formData: {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Not logged in" };
 
+  const adminClient = getAdminClient();
+  const db = adminClient || supabase;
+
   if (formData.is_primary) {
-    await supabase.from("addresses").update({ is_primary: false }).eq("user_id", user.id);
+    await db.from("addresses").update({ is_primary: false }).eq("user_id", user.id);
   }
 
   const { error } = await supabase.from("addresses").update(formData).eq("id", id).eq("user_id", user.id);
@@ -87,8 +102,11 @@ export async function setPrimaryAddress(id: string) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Not logged in" };
 
-  await supabase.from("addresses").update({ is_primary: false }).eq("user_id", user.id);
-  await supabase.from("addresses").update({ is_primary: true }).eq("id", id).eq("user_id", user.id);
+  const adminClient = getAdminClient();
+  const db = adminClient || supabase;
+
+  await db.from("addresses").update({ is_primary: false }).eq("user_id", user.id);
+  await db.from("addresses").update({ is_primary: true }).eq("id", id).eq("user_id", user.id);
 
   revalidatePath("/profile");
   return { success: true };

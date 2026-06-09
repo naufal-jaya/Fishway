@@ -7,6 +7,7 @@ import { formatPrice, parseSupabaseDate } from "@/lib/data";
 import StatusBadge from "@/components/StatusBadge";
 import { LogOut, Package, Truck, Check, ClipboardList, MapPin, User, Clock, X, Banknote } from "lucide-react";
 import LogoutButton from "@/components/LogoutButton";
+import BackButton from "@/components/BackButton";
 
 type Address = {
   id: string;
@@ -132,7 +133,12 @@ const { data: addressesData } = !isSeller ? await supabase
     <div>
       <Navbar />
       <Container>
-        <div className="max-w-6xl mx-auto space-y-6 py-8">
+        <div className="space-y-6">
+          <div className="flex items-center gap-3">
+            <BackButton href={isSeller ? "/dashboard" : "/"} />
+            <h1 className="text-2xl font-bold text-gray-800">Profil Saya</h1>
+          </div>
+
           {/* Profile Card */}
           <div className="card p-6">
             <div className="flex flex-col md:flex-row items-center md:items-start gap-5">
@@ -264,7 +270,6 @@ const { data: addressesData } = !isSeller ? await supabase
           <div className="pt-8 flex justify-center">
             <LogoutButton />
           </div>
-
         </div>
       </Container>
     </div>

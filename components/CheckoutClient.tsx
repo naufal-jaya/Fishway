@@ -7,6 +7,7 @@ import Link from "next/link";
 import { formatPrice } from "@/lib/data";
 import { calculateDistance } from "@/lib/distance";
 import { useToast } from "@/components/ToastContext";
+import BackButton from "@/components/BackButton";
 import {
   ChevronDown,
   CheckCircle,
@@ -371,9 +372,7 @@ export default function CheckoutClient({
   return (
     <div>
       <div className="flex items-center gap-3 mb-6">
-        <Link href="/cart" className="inline-flex items-center text-gray-400 hover:text-[#407BB5]">
-          <ChevronLeft className="w-5 h-5" />
-        </Link>
+        <BackButton href="/cart" />
         <h1 className="text-2xl font-bold text-gray-800">Checkout</h1>
       </div>
 
