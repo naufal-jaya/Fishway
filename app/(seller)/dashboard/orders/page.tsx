@@ -140,7 +140,7 @@ const paginatedOrders = filteredOrders.slice(
         <OrderTableHeader currentStatus={currentStatus} currentDate={dateFilter} />
 
             {/* Table Header */}
-          <div className="hidden md:grid grid-cols-8 gap-4 items-center px-5 py-3 hidden md:grid grid-cols-8 gap-4 px-5 py-3 bg-gray-50 border-b text-xs font-semibold text-gray-500 uppercase tracking-wide">
+          <div className="hidden md:grid grid-cols-8 gap-4 items-center px-5 py-3 bg-gray-50 border-b text-xs font-semibold text-gray-500 uppercase tracking-wide">
             <span className="col-span-2">Tanggal</span>
             <span className="text-center">Invoice</span>
             <span>Pembeli</span>
