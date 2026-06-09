@@ -103,10 +103,10 @@ export default function CheckoutClient({
     stores.forEach((store) => {
       const opts: { id: string; label: string; desc: string; maxKm?: number }[] = [];
       if (store.shippingOjol !== false) {
-        opts.push({ id: "gosend", label: "GoSend", desc: "Ongkir dibayar terpisah", maxKm: store.maxDistance ?? 10 });
+        opts.push({ id: "gosend", label: "GoSend", desc: "Ongkir dibayar terpisah" });
       }
       if (store.shippingAmbil !== false) {
-        opts.push({ id: "ambil", label: "Ambil Sendiri", desc: "Ambil langsung ke toko", maxKm: store.maxDistance ?? 10 });
+        opts.push({ id: "ambil", label: "Ambil Sendiri", desc: "Ambil langsung ke toko" });
       }
       if (store.shippingPenjual) {
         opts.push({
@@ -118,7 +118,7 @@ export default function CheckoutClient({
       }
       // Fallback jika semua dinonaktifkan
       if (opts.length === 0) {
-        opts.push({ id: "gosend", label: "GoSend", desc: "Ongkir dibayar terpisah", maxKm: 10 });
+        opts.push({ id: "gosend", label: "GoSend", desc: "Ongkir dibayar terpisah" });
       }
       map[store.id] = opts;
     });
@@ -605,9 +605,11 @@ export default function CheckoutClient({
                       )}
 
                       {!distInfo.loading && isOut && (
-                        <div className="flex items-center gap-2 text-[10px] text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-1.5">
-                          <AlertTriangle size={12} />
-                          Alamat terlalu jauh ({distInfo.distance} km). Batas maks {maxKm} km.
+                        <div className="flex items-start gap-2 text-[10px] text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-1.5 leading-relaxed">
+                          <AlertTriangle size={12} className="flex-shrink-0 mt-0.5" />
+                          <span>
+                            Penjual tidak bisa mengantarkan ke alamat utama anda (maks jarak {maxKm} km), ganti alamat atau metode pengiriman
+                          </span>
                         </div>
                       )}
                     </div>
@@ -720,7 +722,7 @@ export default function CheckoutClient({
               )}
             </button>
             {isAnyStoreOutOfRange && (
-              <p className="text-xs text-center text-red-500 mt-2">
+              <p className="text-xs text-center text-amber-600 mt-2 font-medium">
                 Ada pengiriman toko di luar radius layanan. Harap ubah metode pengiriman.
               </p>
             )}

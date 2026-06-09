@@ -11,12 +11,7 @@ import {
   ChevronRight,
   Activity,
   Globe,
-  Package,
-  ThermometerSun,
-  Droplets,
-  Box,
   Truck,
-  CheckCircle2,
   FishSymbol,
   HandPlatter,
   Store,
@@ -132,20 +127,12 @@ export default async function ProductDetailPage({
   const trimCat = product.category ? product.category.trim() : "";
   const categoryNormalized = (trimCat === "Ikan Tangkapan Laut" || trimCat === "Ikan Air Laut" || trimCat === "Ikan Laut") ? "Ikan Air Asin" : (trimCat === "Ikan Ternak" ? "Ikan Air Tawar" : (trimCat === "Olahan Ikan" ? "Produk Olahan" : trimCat));
   const attrs = [
-    { icon: <FishSymbol className="w-4 h-4" />, label: "Jenis", value: product.jenis || categoryNormalized },
     { icon: <Activity className="w-4 h-4" />, label: "Kondisi", value: product.condition },
     { icon: <Globe className="w-4 h-4" />, label: "Asal", value: product.origin },
-    { icon: <HandPlatter className="w-4 h-4" />, label: "Pakan", value: product.food },
-    { icon: <ThermometerSun className="w-4 h-4" />, label: "Suhu Ideal", value: product.suhu_ideal || "26–30°C" },
-    { icon: <Droplets className="w-4 h-4" />, label: "pH Air Ideal", value: product.ph_ideal || "6,5–7,5" },
+    { icon: <FishSymbol className="w-4 h-4" />, label: "Pakan", value: product.food },
   ].filter((a) => a.value);
 
-  const packaging = [
-    { icon: <Box className="w-5 h-5" />, label: "Plastik double + oksigen" },
-    { icon: <Package className="w-5 h-5" />, label: "Dus styrofoam (opsional)" },
-    { icon: <Truck className="w-5 h-5" />, label: "Dikirim setiap hari" },
-    { icon: <CheckCircle2 className="w-5 h-5" />, label: "Aman sampai tujuan" },
-  ];
+
 
   let userDistance: number | null = null;
   const { data: { user } } = await supabase.auth.getUser();
@@ -273,18 +260,7 @@ export default async function ProductDetailPage({
                   ))}
                 </div>
 
-                {/* Packaging */}
-                <div>
-                  <h3 className="font-semibold text-gray-800 mb-3">Pengiriman &amp; Packaging</h3>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                    {packaging.map((p) => (
-                      <div key={p.label} className="flex items-start gap-2.5 bg-gray-50 rounded-xl p-3">
-                        <span className="flex-shrink-0 mt-0.5">{p.icon}</span>
-                        <p className="text-sm text-gray-600 leading-snug">{p.label}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
+
               </div>
             </div>
 

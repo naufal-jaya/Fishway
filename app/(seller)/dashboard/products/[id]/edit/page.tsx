@@ -34,7 +34,7 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
   const { showToast } = useToast();
 
   const [formData, setFormData] = useState({
-    name: "", category: "", description: "", jenis: "", condition: "",
+    name: "", category: "", description: "", condition: "",
     origin: "", food: "", price: "", unit: "", stock: "",
   });
   
@@ -61,7 +61,7 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
       if (data && !error) {
         setFormData({
           name: data.name || "", category: data.category || "", description: data.description || "",
-          jenis: data.jenis || "", condition: data.condition || "", origin: data.origin || "",
+          condition: data.condition || "", origin: data.origin || "",
           food: data.food || "", price: data.price?.toString() || "", unit: data.unit || "",
           stock: data.stock?.toString() || "",
         });
@@ -218,7 +218,7 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
 
       const productPayload = {
         name: formData.name, category: formData.category, description: formData.description,
-        jenis: formData.jenis, condition: formData.condition, origin: formData.origin,
+        condition: formData.condition, origin: formData.origin,
         food: formData.food, type: productType, gambar: imageUrl, image: imageUrl,
         ...(productType === 0 ? { price: priceValue, unit: formData.unit, stock: stockValue } : { price: null, unit: null, stock: null })
       };
@@ -382,26 +382,22 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
                 </div>
               )}
 
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Jenis</label>
-                  <input type="text" name="jenis" value={formData.jenis} onChange={handleChange} className="w-full border rounded-lg p-2" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Kondisi (mis. Segar, Hidup)</label>
-                  <input type="text" name="condition" value={formData.condition} onChange={handleChange} className="w-full border rounded-lg p-2" />
-                </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Kondisi (mis. Segar, Hidup)</label>
+                <input type="text" name="condition" value={formData.condition} onChange={handleChange} className="w-full border rounded-lg p-2" />
               </div>
 
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className={`grid gap-4 ${formData.category === "Ikan Hias" ? "sm:grid-cols-2" : "sm:grid-cols-1"}`}>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Asal</label>
                   <input type="text" name="origin" value={formData.origin} onChange={handleChange} className="w-full border rounded-lg p-2" />
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Pakan (jika ada)</label>
-                  <input type="text" name="food" value={formData.food} onChange={handleChange} className="w-full border rounded-lg p-2" />
-                </div>
+                {formData.category === "Ikan Hias" && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Pakan (Khusus Ikan Hias)</label>
+                    <input type="text" name="food" value={formData.food} onChange={handleChange} placeholder="Misal: Cacing Sutra, Pelet" className="w-full border rounded-lg p-2" />
+                  </div>
+                )}
               </div>
 
               <div>
