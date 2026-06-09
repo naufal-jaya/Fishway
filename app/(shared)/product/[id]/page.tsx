@@ -211,7 +211,7 @@ export default async function ProductDetailPage({
             </div>
 
             {/* Store Info */}
-            <div className="rounded-2xl width-auto border border-gray-100 shadow-sm p-4 sm:p-6 mb-6 flex flex-col sm:flex-row items-center sm:items-start gap-4">
+            <div className="bg-white rounded-2xl width-auto border border-gray-100 shadow-sm p-4 sm:p-6 mb-6 flex flex-col sm:flex-row items-center sm:items-start gap-4">
               <Store className="w-8 h-8  text-[#407BB5] self-center" />
               <div className="flex-1 text-center sm:text-left">
                 <Link href={`/store/${product.store_id}`} className="text-xl font-bold text-gray-900 hover:text-[#407BB5] transition-colors">

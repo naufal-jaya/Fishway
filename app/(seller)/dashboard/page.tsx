@@ -37,11 +37,23 @@ export default async function SellerDashboardPage() {
     );
   }
 
-  const { count: productsCount } = await supabase
-    .from("products")
-    .select("*", { count: "exact", head: true })
-    .eq("store_id", store.id);
+  const [productsCountRes, ordersRes] = await Promise.all([
+    supabase
+      .from("products")
+      .select("*", { count: "exact", head: true })
+      .eq("store_id", store.id),
+    supabase
+      .from("orders")
+      .select(`
+        id, status, total_amount, shipping_cost, created_at,
+        buyers ( accounts ( name ) ),
+        order_items ( products ( name ) )
+      `)
+      .eq("store_id", store.id)
+      .order("created_at", { ascending: false })
+  ]);
 
+<<<<<<< HEAD
   const { data: orders } = await supabase
     .from("orders")
     .select(`
@@ -51,6 +63,10 @@ export default async function SellerDashboardPage() {
     `)
     .eq("store_id", store.id)
     .order("created_at", { ascending: false });
+=======
+  const productsCount = productsCountRes.count;
+  const orders = ordersRes.data;
+>>>>>>> 91959f6db067a3a933b901e291dec45d7e0415c9
 
   const totalOrders = orders?.length || 0;
   const pendingOrders = orders?.filter(o =>

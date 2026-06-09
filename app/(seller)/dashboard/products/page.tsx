@@ -36,17 +36,38 @@ export default async function SellerProductsPage({ searchParams }: { searchParam
   const uniqueOrderIds = new Set<string>();
 
   if (store) {
-    // 1. Fetch products
-    const { data: productsData } = await supabase
-      .from("products")
-      .select("*, price_options(*), product_images(*)")
-      .eq("store_id", store.id)
-      .order("created_at", { ascending: false });
+    const [productsRes, orderItemsRes] = await Promise.all([
+      supabase
+        .from("products")
+        .select("*, price_options(*), product_images(*)")
+        .eq("store_id", store.id)
+        .order("created_at", { ascending: false }),
+      supabase
+        .from("order_items")
+        .select(`
+          id,
+          quantity,
+          price,
+          product_id,
+          selected_variant_id,
+          orders!inner (
+            id,
+            status,
+            store_id
+          )
+        `)
+        .eq("orders.store_id", store.id)
+        .neq("orders.status", "Dibatalkan")
+    ]);
+
+    const productsData = productsRes.data;
+    const storeOrderItems = orderItemsRes.data;
 
     if (productsData) {
       myProducts = productsData;
     }
 
+<<<<<<< HEAD
     // 2. Fetch order items for sales calculations
     const { data: storeOrderItems } = await supabase
       .from("order_items")
@@ -69,6 +90,8 @@ export default async function SellerProductsPage({ searchParams }: { searchParam
       .eq("orders.store_id", store.id)
       .in("orders.status", ["Diproses", "Dikirim", "Selesai", "Proses Pembatalan"]);
 
+=======
+>>>>>>> 91959f6db067a3a933b901e291dec45d7e0415c9
     if (storeOrderItems) {
       const uniqueOrders = new Map<string, { total_amount: number; shipping_cost: number; shipping_method: string | null; status: string; cancel_reason: string | null }>();
       const orderItemsByOrderId = new Map<string, any[]>();

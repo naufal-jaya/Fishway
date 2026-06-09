@@ -16,7 +16,9 @@ export default function RootLayout({
     <html lang="id">
       <body
         className="font-sans min-h-screen text-[#1a1a1a] relative bg-fixed bg-center bg-cover bg-no-repeat"
-        style={{ backgroundImage: "url('/images/background.png')" }}
+        style={{
+          backgroundImage: "linear-gradient(rgba(255, 255, 255, 0.39), rgba(255, 255, 255, 0.54)), url('/images/background.png')"
+        }}
       >
         <ToastProvider>
           {/* Fixed Sticky Waves at the bottom of the viewport, layered behind content (z-[5]) but in front of background (z-0) */}

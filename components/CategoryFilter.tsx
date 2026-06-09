@@ -20,8 +20,8 @@ export default function CategoryFilter({ products }: { products: Product[] }) {
     selected === "Semua"
       ? products
       : products.filter(
-          (p) => p.category?.toLowerCase() === selected.toLowerCase()
-        );
+        (p) => p.category?.toLowerCase() === selected.toLowerCase()
+      );
 
   const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
   const paginatedProducts = filtered.slice(
@@ -39,7 +39,7 @@ export default function CategoryFilter({ products }: { products: Product[] }) {
     const element = document.getElementById("katalog-produk-title");
     if (element) {
       // Offset slightly to account for the sticky navbar height
-      const yOffset = -80; 
+      const yOffset = -80;
       const y = element.getBoundingClientRect().top + window.scrollY + yOffset;
       window.scrollTo({ top: y, behavior: "smooth" });
     }
@@ -52,11 +52,10 @@ export default function CategoryFilter({ products }: { products: Product[] }) {
           <button
             key={cat}
             onClick={() => handleSelectCategory(cat)}
-            className={`px-4 py-1.5 rounded-xl text-sm whitespace-nowrap border transition-all duration-300 ${
-              selected === cat
-                ? "bg-primary text-white border-primary"
-                : "border-gray-300 text-gray-600 hover:border-primary hover:text-primary hover:bg-gradient-to-t hover:from-primary/20 hover:to-white"
-            }`}
+            className={`px-4 py-1.5 rounded-xl text-sm whitespace-nowrap border transition-all duration-300 ${selected === cat
+              ? "bg-primary text-white border-primary"
+              : "bg-white border-gray-300 text-gray-600 hover:border-primary hover:text-primary hover:bg-gradient-to-t hover:from-primary/20 hover:to-white"
+              }`}
           >
             {cat}
           </button>
@@ -93,11 +92,10 @@ export default function CategoryFilter({ products }: { products: Product[] }) {
               <button
                 key={pageNum}
                 onClick={() => handlePageChange(pageNum)}
-                className={`w-9 h-9 rounded-xl text-sm font-semibold border transition-all duration-200 shadow-sm cursor-pointer ${
-                  currentPage === pageNum
-                    ? "bg-[#407BB5] text-white border-[#407BB5] scale-105"
-                    : "border-gray-300 text-gray-600 bg-white hover:border-primary hover:text-primary"
-                }`}
+                className={`w-9 h-9 rounded-xl text-sm font-semibold border transition-all duration-200 shadow-sm cursor-pointer ${currentPage === pageNum
+                  ? "bg-[#407BB5] text-white border-[#407BB5] scale-105"
+                  : "border-gray-300 text-gray-600 bg-white hover:border-primary hover:text-primary"
+                  }`}
               >
                 {pageNum}
               </button>
