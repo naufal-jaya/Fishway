@@ -11,7 +11,8 @@
   --font-inter-sans: 'Inter';
 }
 
-html, body {
+html,
+body {
   max-width: 100%;
   overflow-x: hidden;
 }
@@ -25,9 +26,11 @@ body {
   .btn-primary {
     @apply bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary-dark transition-colors font-medium;
   }
+
   .btn-outline {
     @apply border border-primary text-primary px-4 py-2 rounded-lg hover:bg-primary hover:text-white transition-colors font-medium;
   }
+
   .card {
     @apply bg-white rounded-xl shadow-sm border border-gray-100;
   }

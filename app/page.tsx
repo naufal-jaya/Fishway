@@ -23,19 +23,20 @@ export default async function HomePage() {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  const { data: account } = user
-    ? await supabase
-        .from("accounts")
-        .select("name")
-        .eq("id", user.id)
-        .maybeSingle()
-    : { data: null };
-  const displayName = account?.name || user?.email || "Pengguna";
+  const [accountRes, rawProductsRes] = await Promise.all([
+    user
+      ? supabase.from("accounts").select("name").eq("id", user.id).maybeSingle()
+      : Promise.resolve({ data: null }),
+    supabase
+      .from("products")
+      .select("*, stores(id, name, phone, address, lat, lon), price_options(*), product_images(*)")
+      .order("created_at", { ascending: false })
+  ]);
 
-  const { data: rawProducts, error } = await supabase
-    .from("products")
-    .select("*, stores(id, name, phone, address, lat, lon), price_options(*), product_images(*)")
-    .order("created_at", { ascending: false });
+  const account = accountRes.data;
+  const rawProducts = rawProductsRes.data;
+  const error = rawProductsRes.error;
+  const displayName = account?.name || user?.email || "Pengguna";
 
   if (error) {
     console.error("Supabase error fetching products:", error);
