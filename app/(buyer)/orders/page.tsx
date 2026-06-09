@@ -47,7 +47,7 @@ export default async function BuyerOrdersPage({ searchParams }: { searchParams: 
     <div>
       <Navbar />
       <Container>
-        <div className="max-w-4xl mx-auto py-8">
+        <div className="max-w-6xl mx-auto py-8">
           <h1 className="text-2xl font-bold text-gray-800 mb-6">Pesanan Saya</h1>
 
           {!orders || orders.length === 0 ? (

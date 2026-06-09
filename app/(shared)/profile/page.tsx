@@ -131,7 +131,7 @@ const { data: addressesData } = !isSeller ? await supabase
     <div>
       <Navbar />
       <Container>
-        <div className="max-w-3xl mx-auto space-y-6 py-8">
+        <div className="max-w-6xl mx-auto space-y-6 py-8">
           {/* Profile Card */}
           <div className="card p-6">
             <div className="flex flex-col md:flex-row items-center md:items-start gap-5">

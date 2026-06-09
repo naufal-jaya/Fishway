@@ -377,7 +377,7 @@ export default function CheckoutClient({
         <h1 className="text-2xl font-bold text-gray-800">Checkout</h1>
       </div>
 
-      <div className="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto items-start">
+      <div className="grid md:grid-cols-2 gap-6 max-w-6xl mx-auto items-start">
         {/* KIRI - Alamat & Per Toko Shipping Selection */}
         <div className="space-y-4">
           {/* Pilih Alamat Card — Card sekaligus Dropdown */}

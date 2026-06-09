@@ -122,7 +122,7 @@ const paginatedOrders = filteredOrders.slice(
     <div>
       <Navbar />
       <Container>
-        <div className="max-w-5xl mx-auto py-8">
+        <div className="max-w-6xl mx-auto py-8">
           {/* Header */}
           <div className="mb-6">
           <Link href="/dashboard" className="inline-flex items-center text-gray-400 hover:text-[#407BB5]">

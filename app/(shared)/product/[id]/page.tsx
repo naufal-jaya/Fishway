@@ -170,7 +170,7 @@ export default async function ProductDetailPage({
       <div className="relative z-10">
         <Navbar />
         <Container>
-          <div className="max-w-5xl mx-auto py-6 relative z-10">
+          <div className="max-w-6xl mx-auto py-6 relative z-10">
 
             {/* Breadcrumb */}
             <Link href="/" className="inline-flex items-center text-gray-400 hover:text-[#407BB5] mb-4">

@@ -156,7 +156,7 @@ export default async function SellerOrderDetailPage({ params }: { params: { id: 
     <div>
       <Navbar />
       <Container>
-        <div className="max-w-3xl mx-auto py-8">
+        <div className="max-w-6xl mx-auto py-8">
           <Link href="/dashboard/orders" className="inline-flex items-center text-gray-400 hover:text-[#407BB5] mb-6">
             <ChevronLeft className="w-5 h-5" />
           </Link>

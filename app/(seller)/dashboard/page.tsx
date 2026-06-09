@@ -153,7 +153,7 @@ export default async function SellerDashboardPage() {
     <div>
       <Navbar />
       <Container>
-        <div className="max-w-4xl mx-auto py-8">
+        <div className="max-w-6xl mx-auto py-8">
 
           {/* Header */}
           <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-8 gap-4">
