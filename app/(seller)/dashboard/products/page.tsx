@@ -53,11 +53,15 @@ export default async function SellerProductsPage({ searchParams }: { searchParam
           orders!inner (
             id,
             status,
-            store_id
+            store_id,
+            total_amount,
+            shipping_cost,
+            shipping_method,
+            cancel_reason
           )
         `)
         .eq("orders.store_id", store.id)
-        .neq("orders.status", "Dibatalkan")
+        .in("orders.status", ["Diproses", "Dikirim", "Selesai", "Proses Pembatalan"])
     ]);
 
     const productsData = productsRes.data;
@@ -66,32 +70,6 @@ export default async function SellerProductsPage({ searchParams }: { searchParam
     if (productsData) {
       myProducts = productsData;
     }
-
-<<<<<<< HEAD
-    // 2. Fetch order items for sales calculations
-    const { data: storeOrderItems } = await supabase
-      .from("order_items")
-      .select(`
-        id,
-        quantity,
-        price,
-        product_id,
-        selected_variant_id,
-        orders!inner (
-          id,
-          status,
-          store_id,
-          total_amount,
-          shipping_cost,
-          shipping_method,
-          cancel_reason
-        )
-      `)
-      .eq("orders.store_id", store.id)
-      .in("orders.status", ["Diproses", "Dikirim", "Selesai", "Proses Pembatalan"]);
-
-=======
->>>>>>> 91959f6db067a3a933b901e291dec45d7e0415c9
     if (storeOrderItems) {
       const uniqueOrders = new Map<string, { total_amount: number; shipping_cost: number; shipping_method: string | null; status: string; cancel_reason: string | null }>();
       const orderItemsByOrderId = new Map<string, any[]>();
