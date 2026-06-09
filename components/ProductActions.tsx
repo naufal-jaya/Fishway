@@ -21,11 +21,10 @@ function ToastContainer({ toasts, onClose }: { toasts: Toast[]; onClose: (id: nu
       {toasts.map((t) => (
         <div
           key={t.id}
-          className={`flex items-start gap-3 px-4 py-3 rounded-xl shadow-lg border text-sm max-w-xs animate-in slide-in-from-right-4 duration-300 ${
-            t.type === "success"
-              ? "bg-white border-green-100 text-gray-800"
-              : "bg-white border-red-100 text-gray-800"
-          }`}
+          className={`flex items-start gap-3 px-4 py-3 rounded-xl shadow-lg border text-sm max-w-xs animate-in slide-in-from-right-4 duration-300 ${t.type === "success"
+            ? "bg-white border-green-100 text-gray-800"
+            : "bg-white border-red-100 text-gray-800"
+            }`}
         >
           {t.type === "success" ? (
             <CheckCircle size={18} className="text-green-500 flex-shrink-0 mt-0.5" />
@@ -177,11 +176,10 @@ export default function ProductActions({
                 <button
                   key={(opt as any).id || opt.label}
                   onClick={() => { setSelectedVariant(opt); setQuantity("1"); }}
-                  className={`px-4 py-1.5 border rounded-lg text-sm transition-all ${
-                    selectedVariant?.label === opt.label
-                      ? "border-blue-500 bg-blue-50 text-blue-600 font-medium"
-                      : "border-gray-200 text-gray-600 hover:border-gray-300"
-                  }`}
+                  className={`px-4 py-1.5 border rounded-lg text-sm transition-all ${selectedVariant?.label === opt.label
+                    ? "border-blue-500 bg-blue-50 text-blue-600 font-medium"
+                    : "border-gray-200 text-gray-600 hover:border-gray-300"
+                    }`}
                 >
                   {opt.label}
                 </button>
@@ -194,7 +192,7 @@ export default function ProductActions({
         <div className="space-y-2">
           <p className="text-sm font-semibold text-gray-700">Jumlah</p>
           <div className="flex items-center gap-4">
-            <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden">
+            <div className="bg-white flex items-center border border-gray-200 rounded-lg overflow-hidden">
               <button
                 onClick={handleDecrease}
                 disabled={Number(quantity) <= 1}
@@ -238,7 +236,7 @@ export default function ProductActions({
             onClick={handleAddToCart}
             disabled={isAdding || currentStock === 0 || isOutOfRange}
             style={{ borderColor: isOutOfRange ? "#ccc" : "#407BB5", color: isOutOfRange ? "#999" : "#407BB5" }}
-            className="w-full sm:flex-1 flex items-center justify-center gap-2 h-11 px-5 border-2 rounded-xl text-sm font-semibold transition hover:bg-blue-50 disabled:hover:bg-transparent disabled:opacity-60 disabled:cursor-not-allowed"
+            className="bg-white w-full sm:flex-1 flex items-center justify-center gap-2 h-11 px-5 border-2 rounded-xl text-sm font-semibold transition hover:bg-blue-50 disabled:hover:bg-transparent disabled:opacity-60 disabled:cursor-not-allowed"
           >
             {isAdding ? (
               <span className="w-4 h-4 border-2 border-[#407BB5] border-t-transparent rounded-full animate-spin" />
