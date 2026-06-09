@@ -3,6 +3,7 @@ import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import { createClient } from "@/utils/supabase/server";
 import { createClient as createSupabaseAdminClient } from "@supabase/supabase-js";
+import { cookies } from "next/headers";
 import { formatPrice, ORDER_STATUSES, ORDER_STATUS_TRANSITIONS, ORDER_STATUS_COLORS, parseSupabaseDate } from "@/lib/data";
 import StatusBadge from "@/components/StatusBadge";
 import { notFound } from "next/navigation";

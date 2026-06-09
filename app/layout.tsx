@@ -14,20 +14,11 @@ export default function RootLayout({
 }) {
   return (
     <html lang="id">
-      <body className="font-sans min-h-screen bg-white text-[#1a1a1a] relative">
+      <body
+        className="font-sans min-h-screen text-[#1a1a1a] relative bg-fixed bg-center bg-cover bg-no-repeat"
+        style={{ backgroundImage: "url('/images/background.png')" }}
+      >
         <ToastProvider>
-          {/* Background Latar */}
-          <div
-            className="fixed top-0 left-0 h-full pointer-events-none z-0 w-full max-w-[1300px]"
-            style={{
-              backgroundImage: "url('/images/latar.png')",
-              backgroundRepeat: "no-repeat",
-              backgroundSize: "contain",
-              backgroundPosition: "left center",
-              opacity: 1,
-            }}
-          />
-
           {/* Fixed Sticky Waves at the bottom of the viewport, layered behind content (z-[5]) but in front of background (z-0) */}
           <div className="fixed bottom-0 left-0 w-full h-24 sm:h-40 pointer-events-none z-[5] overflow-hidden">
             <svg
