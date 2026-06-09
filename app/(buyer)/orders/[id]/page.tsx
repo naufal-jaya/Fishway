@@ -41,7 +41,7 @@ export default async function BuyerOrderDetailPage({ params }: { params: { id: s
         id,
         quantity,
         price,
-        products ( name, gambar, unit, product_images(url, sort_order) )
+        products ( name, category, gambar, unit, product_images(url, sort_order) )
       )
     `)
     .eq("id", params.id)
@@ -82,7 +82,29 @@ Mohon diproses ya. Terima kasih!`;
 
   const waLink = `https://wa.me/${waNumber.replace(/\D/g, '')}?text=${encodeURIComponent(waMessage)}`;
 
-  const waRefundMessage = `Hai, saya mau konfirmasi pembatalan pesanan ${order.id}, tolong kirim ke rekening saya saya dengan detail:
+  let deadItemsRecord: Record<string, number> = {};
+  let isPartialRefund = false;
+  if (order.cancel_reason?.startsWith("JSON_DATA:")) {
+    try {
+      deadItemsRecord = JSON.parse(order.cancel_reason.substring(10));
+      isPartialRefund = true;
+    } catch (e) {}
+  }
+
+  let deadItemsText = "";
+  if (isPartialRefund) {
+    const deadItemsArray: string[] = [];
+    Object.entries(deadItemsRecord).forEach(([itemId, qty]) => {
+      const item = order.order_items.find((i: any) => i.id === itemId);
+      if (item) {
+        const product = Array.isArray(item.products) ? item.products[0] : item.products;
+        deadItemsArray.push(`- ${product?.name} (${qty} ekor)`);
+      }
+    });
+    if (deadItemsArray.length > 0) deadItemsText = `\n\nIkan yang mati:\n${deadItemsArray.join("\n")}`;
+  }
+
+  const waRefundMessage = `Hai, saya mau konfirmasi pesanan ${order.id} untuk refund karena ikan mati.${deadItemsText}\n\nMohon kirim refund ke rekening saya dengan detail:
 Bank: 
 No Rek: 
 A/N: `;
@@ -106,13 +128,15 @@ A/N: `;
       ? createSupabaseAdminClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, serviceRoleKey)
       : supabase;
 
-    const { data: updatedOrder, error: updateError } = await supabaseAdmin
+    const { data: currentOrder, error: updateError } = await supabaseAdmin
       .from("orders")
-      .update({ status: "Dibatalkan" })
+      .select(`
+        id, total_amount, status, store_id, cancel_reason,
+        order_items ( id, quantity, price, products ( category ) )
+      `)
       .eq("id", params.id)
       .eq("buyer_id", user.id)
       .eq("status", "Proses Pembatalan")
-      .select("id, store_id")
       .maybeSingle();
 
     if (updateError) {
@@ -120,7 +144,7 @@ A/N: `;
       return;
     }
 
-    if (!updatedOrder) {
+    if (!currentOrder) {
       console.error("Accept cancel update skipped: no matching order", {
         orderId: params.id,
         buyerId: user.id,
@@ -128,18 +152,62 @@ A/N: `;
       return;
     }
 
+    let deadItemsRecord: Record<string, number> = {};
+    if (currentOrder.cancel_reason?.startsWith("JSON_DATA:")) {
+      try {
+        deadItemsRecord = JSON.parse(currentOrder.cancel_reason.substring(10));
+      } catch (e) {}
+    }
+
+    let ikanHiasRefundTotal = 0;
+    const itemsToDelete: string[] = [];
+    let hasRemainingItems = false;
+
+    for (const item of currentOrder.order_items) {
+      const deadQty = deadItemsRecord[item.id];
+      if (deadQty) {
+        ikanHiasRefundTotal += (deadQty * item.price);
+        const remainingQty = item.quantity - deadQty;
+        if (remainingQty <= 0) {
+          itemsToDelete.push(item.id);
+        } else {
+          hasRemainingItems = true;
+          await supabaseAdmin.from("order_items").update({ quantity: remainingQty }).eq("id", item.id);
+        }
+      } else {
+        hasRemainingItems = true;
+      }
+    }
+
+    if (itemsToDelete.length > 0) {
+      await supabaseAdmin.from("order_items").delete().in("id", itemsToDelete);
+    }
+
+    if (hasRemainingItems) {
+      const newTotal = currentOrder.total_amount - ikanHiasRefundTotal;
+      await supabaseAdmin
+        .from("orders")
+        .update({ status: "Dikirim", total_amount: Math.max(0, newTotal), cancel_reason: null })
+        .eq("id", params.id);
+    } else {
+      await supabaseAdmin
+        .from("orders")
+        .update({ status: "Dibatalkan", cancel_reason: null })
+        .eq("id", params.id);
+    }
+
     // Notify seller
     const { data: storeOwner } = await supabaseAdmin
       .from("stores")
       .select("seller_id")
-      .eq("id", updatedOrder.store_id)
+      .eq("id", currentOrder.store_id)
       .maybeSingle();
 
     if (storeOwner?.seller_id) {
       await supabaseAdmin.from("notifications").insert({
         user_id: storeOwner.seller_id,
-        title: "Pembatalan Disetujui",
-        message: `Pembeli telah menyetujui pembatalan pesanan ${params.id}.`,
+        title: "Refund Ikan Mati Disetujui",
+        message: `Pembeli telah menyetujui refund ikan mati untuk pesanan ${params.id}.`,
         link: `/dashboard/orders/${params.id}`,
       });
     }
@@ -211,9 +279,19 @@ A/N: `;
                     <X size={20} className="lucide lucide-x-circle" />
                   </div>
                   <div className="flex-1">
-                    <h3 className="text-red-800 font-bold text-lg mb-1">Menunggu Persetujuan Pembatalan</h3>
+                    <h3 className="text-red-800 font-bold text-lg mb-1">Menunggu Persetujuan Refund Ikan Mati</h3>
                     <p className="text-sm text-red-700 mb-4 leading-relaxed">
-                      Ups! pesanan kamu terkendala, <strong>{order.cancel_reason || "Penjual mengajukan pembatalan"}</strong>. Hubungi penjual untuk refund.
+                      Ups! pesanan kamu terkendala, <strong>Penjual mengajukan refund karena ada ikan mati</strong>.
+                      {isPartialRefund && (
+                        <ul className="list-disc pl-5 mt-2 mb-2 font-medium">
+                          {Object.entries(deadItemsRecord).map(([itemId, qty]) => {
+                            const item = order.order_items.find((i: any) => i.id === itemId);
+                            const product = Array.isArray(item?.products) ? item.products[0] : item?.products;
+                            return <li key={itemId}>{product?.name} ({qty} ekor)</li>;
+                          })}
+                        </ul>
+                      )}
+                      Hubungi penjual untuk proses refund.
                     </p>
                     <div className="flex flex-col sm:flex-row gap-3">
                       <a

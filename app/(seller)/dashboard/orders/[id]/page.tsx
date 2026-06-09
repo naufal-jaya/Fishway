@@ -45,7 +45,7 @@ export default async function SellerOrderDetailPage({ params }: { params: { id: 
       store_id,
       order_items (
         id, quantity, price,
-        products ( id, name, gambar, unit, store_id, product_images(url, sort_order) )
+        products ( id, name, category, gambar, unit, store_id, product_images(url, sort_order) )
       )
     `)
     .eq("id", params.id)
@@ -60,6 +60,11 @@ export default async function SellerOrderDetailPage({ params }: { params: { id: 
   const safeOrderItems = (order.order_items as any[]).filter((item) => {
     const product = Array.isArray(item.products) ? item.products[0] : item.products;
     return product?.store_id === store.id;
+  });
+
+  const hasIkanHias = safeOrderItems.some((item) => {
+    const product = Array.isArray(item.products) ? item.products[0] : item.products;
+    return product?.category === "Ikan Hias";
   });
 
   const orderDate = new Date(order.created_at).toLocaleDateString('id-ID', {
@@ -109,7 +114,12 @@ export default async function SellerOrderDetailPage({ params }: { params: { id: 
   // Server action: cancel order
   async function cancelOrder(formData: FormData) {
     "use server";
-    const reason = formData.get("reason") as string;
+
+    const deadItemsStr = formData.get("deadItems") as string;
+    let cancelReason = "Ikan mati saat pengiriman";
+    if (deadItemsStr) {
+      cancelReason = `JSON_DATA:${deadItemsStr}`;
+    }
 
     const supabaseAdmin = createClient(cookies());
     const { data: currentOrder } = await supabaseAdmin
@@ -120,22 +130,21 @@ export default async function SellerOrderDetailPage({ params }: { params: { id: 
 
     if (!currentOrder) return;
 
-    const cancellableStatuses = ["Menunggu Konfirmasi", "Dikirim"];
-    if (!cancellableStatuses.includes(currentOrder.status)) return;
+    if (currentOrder.status !== "Dikirim") return;
 
     await supabaseAdmin
       .from("orders")
-      .update({ 
+      .update({
         status: "Proses Pembatalan",
-        cancel_reason: reason || "Tidak ada keterangan" 
+        cancel_reason: cancelReason
       })
       .eq("id", params.id);
 
     if (currentOrder.buyer_id) {
       await supabaseAdmin.from("notifications").insert({
         user_id: currentOrder.buyer_id,
-        title: "Persetujuan Pembatalan Pesanan",
-        message: `Penjual mengajukan pembatalan pesanan Anda. Alasan: ${reason || "Tidak ada keterangan"}. Harap periksa detail pesanan.`,
+        title: "Refund Ikan Mati Diajukan",
+        message: `Penjual mengajukan pembatalan karena ada ikan mati saat pengiriman. Harap periksa detail pesanan Anda.`,
         link: `/orders/${params.id}`,
       });
     }
@@ -163,7 +172,7 @@ export default async function SellerOrderDetailPage({ params }: { params: { id: 
 
               {(() => {
                 const allowedTransitions = ORDER_STATUS_TRANSITIONS[order.status] || [];
-                
+
                 if (allowedTransitions.length > 0) {
                   return (
                     <div className="bg-gray-50 p-3 rounded-xl border border-gray-200">
@@ -187,17 +196,17 @@ export default async function SellerOrderDetailPage({ params }: { params: { id: 
                 }
 
                 if (order.status === "Menunggu Pembayaran") {
-                   return <span className="text-sm font-semibold text-yellow-600 bg-yellow-50 px-3 py-1.5 rounded-full border border-yellow-200">Menunggu pembayaran pembeli</span>;
+                  return <span className="text-sm font-semibold text-yellow-600 bg-yellow-50 px-3 py-1.5 rounded-full border border-yellow-200">Menunggu pembayaran pembeli</span>;
                 } else if (order.status === "Dibatalkan") {
-                   return (
-                     <span className="inline-flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-full font-semibold bg-red-100 text-red-700">
-                       <XCircle className="w-4 h-4" /> Pesanan Dibatalkan
-                     </span>
-                   );
+                  return (
+                    <span className="inline-flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-full font-semibold bg-red-100 text-red-700">
+                      <XCircle className="w-4 h-4" /> Pesanan Dibatalkan
+                    </span>
+                  );
                 } else if (order.status === "Proses Pembatalan") {
-                   return <span className="text-sm font-semibold text-red-600 bg-red-50 px-3 py-1.5 rounded-full border border-red-200">Proses Pembatalan</span>;
+                  return <span className="text-sm font-semibold text-red-600 bg-red-50 px-3 py-1.5 rounded-full border border-red-200">Proses Pembatalan</span>;
                 } else if (order.status === "Selesai") {
-                   return <span className="text-sm font-semibold text-green-600 bg-green-50 px-3 py-1.5 rounded-full border border-green-200">Pesanan Selesai</span>;
+                  return <span className="text-sm font-semibold text-green-600 bg-green-50 px-3 py-1.5 rounded-full border border-green-200">Pesanan Selesai</span>;
                 }
 
                 return null;
@@ -219,8 +228,8 @@ export default async function SellerOrderDetailPage({ params }: { params: { id: 
                       className="bg-green-500 text-white px-3 py-1 rounded-full text-xs font-semibold hover:bg-green-600 transition-colors flex items-center gap-1.5"
                     >
                       <svg className="w-3.5 h-3.5 fill-white" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
-                        <path d="M12 0C5.373 0 0 5.373 0 12c0 2.124.558 4.17 1.541 5.943L.057 23.571a.5.5 0 00.6.633l5.782-1.457A11.944 11.944 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.894a9.877 9.877 0 01-5.031-1.378l-.36-.214-3.733.941.993-3.608-.235-.372A9.833 9.833 0 012.106 12C2.106 6.533 6.533 2.106 12 2.106S21.894 6.533 21.894 12 17.467 21.894 12 21.894z"/>
+                        <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z" />
+                        <path d="M12 0C5.373 0 0 5.373 0 12c0 2.124.558 4.17 1.541 5.943L.057 23.571a.5.5 0 00.6.633l5.782-1.457A11.944 11.944 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.894a9.877 9.877 0 01-5.031-1.378l-.36-.214-3.733.941.993-3.608-.235-.372A9.833 9.833 0 012.106 12C2.106 6.533 6.533 2.106 12 2.106S21.894 6.533 21.894 12 17.467 21.894 12 21.894z" />
                       </svg>
                       WhatsApp
                     </a>
@@ -300,8 +309,8 @@ export default async function SellerOrderDetailPage({ params }: { params: { id: 
               </div>
             </div>
 
-            {(order.status === "Menunggu Konfirmasi" || order.status === "Dikirim") && (
-              <CancelOrderButton action={cancelOrder} buyerPhone={buyerPhone} orderId={order.id} />
+            {(order.status === "Dikirim" && hasIkanHias) && (
+              <CancelOrderButton action={cancelOrder} buyerPhone={buyerPhone} orderId={order.id} orderItems={safeOrderItems} orderDate={orderDate} />
             )}
           </div>
         </div>
