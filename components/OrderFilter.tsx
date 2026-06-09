@@ -3,19 +3,11 @@
 import { useState, useEffect } from "react";
 import { Package, Truck, Check, Clock, PackageOpen, X, Bike, Store } from "lucide-react";
 import Link from "next/link";
-import { formatPrice, ORDER_STATUS_COLORS, ORDER_STATUSES } from "@/lib/data";
+import { formatPrice, ORDER_STATUS_COLORS, ORDER_STATUSES, parseSupabaseDate } from "@/lib/data";
 
 const STATUSES = ["Semua", ...ORDER_STATUSES];
 
-const STATUS_ICON: Record<string, React.ReactNode> = {
-  "Menunggu Pembayaran": <Clock size={14} className="text-yellow-500" />,
-  "Menunggu Konfirmasi": <Clock size={14} className="text-orange-400" />,
-  "Diproses": <Package size={14} className="text-blue-500" />,
-  "Dikirim": <Truck size={14} className="text-purple-500" />,
-  "Selesai": <Check size={14} className="text-green-500" />,
-  "Proses Pembatalan": <X size={14} className="text-red-600" />,
-  "Dibatalkan": <X size={14} className="text-red-500" />,
-};
+import StatusBadge from "./StatusBadge";
 
 const SHIPPING_ICON: Record<string, React.ReactNode> = {
   "Ojol": <Bike size={12} />,
@@ -42,11 +34,10 @@ export default function OrderFilter({ orders, initialStatus }: { orders: any[], 
           <button
             key={status}
             onClick={() => setSelected(status)}
-            className={`px-4 py-1.5 rounded-xl text-sm whitespace-nowrap border transition-all duration-300 ${
-              selected === status
+            className={`px-4 py-1.5 rounded-xl text-sm whitespace-nowrap border transition-all duration-300 ${selected === status
                 ? "bg-primary text-white border-primary"
                 : "border-gray-300 text-gray-600 hover:border-primary hover:text-primary"
-            }`}
+              }`}
           >
             {status}
           </button>
@@ -62,13 +53,14 @@ export default function OrderFilter({ orders, initialStatus }: { orders: any[], 
       ) : (
         <div className="space-y-4">
           {filtered.map((order: any) => {
-            const orderDate = new Date(order.created_at).toLocaleDateString('id-ID', {
+            const parsedDate = parseSupabaseDate(order.created_at);
+            const orderDate = parsedDate.toLocaleDateString('id-ID', {
               timeZone: 'Asia/Jakarta',
               year: 'numeric',
               month: 'long',
               day: 'numeric',
             });
-            const orderTime = new Date(order.created_at).toLocaleTimeString('id-ID', {
+            const orderTime = parsedDate.toLocaleTimeString('id-ID', {
               timeZone: 'Asia/Jakarta',
               hour: '2-digit',
               minute: '2-digit',
@@ -102,10 +94,7 @@ export default function OrderFilter({ orders, initialStatus }: { orders: any[], 
                     <p className="text-xs text-gray-400">{orderDate} • {orderTime}</p>
                     <p className="font-mono text-xs text-gray-300 mt-0.5">#{order.id.split("-")[0].toUpperCase()}</p>
                   </div>
-                  <span className={`text-xs px-3 py-1 rounded-full font-medium flex items-center gap-1 ${ORDER_STATUS_COLORS[order.status] || "bg-gray-100 text-gray-700"}`}>
-                    {STATUS_ICON[order.status] || null}
-                    {order.status}
-                  </span>
+                  <StatusBadge status={order.status} className="text-xs px-3 py-1" />
                 </div>
 
                 {/* Produk-produk dari toko ini */}

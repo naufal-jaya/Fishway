@@ -5,6 +5,14 @@ export const PRODUCT_CATEGORIES = [
   "Produk Olahan",
 ] as const;
 
+export const parseSupabaseDate = (dateString: string) => {
+  if (!dateString) return new Date();
+  if (dateString.includes('Z') || dateString.includes('+')) {
+    return new Date(dateString);
+  }
+  return new Date(dateString + 'Z');
+};
+
 export const ORDER_STATUSES = [
   "Menunggu Pembayaran",
   "Menunggu Konfirmasi",
@@ -23,8 +31,8 @@ export const ORDER_STATUS_COLORS: Record<string, string> = {
   "Diproses": "bg-blue-100 text-blue-500",
   "Dikirim": "bg-purple-100 text-purple-500",
   "Selesai": "bg-green-100 text-green-500",
-  "Proses Pembatalan": "bg-red-50 text-red-600",
-  "Dibatalkan": "bg-red-100 text-red-500",
+  "Proses Pembatalan": "bg-red-100 text-red-600",
+  "Dibatalkan": "bg-gray-100 text-gray-800",
 };
 
 export const ORDER_STATUS_TRANSITIONS: Record<string, OrderStatus[]> = {
@@ -63,15 +71,15 @@ type BaseProduct = {
 
 export type Product =
   | (BaseProduct & {
-      type: 0;
-      price: number;
-      unit: string;
-      stock: number;
-    })
+    type: 0;
+    price: number;
+    unit: string;
+    stock: number;
+  })
   | (BaseProduct & {
-      type: 1;
-      priceOptions: PriceOption[];
-    });
+    type: 1;
+    priceOptions: PriceOption[];
+  });
 
 export type CartItem = Product & {
   qty: number;

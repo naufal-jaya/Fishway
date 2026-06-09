@@ -1,7 +1,7 @@
 import Container from "@/components/Container";
 import Navbar from "@/components/Navbar";
 import ProductCard from "@/components/ProductCard";
-import { Product } from "@/lib/data";
+import { Product, parseSupabaseDate } from "@/lib/data";
 import { createClient } from "@/utils/supabase/server";
 import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
@@ -93,7 +93,8 @@ export default async function StorePage({
   );
 
   const formattedDate = store.created_at
-    ? new Date(store.created_at).toLocaleDateString("id-ID", {
+    ? parseSupabaseDate(store.created_at).toLocaleDateString("id-ID", {
+        timeZone: 'Asia/Jakarta',
         year: "numeric",
         month: "long",
         day: "numeric",

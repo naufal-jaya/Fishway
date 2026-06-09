@@ -1,5 +1,6 @@
 import Container from "@/components/Container";
-import { formatPrice, ORDER_STATUS_COLORS, ORDER_STATUSES } from "@/lib/data";
+import { formatPrice, ORDER_STATUSES, parseSupabaseDate } from "@/lib/data";
+import StatusBadge from "@/components/StatusBadge";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import { createClient } from "@/utils/supabase/server";
@@ -95,17 +96,19 @@ const filteredOrders = (orders || []).filter((order: any) => {
 
   let matchDate = true;
   if (dateFilter) {
-    const orderDate = new Date(order.created_at).toISOString().split("T")[0];
+    const parsedDate = parseSupabaseDate(order.created_at);
+    const orderDateStr = parsedDate.toLocaleDateString("en-CA", { timeZone: "Asia/Jakarta" });
     if (dateFilter === "today") {
-      matchDate = orderDate === new Date().toISOString().split("T")[0];
+      const todayStr = new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Jakarta" });
+      matchDate = orderDateStr === todayStr;
     } else if (dateFilter === "week") {
       const weekAgo = new Date();
       weekAgo.setDate(weekAgo.getDate() - 7);
-      matchDate = new Date(order.created_at) >= weekAgo;
+      matchDate = parsedDate >= weekAgo;
     } else if (dateFilter === "month") {
       const monthAgo = new Date();
       monthAgo.setMonth(monthAgo.getMonth() - 1);
-      matchDate = new Date(order.created_at) >= monthAgo;
+      matchDate = parsedDate >= monthAgo;
     }
   }
 
@@ -153,13 +156,14 @@ const paginatedOrders = filteredOrders.slice(
             {/* Table Rows */}
             <div>
               {paginatedOrders.map((order: any) => {
-                const orderDate = new Date(order.created_at).toLocaleDateString("id-ID", {
+                const parsedDate = parseSupabaseDate(order.created_at);
+                const orderDate = parsedDate.toLocaleDateString("id-ID", {
                   timeZone: 'Asia/Jakarta',
                   day: "2-digit",
                   month: "short",
                   year: "numeric",
                 });
-                const orderTime = new Date(order.created_at).toLocaleTimeString("id-ID", {
+                const orderTime = parsedDate.toLocaleTimeString("id-ID", {
                   timeZone: 'Asia/Jakarta',
                   hour: "2-digit",
                   minute: "2-digit",
@@ -182,9 +186,7 @@ const paginatedOrders = filteredOrders.slice(
         <p className="text-sm font-medium text-gray-800">{orderDate} • {orderTime}</p>
         <p className="text-xs text-gray-400 font-mono">#{order.id.split("-")[0].toUpperCase()}</p>
       </div>
-      <span className={`inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full font-medium ${ORDER_STATUS_COLORS[order.status] || "bg-gray-100 text-gray-700"}`}>
-        <span>•</span><span>{order.status}</span>
-      </span>
+      <StatusBadge status={order.status} className="text-[10px] px-2 py-0.5" />
     </div>
     <div className="flex items-center justify-between">
       <div>
@@ -225,9 +227,7 @@ const paginatedOrders = filteredOrders.slice(
       </p>
     </div>
     <div className="flex justify-center">
-    <span className={`inline-flex items-center gap-1 text-xs px-3 py-1 rounded-full font-medium ${ORDER_STATUS_COLORS[order.status] || "bg-gray-100 text-gray-700"}`}>
-      <span>•</span><span>{order.status}</span>
-    </span>
+    <StatusBadge status={order.status} className="text-[10px] px-3 py-1" />
     </div>
     <div className="flex justify-center">
       <Link href={`/dashboard/orders/${order.id}`} className="text-gray-400 hover:text-primary transition-colors">

@@ -2,8 +2,9 @@ import Container from "@/components/Container";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import { createClient } from "@/utils/supabase/server";
-import { cookies } from "next/headers";
-import { formatPrice, ORDER_STATUSES, ORDER_STATUS_TRANSITIONS } from "@/lib/data";
+import { createClient as createSupabaseAdminClient } from "@supabase/supabase-js";
+import { formatPrice, ORDER_STATUSES, ORDER_STATUS_TRANSITIONS, ORDER_STATUS_COLORS, parseSupabaseDate } from "@/lib/data";
+import StatusBadge from "@/components/StatusBadge";
 import { notFound } from "next/navigation";
 import Image from "next/image";
 import { revalidatePath } from "next/cache";
@@ -67,9 +68,11 @@ export default async function SellerOrderDetailPage({ params }: { params: { id: 
     return product?.category === "Ikan Hias";
   });
 
-  const orderDate = new Date(order.created_at).toLocaleDateString('id-ID', {
-    year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit'
-  });
+  const parsedDate = parseSupabaseDate(order.created_at);
+  const orderDate = parsedDate.toLocaleDateString('id-ID', {
+    timeZone: 'Asia/Jakarta',
+    year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false
+  }).replace('.', ':') + ' WIB';
 
   const buyerName = order.shipping_name || "Pembeli";
   const buyerPhone = order.shipping_phone || "Tidak ada nomor";
@@ -195,19 +198,7 @@ export default async function SellerOrderDetailPage({ params }: { params: { id: 
                   );
                 }
 
-                if (order.status === "Menunggu Pembayaran") {
-                  return <span className="text-sm font-semibold text-yellow-600 bg-yellow-50 px-3 py-1.5 rounded-full border border-yellow-200">Menunggu pembayaran pembeli</span>;
-                } else if (order.status === "Dibatalkan") {
-                  return (
-                    <span className="inline-flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-full font-semibold bg-red-100 text-red-700">
-                      <XCircle className="w-4 h-4" /> Pesanan Dibatalkan
-                    </span>
-                  );
-                } else if (order.status === "Proses Pembatalan") {
-                  return <span className="text-sm font-semibold text-red-600 bg-red-50 px-3 py-1.5 rounded-full border border-red-200">Proses Pembatalan</span>;
-                } else if (order.status === "Selesai") {
-                  return <span className="text-sm font-semibold text-green-600 bg-green-50 px-3 py-1.5 rounded-full border border-green-200">Pesanan Selesai</span>;
-                }
+                return <StatusBadge status={order.status} className="text-sm px-4 py-2" />;
 
                 return null;
               })()}

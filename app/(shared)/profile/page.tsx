@@ -3,7 +3,8 @@ import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import { createClient } from "@/utils/supabase/server";
 import { cookies } from "next/headers";
-import { formatPrice, ORDER_STATUS_COLORS } from "@/lib/data";
+import { formatPrice, parseSupabaseDate } from "@/lib/data";
+import StatusBadge from "@/components/StatusBadge";
 import { LogOut, Package, Truck, Check, ClipboardList, MapPin, User, Clock, X, Banknote } from "lucide-react";
 import LogoutButton from "@/components/LogoutButton";
 
@@ -84,7 +85,7 @@ const { data: addressesData } = !isSeller ? await supabase
   const recentOrders = orders?.slice(0, 3) || [];
 
   const joinDate = account?.created_at
-    ? new Date(account.created_at).toLocaleDateString('id-ID', { month: 'long', year: 'numeric' })
+    ? parseSupabaseDate(account.created_at).toLocaleDateString('id-ID', { timeZone: 'Asia/Jakarta', month: 'long', year: 'numeric' })
     : "-";
 
   // Stats — hanya untuk pembeli
@@ -229,7 +230,7 @@ const { data: addressesData } = !isSeller ? await supabase
                 <p className="text-sm text-gray-500 text-center py-4">Belum ada pesanan.</p>
               ) : (
                 recentOrders.map((order) => {
-                  const oDate = new Date(order.created_at).toLocaleDateString('id-ID');
+                  const oDate = parseSupabaseDate(order.created_at).toLocaleDateString('id-ID', { timeZone: 'Asia/Jakarta' });
                   const detailHref = `/orders/${order.id}`;
                   return (
                     <Link
@@ -249,11 +250,7 @@ const { data: addressesData } = !isSeller ? await supabase
                         <p className="font-bold text-gray-800 text-sm mb-1">
                           {formatPrice(order.total_amount)}
                         </p>
-                        <span
-                          className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${ORDER_STATUS_COLORS[order.status] || "bg-gray-100 text-gray-700"}`}
-                        >
-                          {order.status}
-                        </span>
+                        <StatusBadge status={order.status} className="text-[10px] px-2 py-0.5" />
                       </div>
                     </Link>
                   );

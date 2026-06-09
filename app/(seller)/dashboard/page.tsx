@@ -1,5 +1,5 @@
 import Container from "@/components/Container";
-import { formatPrice } from "@/lib/data";
+import { formatPrice, parseSupabaseDate } from "@/lib/data";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import { createClient } from "@/utils/supabase/server";
@@ -7,15 +7,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { Package, ShoppingBag, Clock, Wallet, Phone, Truck, Check, X, ChevronRight, Banknote } from "lucide-react";
 
-const STATUS_COLOR: Record<string, string> = {
-  "Menunggu Pembayaran": "bg-yellow-100 text-yellow-600",
-  "Menunggu Konfirmasi": "bg-orange-100 text-orange-500",
-  "Diproses": "bg-blue-100 text-blue-500",
-  "Dikirim": "bg-purple-100 text-purple-500",
-  "Selesai": "bg-green-100 text-green-500",
-  "Proses Pembatalan": "bg-red-50 text-red-600",
-  "Dibatalkan": "bg-red-100 text-red-500",
-};
+import StatusBadge from "@/components/StatusBadge";
 
 export default async function SellerDashboardPage() {
   const supabase = createClient(cookies());
@@ -253,7 +245,7 @@ export default async function SellerDashboardPage() {
                 <p className="text-sm text-gray-500 text-center py-4">Belum ada pesanan terbaru.</p>
               ) : (
                 recentOrders.map((order) => {
-                  const oDate = new Date(order.created_at).toLocaleDateString("id-ID");
+                  const oDate = parseSupabaseDate(order.created_at).toLocaleDateString("id-ID", { timeZone: 'Asia/Jakarta' });
                   const buyerData = Array.isArray(order.buyers) ? order.buyers[0] : order.buyers;
                   const accountData = buyerData && Array.isArray((buyerData as any).accounts)
                     ? (buyerData as any).accounts[0]
@@ -281,11 +273,7 @@ export default async function SellerDashboardPage() {
                         <p className="font-bold text-gray-800">
                           {formatPrice(order.total_amount + order.shipping_cost)}
                         </p>
-                        <span
-                          className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${STATUS_COLOR[order.status] || "bg-gray-100 text-gray-700"}`}
-                        >
-                          {order.status}
-                        </span>
+                        <StatusBadge status={order.status} className="text-[10px] px-2 py-0.5" />
                       </div>
                     </div>
                   );

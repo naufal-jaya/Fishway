@@ -4,10 +4,11 @@ import Navbar from "@/components/Navbar";
 import { createClient } from "@/utils/supabase/server";
 import { createClient as createSupabaseAdminClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
-import { formatPrice, ORDER_STATUS_COLORS } from "@/lib/data";
+import { formatPrice, parseSupabaseDate } from "@/lib/data";
 import { notFound } from "next/navigation";
 import Image from "next/image";
 import { Phone, MessageCircle, ChevronLeft, X } from "lucide-react";
+import StatusBadge from "@/components/StatusBadge";
 import AcceptCancelButton from "./AcceptCancelButton";
 import ContinuePaymentButton from "@/components/ContinuePaymentButton";
 import OrderStatusPoller from "@/components/OrderStatusPoller";
@@ -52,13 +53,16 @@ export default async function BuyerOrderDetailPage({ params }: { params: { id: s
     return notFound();
   }
 
-  const orderDate = new Date(order.created_at).toLocaleDateString('id-ID', {
+  const parsedDate = parseSupabaseDate(order.created_at);
+  const orderDate = parsedDate.toLocaleDateString('id-ID', {
+    timeZone: 'Asia/Jakarta',
     year: 'numeric',
     month: 'long',
     day: 'numeric',
     hour: '2-digit',
-    minute: '2-digit'
-  });
+    minute: '2-digit',
+    hour12: false
+  }).replace('.', ':') + ' WIB';
 
   // Siapkan pesan WA
   const sellerInfo = Array.isArray(order.stores) ? order.stores[0] : order.stores;
@@ -246,9 +250,7 @@ A/N: `;
                 )}
               </div>
               <div className="text-right">
-                <span className={`px-4 py-2 rounded-full font-semibold text-sm inline-block ${ORDER_STATUS_COLORS[order.status] || "bg-gray-100 text-gray-700"}`}>
-                  {order.status}
-                </span>
+                <StatusBadge status={order.status} className="px-4 py-2 text-sm" />
               </div>
             </div>
 
