@@ -1,13 +1,24 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/utils/supabase/supabaseClient";
 import { useToast } from "@/components/ToastContext";
+import { GoogleMap, Marker, useJsApiLoader } from "@react-google-maps/api";
+import usePlacesAutocomplete, { getGeocode, getLatLng } from "use-places-autocomplete";
+import { MapPin, Search } from "lucide-react";
 
 type AccountType = "buyer" | "seller";
+
+const libraries: any = ["places"];
+const mapContainerStyle = {
+  width: "100%",
+  height: "200px",
+  borderRadius: "0.75rem",
+};
+const defaultCenter = { lat: -6.2088, lng: 106.8456 };
 
 export default function SignupPage() {
   const router = useRouter();
@@ -24,11 +35,91 @@ export default function SignupPage() {
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
   const [storeName, setStoreName] = useState("");
-  const [storeAddress, setStoreAddress] = useState("");
-  const [buyerAddress, setBuyerAddress] = useState("");
+  const [address, setAddress] = useState("");
+  const [lat, setLat] = useState<number | null>(null);
+  const [lon, setLon] = useState<number | null>(null);
   const [isProfileStep, setIsProfileStep] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(false);
+
+  const { isLoaded } = useJsApiLoader({
+    id: "google-map-script",
+    googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "",
+    libraries,
+  });
+
+  const [mapCenter, setMapCenter] = useState(defaultCenter);
+  const [markerPosition, setMarkerPosition] = useState(defaultCenter);
+
+  const {
+    ready,
+    value: searchValue,
+    suggestions: { status, data },
+    setValue: setSearchValue,
+    clearSuggestions,
+  } = usePlacesAutocomplete({
+    requestOptions: {
+      componentRestrictions: { country: "id" },
+    },
+    debounce: 300,
+  });
+
+  const mapRef = useRef<google.maps.Map | null>(null);
+  const onLoadMap = useCallback((map: google.maps.Map) => {
+    mapRef.current = map;
+  }, []);
+
+  const reverseGeocode = (lat: number, lng: number) => {
+    if (!window.google) return;
+    const geocoder = new window.google.maps.Geocoder();
+    geocoder.geocode({ location: { lat, lng } }, (results, status) => {
+      if (status === "OK" && results?.[0]) {
+        setAddress(results[0].formatted_address);
+        setSearchValue(results[0].formatted_address, false);
+      }
+    });
+  };
+
+  const handleMapClick = (e: google.maps.MapMouseEvent) => {
+    if (e.latLng) {
+      const lat = e.latLng.lat();
+      const lng = e.latLng.lng();
+      setMarkerPosition({ lat, lng });
+      setLat(lat);
+      setLon(lng);
+      reverseGeocode(lat, lng);
+      setErrors((prev) => ({ ...prev, address: "" }));
+    }
+  };
+
+  const handleMarkerDragEnd = (e: google.maps.MapMouseEvent) => {
+    if (e.latLng) {
+      const lat = e.latLng.lat();
+      const lng = e.latLng.lng();
+      setMarkerPosition({ lat, lng });
+      setLat(lat);
+      setLon(lng);
+      reverseGeocode(lat, lng);
+      setErrors((prev) => ({ ...prev, address: "" }));
+    }
+  };
+
+  const handleSelectPlace = async (addressStr: string) => {
+    setSearchValue(addressStr, false);
+    clearSuggestions();
+    try {
+      const results = await getGeocode({ address: addressStr });
+      const { lat, lng } = await getLatLng(results[0]);
+      setMapCenter({ lat, lng });
+      setMarkerPosition({ lat, lng });
+      setAddress(addressStr);
+      setLat(lat);
+      setLon(lng);
+      setErrors((prev) => ({ ...prev, address: "" }));
+    } catch (err) {
+      console.error("Error fetching geocode", err);
+    }
+  };
 
   useEffect(() => {
     const loadUser = async () => {
@@ -50,9 +141,9 @@ export default function SignupPage() {
 
       setFullName(
         user.user_metadata?.full_name ||
-          user.user_metadata?.name ||
-          user.email?.split("@")[0] ||
-          "",
+        user.user_metadata?.name ||
+        user.email?.split("@")[0] ||
+        "",
       );
       setIsProfileStep(true);
     };
@@ -64,7 +155,7 @@ export default function SignupPage() {
     /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 
   const validatePhone = (value: string) =>
-    /^(\+62|62|0)[0-9]{8,13}$/.test(value.replace(/\s/g, ""));
+    /^08[0-9]{8,11}$/.test(value.replace(/\s/g, ""));
 
   const handleGoogleSignup = async () => {
     setErrors({});
@@ -106,39 +197,8 @@ export default function SignupPage() {
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length > 0) return;
 
-    try {
-      setIsLoading(true);
-
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-      });
-
-      if (error) {
-        setErrors({ email: error.message });
-        return;
-      }
-
-      if (!data.session) {
-        showToast({
-          type: "info",
-          message: "Akun berhasil dibuat! Cek email Anda untuk konfirmasi login.",
-          actionLabel: "Ke halaman login",
-          actionHref: "/login",
-          duration: 6000,
-        });
-        router.replace("/login");
-        return;
-      }
-
-      setFullName(email.split("@")[0]);
-      setIsProfileStep(true);
-    } catch (err) {
-      console.error(err);
-      setErrors({ email: "Terjadi kesalahan, coba lagi" });
-    } finally {
-      setIsLoading(false);
-    }
+    setFullName(email.split("@")[0]);
+    setIsProfileStep(true);
   };
 
   const handleProfileSubmit = async (e: React.FormEvent) => {
@@ -150,14 +210,16 @@ export default function SignupPage() {
       nextErrors.fullName = "Nama lengkap tidak boleh kosong";
     if (!phone) nextErrors.phone = "Nomor telepon tidak boleh kosong";
     else if (!validatePhone(phone))
-      nextErrors.phone = "Format nomor telepon tidak valid";
-    if (accountType === "buyer" && !buyerAddress.trim())
-      nextErrors.buyerAddress = "Alamat tidak boleh kosong";
-    if (accountType === "seller") {
-      if (!storeName.trim())
-        nextErrors.storeName = "Nama toko tidak boleh kosong";
-      if (!storeAddress.trim())
-        nextErrors.storeAddress = "Alamat toko tidak boleh kosong";
+      nextErrors.phone = "Format nomor telepon tidak valid. Harus diawali 08, cth: 08123456789";
+    if (accountType === "seller" && !storeName.trim()) {
+      nextErrors.storeName = "Nama toko tidak boleh kosong";
+    }
+    
+    if (!address.trim()) {
+      nextErrors.address = "Detail alamat tidak boleh kosong";
+    }
+    if (!lat || !lon) {
+      nextErrors.address = "Harap tentukan lokasi di peta";
     }
 
     setErrors(nextErrors);
@@ -166,13 +228,36 @@ export default function SignupPage() {
     try {
       setIsLoading(true);
 
-      const {
-        data: { user },
-        error: userError,
-      } = await supabase.auth.getUser();
+      let user = (await supabase.auth.getUser()).data.user;
 
-      if (userError || !user) {
-        setErrors({ fullName: "Session login tidak ditemukan" });
+      if (!user) {
+        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+          email,
+          password,
+        });
+
+        if (signUpError) {
+          setErrors({ fullName: signUpError.message });
+          return;
+        }
+
+        if (!signUpData.session) {
+          showToast({
+            type: "info",
+            message: "Akun berhasil dibuat! Cek email Anda untuk konfirmasi login.",
+            actionLabel: "Ke halaman login",
+            actionHref: "/login",
+            duration: 6000,
+          });
+          router.replace("/login");
+          return;
+        }
+
+        user = signUpData.user;
+      }
+
+      if (!user) {
+        setErrors({ fullName: "Gagal mendapatkan data user" });
         return;
       }
 
@@ -211,13 +296,15 @@ export default function SignupPage() {
           label: "Alamat Utama",
           recipient_name: fullName.trim(),
           phone: phone.trim(),
-          address: buyerAddress.trim(),
+          address: address.trim(),
+          lat,
+          lon,
           is_primary: true,
         });
 
         if (addressError) {
           console.error(addressError);
-          setErrors({ buyerAddress: "Gagal menyimpan alamat pembeli" });
+          setErrors({ address: "Gagal menyimpan alamat pembeli" });
           return;
         }
       } else {
@@ -238,7 +325,9 @@ export default function SignupPage() {
           {
             seller_id: user.id,
             name: storeName.trim(),
-            address: storeAddress.trim(),
+            address: address.trim(),
+            lat,
+            lon,
             phone,
           },
           { onConflict: "seller_id" },
@@ -249,6 +338,17 @@ export default function SignupPage() {
           setErrors({ storeName: "Gagal menyimpan data toko" });
           return;
         }
+      }
+
+      const { error: updateAuthError } = await supabase.auth.updateUser({
+        data: {
+          role: accountType,
+          full_name: fullName.trim(),
+        },
+      });
+
+      if (updateAuthError) {
+        console.error("Failed to update auth user metadata:", updateAuthError);
       }
 
       router.replace("/");
@@ -309,7 +409,7 @@ export default function SignupPage() {
       </div>
 
       <div className="flex-1 min-h-screen flex items-center justify-center px-4 sm:px-8 py-10 z-30">
-        <div className="w-full bg-white rounded-3xl shadow-[0_1px_3px_rgba(0,0,0,0.25)] py-6 px-4 sm:py-10 sm:px-16 max-w-[300px] sm:max-w-[480px]">
+        <div className="w-full bg-white rounded-3xl shadow-[0_1px_3px_rgba(0,0,0,0.25)] py-6 px-4 sm:py-10 sm:px-16 max-w-[300px] sm:max-w-[480px] max-h-[95vh] overflow-y-auto scrollbar-hide">
           <div className="flex justify-center mb-2">
             <Image src="/images/logo2_blue.png" alt="Fishway" width={100} height={32} className="sm:w-[140px] sm:h-[44px]" />
           </div>
@@ -336,38 +436,91 @@ export default function SignupPage() {
                 {errors.fullName && <p className="text-red-500 text-xs mt-1.5">{errors.fullName}</p>}
               </div>
 
-              {accountType === "buyer" ? (
-                <>
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1.5">No. Telepon</label>
-                    <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Masukkan nomor telepon" className={`w-full px-4 py-3 rounded-xl border text-sm outline-none transition-all ${errors.phone ? "border-red-400 bg-red-50 focus:ring-2 focus:ring-red-200" : "border-gray-200 bg-gray-50 focus:border-[#568EC5] focus:ring-2 focus:ring-blue-100 focus:bg-white"}`} />
-                    {errors.phone && <p className="text-red-500 text-xs mt-1.5">{errors.phone}</p>}
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1.5">Alamat</label>
-                    <textarea value={buyerAddress} onChange={(e) => setBuyerAddress(e.target.value)} placeholder="Masukkan alamat lengkap Anda" rows={3} className={`w-full resize-none rounded-xl border px-4 py-3 text-sm outline-none transition-all ${errors.buyerAddress ? "border-red-400 bg-red-50 focus:ring-2 focus:ring-red-200" : "border-gray-200 bg-gray-50 focus:border-[#568EC5] focus:ring-2 focus:ring-blue-100 focus:bg-white"}`} />
-                    {errors.buyerAddress && <p className="text-red-500 text-xs mt-1.5">{errors.buyerAddress}</p>}
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1.5">Nama Toko</label>
-                    <input type="text" value={storeName} onChange={(e) => setStoreName(e.target.value)} placeholder="Masukkan nama toko" className={`w-full px-4 py-3 rounded-xl border text-sm outline-none transition-all ${errors.storeName ? "border-red-400 bg-red-50 focus:ring-2 focus:ring-red-200" : "border-gray-200 bg-gray-50 focus:border-[#568EC5] focus:ring-2 focus:ring-blue-100 focus:bg-white"}`} />
-                    {errors.storeName && <p className="text-red-500 text-xs mt-1.5">{errors.storeName}</p>}
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1.5">Telepon Toko</label>
-                    <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Masukkan nomor telepon toko" className={`w-full px-4 py-3 rounded-xl border text-sm outline-none transition-all ${errors.phone ? "border-red-400 bg-red-50 focus:ring-2 focus:ring-red-200" : "border-gray-200 bg-gray-50 focus:border-[#568EC5] focus:ring-2 focus:ring-blue-100 focus:bg-white"}`} />
-                    {errors.phone && <p className="text-red-500 text-xs mt-1.5">{errors.phone}</p>}
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-1.5">Alamat Toko</label>
-                    <textarea value={storeAddress} onChange={(e) => setStoreAddress(e.target.value)} placeholder="Masukkan alamat lengkap toko" rows={3} className={`w-full resize-none rounded-xl border px-4 py-3 text-sm outline-none transition-all ${errors.storeAddress ? "border-red-400 bg-red-50 focus:ring-2 focus:ring-red-200" : "border-gray-200 bg-gray-50 focus:border-[#568EC5] focus:ring-2 focus:ring-blue-100 focus:bg-white"}`} />
-                    {errors.storeAddress && <p className="text-red-500 text-xs mt-1.5">{errors.storeAddress}</p>}
-                  </div>
-                </>
+              {accountType === "seller" && (
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">Nama Toko</label>
+                  <input type="text" value={storeName} onChange={(e) => { setStoreName(e.target.value); setErrors(prev => ({ ...prev, storeName: "" })); }} placeholder="Masukkan nama toko" className={`w-full px-4 py-3 rounded-xl border text-sm outline-none transition-all ${errors.storeName ? "border-red-400 bg-red-50 focus:ring-2 focus:ring-red-200" : "border-gray-200 bg-gray-50 focus:border-[#568EC5] focus:ring-2 focus:ring-blue-100 focus:bg-white"}`} />
+                  {errors.storeName && <p className="text-red-500 text-xs mt-1.5">{errors.storeName}</p>}
+                </div>
               )}
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1.5">{accountType === "seller" ? "Telepon Toko" : "No. Telepon"}</label>
+                <input type="tel" value={phone} onChange={(e) => { setPhone(e.target.value); setErrors(prev => ({ ...prev, phone: "" })); }} placeholder="Masukkan nomor telepon" className={`w-full px-4 py-3 rounded-xl border text-sm outline-none transition-all ${errors.phone ? "border-red-400 bg-red-50 focus:ring-2 focus:ring-red-200" : "border-gray-200 bg-gray-50 focus:border-[#568EC5] focus:ring-2 focus:ring-blue-100 focus:bg-white"}`} />
+                {errors.phone && <p className="text-red-500 text-xs mt-1.5">{errors.phone}</p>}
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1.5">Tentukan Lokasi di Peta</label>
+                {isLoaded ? (
+                  <div className="space-y-2 relative">
+                    <div className="relative z-10">
+                      <div className="relative flex items-center">
+                        <Search className="w-4 h-4 text-gray-400 absolute left-3" />
+                        <input
+                          type="text"
+                          value={searchValue}
+                          onChange={(e) => setSearchValue(e.target.value)}
+                          disabled={!ready}
+                          placeholder="Cari lokasi jalan/gedung..."
+                          className={`w-full border rounded-xl py-3 pl-9 pr-3 text-sm focus:border-[#568EC5] focus:ring-2 focus:ring-blue-100 outline-none transition-all ${errors.address && (!lat || !lon) ? "border-red-400 bg-red-50" : "border-gray-200 bg-gray-50 bg-white"}`}
+                        />
+                      </div>
+                      {status === "OK" && (
+                        <ul className="absolute bg-white border border-gray-200 rounded-lg shadow-lg mt-1 w-full max-h-40 overflow-auto z-20 text-sm">
+                          {data.map(({ place_id, description }) => (
+                            <li
+                              key={place_id}
+                              className="px-3 py-2 hover:bg-gray-50 cursor-pointer flex items-start gap-2"
+                              onClick={() => handleSelectPlace(description)}
+                            >
+                              <MapPin className="w-4 h-4 text-gray-400 mt-0.5 flex-shrink-0" />
+                              <span className="truncate">{description}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+
+                    <div className={`border rounded-xl overflow-hidden relative ${errors.address && (!lat || !lon) ? "border-red-400" : "border-gray-200"}`}>
+                      <GoogleMap
+                        mapContainerStyle={mapContainerStyle}
+                        zoom={15}
+                        center={mapCenter}
+                        onClick={handleMapClick}
+                        onLoad={onLoadMap}
+                        options={{
+                          disableDefaultUI: true,
+                          zoomControl: true,
+                        }}
+                      >
+                        <Marker
+                          position={markerPosition}
+                          draggable={true}
+                          onDragEnd={handleMarkerDragEnd}
+                        />
+                      </GoogleMap>
+                      <div className="absolute bottom-2 left-2 right-2 bg-white/90 backdrop-blur text-xs p-2 rounded shadow-sm text-gray-600 pointer-events-none">
+                        <MapPin className="w-3 h-3 inline mr-1 text-[#568EC5]" />
+                        Geser pin atau klik peta untuk atur lokasi pasti
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="w-full h-[200px] bg-gray-100 rounded-xl flex items-center justify-center text-sm text-gray-500 animate-pulse">
+                    Memuat peta...
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1.5">Detail Alamat</label>
+                <textarea value={address} onChange={(e) => { setAddress(e.target.value); setErrors(prev => ({ ...prev, address: "" })); }} placeholder="Masukkan detail alamat lengkap" rows={3} className={`w-full resize-none rounded-xl border px-4 py-3 text-sm outline-none transition-all ${errors.address ? "border-red-400 bg-red-50 focus:ring-2 focus:ring-red-200" : "border-gray-200 bg-gray-50 focus:border-[#568EC5] focus:ring-2 focus:ring-blue-100 focus:bg-white"}`} />
+                {errors.address && <p className="text-red-500 text-xs mt-1.5">{errors.address}</p>}
+                {lat && lon && (
+                  <p className="text-[10px] text-gray-400 mt-1">Koordinat: {lat.toFixed(6)}, {lon.toFixed(6)}</p>
+                )}
+              </div>
 
               <div className="grid gap-3">
                 <button type="submit" disabled={isLoading} className="w-full py-3 rounded-xl bg-[#568EC5] text-white font-semibold text-sm transition-all duration-200 hover:bg-[#4578b0] active:scale-[0.98] disabled:opacity-70">
@@ -419,7 +572,7 @@ export default function SignupPage() {
                 </div>
 
                 <button type="submit" disabled={isLoading} className="w-full py-3 rounded-xl bg-[#568EC5] text-white font-semibold text-sm transition-all duration-200 hover:bg-[#4578b0] active:scale-[0.98] disabled:opacity-70">
-                  {isLoading ? "Memproses..." : "Buat akun"}
+                  {isLoading ? "Memproses..." : "Lanjut buat akun"}
                 </button>
               </form>
 

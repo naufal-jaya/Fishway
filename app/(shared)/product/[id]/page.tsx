@@ -119,7 +119,7 @@ export default async function ProductDetailPage({
   const sellerName = product.stores?.name || "Penjual";
   const maxDistanceLimit = product.stores?.max_distance != null ? product.stores.max_distance : 10;
   const waNumber = product.stores?.phone || WA_NUMBER;
-  const waLink = `https://wa.me/${waNumber}?text=Halo, saya tertarik dengan ${product.name}`;
+  const waLink = `https://wa.me/${waNumber.replace(/\D/g, '').replace(/^0/, '62')}?text=Halo, saya tertarik dengan ${product.name}`;
   const galleryImages = Array.isArray(product.product_images) && product.product_images.length > 0
     ? [...product.product_images]
       .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0))

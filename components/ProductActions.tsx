@@ -149,7 +149,7 @@ export default function ProductActions({
   const variantText = product.type === 1 && selectedVariant ? ` Varian: ${selectedVariant.label}` : "";
   const totalHarga = formatPrice(currentPrice * Number(quantity));
   const message = `Halo ${sellerName}, saya ingin membeli produk ini:\nNama Produk: ${product.name}${variantText}\nJumlah: ${quantity} ${currentUnit}\nTotal Harga: ${totalHarga}\n\nApakah stok masih tersedia?`;
-  const waLink = `https://wa.me/${waNumber}?text=${encodeURIComponent(message)}`;
+  const waLink = `https://wa.me/${waNumber.replace(/\D/g, '').replace(/^0/, '62')}?text=${encodeURIComponent(message)}`;
 
   return (
     <>

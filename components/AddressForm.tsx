@@ -148,8 +148,8 @@ export default function AddressForm({
 
     if (!form.phone.trim()) {
       newErrors.phone = "Nomor telepon tidak boleh kosong.";
-    } else if (!/^(\+62|62|0)[0-9]{8,12}$/.test(form.phone.replace(/\s/g, ""))) {
-      newErrors.phone = "Nomor tidak valid. Contoh: 08123456789";
+    } else if (!/^08[0-9]{8,11}$/.test(form.phone.replace(/\s/g, ""))) {
+      newErrors.phone = "Nomor tidak valid. Harus diawali 08, cth: 08123456789";
     }
 
     if (Object.keys(newErrors).length > 0) {

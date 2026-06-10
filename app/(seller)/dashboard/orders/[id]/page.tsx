@@ -218,7 +218,7 @@ export default async function SellerOrderDetailPage({ params }: { params: { id: 
                   <span className="flex items-center gap-2"><Phone className="w-4 h-4" /> {buyerPhone}</span>
                   {buyerPhone !== "Tidak ada nomor" && (
                     <a
-                      href={`https://wa.me/${buyerPhone.replace(/\D/g, '')}?text=Halo%20${encodeURIComponent(buyerName)},%20saya%20dari%20toko%20ingin%20mengonfirmasi%20pesanan%20Anda%20dengan%20ID%20${order.id}.`}
+                      href={`https://wa.me/${buyerPhone.replace(/\D/g, '').replace(/^0/, '62')}?text=Halo%20${encodeURIComponent(buyerName)},%20saya%20dari%20toko%20ingin%20mengonfirmasi%20pesanan%20Anda%20dengan%20ID%20${order.id}.`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="bg-green-500 text-white px-3 py-1 rounded-full text-xs font-semibold hover:bg-green-600 transition-colors flex items-center gap-1.5"

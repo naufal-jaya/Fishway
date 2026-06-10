@@ -82,7 +82,7 @@ ${deadItemsText}
 Kami telah mengajukan pembatalan untuk ikan tersebut. Mohon cek pesanan Anda di aplikasi untuk memproses refund, dan mohon kirimkan nomor rekening Anda ke nomor ini ya. Terima kasih.`;
 
   const waLink = buyerPhone && buyerPhone !== "Tidak ada nomor"
-    ? `https://wa.me/${buyerPhone.replace(/\D/g, '')}?text=${encodeURIComponent(waMessage)}`
+    ? `https://wa.me/${buyerPhone.replace(/\D/g, '').replace(/^0/, '62')}?text=${encodeURIComponent(waMessage)}`
     : "#";
 
   const isAnySelected = Object.keys(deadItems).length > 0;

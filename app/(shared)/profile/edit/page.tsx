@@ -52,7 +52,7 @@ function EditProfileContent() {
       const [{ data: account }, { data: buyer }, { data: store }] = await Promise.all([
         supabase.from("accounts").select("name").eq("id", user.id).maybeSingle(),
         supabase.from("buyers").select("phone").eq("id", user.id).maybeSingle(),
-        supabase.from("stores").select("id, name").eq("seller_id", user.id).maybeSingle(),
+        supabase.from("stores").select("id, name, phone").eq("seller_id", user.id).maybeSingle(),
       ]);
 
       const sellerDetected = !!store;
@@ -65,7 +65,7 @@ function EditProfileContent() {
 
       setFormData({
         name: sellerDetected ? (store?.name || account?.name || "") : (account?.name || user.email?.split("@")[0] || ""),
-        phone: buyer?.phone || "",
+        phone: sellerDetected ? (store?.phone || "") : (buyer?.phone || ""),
       });
       setFetching(false);
     }
@@ -86,7 +86,7 @@ function EditProfileContent() {
     else if (/\d/.test(formData.name)) newErrors.name = "Nama tidak boleh mengandung angka.";
 
     if (!formData.phone.trim()) newErrors.phone = "Nomor telepon tidak boleh kosong.";
-    else if (!/^(\+62|62|0)[0-9]{8,12}$/.test(formData.phone.replace(/\s/g, ""))) newErrors.phone = "Nomor telepon tidak valid. Contoh: 08123456789";
+    else if (!/^08[0-9]{8,11}$/.test(formData.phone.replace(/\s/g, ""))) newErrors.phone = "Nomor telepon tidak valid. Harus diawali 08, cth: 08123456789";
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);

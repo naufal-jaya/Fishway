@@ -53,7 +53,7 @@ export default async function ProfilePage() {
   // Cek apakah user adalah penjual & ambil alamat toko
   const { data: store } = await supabase
     .from("stores")
-    .select("id, name, address")
+    .select("id, name, address, phone")
     .eq("seller_id", user.id)
     .maybeSingle();
 
@@ -147,10 +147,10 @@ const { data: addressesData } = !isSeller ? await supabase
               </div>
               <div className="flex-1 text-center md:text-left">
                 <h1 className="text-2xl font-bold text-gray-800">
-                  {account?.name || user.email?.split("@")[0] || "Pengguna"}
+                  {isSeller ? (store?.name || account?.name || user.email?.split("@")[0] || "Penjual") : (account?.name || user.email?.split("@")[0] || "Pengguna")}
                 </h1>
                 <p className="text-gray-500 text-sm">{user.email}</p>
-                <p className="text-gray-500 text-sm">{buyer?.phone || "Belum ada nomor HP"}</p>
+                <p className="text-gray-500 text-sm">{isSeller ? (store?.phone || "Belum ada nomor HP") : (buyer?.phone || "Belum ada nomor HP")}</p>
                 <p className="text-xs text-gray-400 mt-1">
                   Bergabung sejak {joinDate}
                 </p>

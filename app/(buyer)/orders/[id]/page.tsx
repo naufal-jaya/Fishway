@@ -85,7 +85,7 @@ Total Pembayaran (termasuk ongkir): ${formatPrice(order.total_amount + order.shi
 
 Mohon diproses ya. Terima kasih!`;
 
-  const waLink = `https://wa.me/${waNumber.replace(/\D/g, '')}?text=${encodeURIComponent(waMessage)}`;
+  const waLink = `https://wa.me/${waNumber.replace(/\D/g, '').replace(/^0/, '62')}?text=${encodeURIComponent(waMessage)}`;
 
   let deadItemsRecord: Record<string, number> = {};
   let isPartialRefund = false;
@@ -114,7 +114,7 @@ Bank:
 No Rek: 
 A/N: `;
 
-  const waRefundLink = `https://wa.me/${waNumber.replace(/\D/g, '')}?text=${encodeURIComponent(waRefundMessage)}`;
+  const waRefundLink = `https://wa.me/${waNumber.replace(/\D/g, '').replace(/^0/, '62')}?text=${encodeURIComponent(waRefundMessage)}`;
 
   // Server action: accept cancellation
   async function acceptCancel() {
