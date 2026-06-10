@@ -273,8 +273,8 @@ export default function EditProductPage({ params }: { params: { id: string } }) 
       <Container>
         <div className="max-w-6xl mx-auto relative min-h-screen">
           <div className="relative z-10">
+            <BackButton href="/dashboard/products" />
             <div className="mb-6">
-              <BackButton href="/dashboard/products" />
               <h1 className="text-2xl font-bold text-gray-800 mt-1">Edit Produk</h1>
             </div>
           

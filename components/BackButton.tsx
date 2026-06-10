@@ -12,23 +12,21 @@ interface BackButtonProps {
 export default function BackButton({ href, className = "" }: BackButtonProps) {
   const router = useRouter();
 
+  const buttonClasses = `inline-flex items-center gap-1 text-gray-500 hover:text-[#407BB5] transition-colors font-medium text-sm ${className}`;
+
   if (href) {
     return (
-      <Link
-        href={href}
-        className={`inline-flex items-center text-gray-400 hover:text-[#407BB5] transition-colors ${className}`}
-      >
+      <Link href={href} className={buttonClasses}>
         <ChevronLeft className="w-5 h-5" />
+        <span>Kembali</span>
       </Link>
     );
   }
 
   return (
-    <button
-      onClick={() => router.back()}
-      className={`inline-flex items-center text-gray-400 hover:text-[#407BB5] transition-colors ${className}`}
-    >
+    <button onClick={() => router.back()} className={buttonClasses}>
       <ChevronLeft className="w-5 h-5" />
+      <span>Kembali</span>
     </button>
   );
 }

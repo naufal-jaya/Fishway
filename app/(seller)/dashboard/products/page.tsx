@@ -179,8 +179,8 @@ export default async function SellerProductsPage({ searchParams }: { searchParam
         <div className="max-w-6xl mx-auto relative min-h-screen">
           <div className="relative z-10">
             {/* HEADER */}
+            <BackButton href="/dashboard" />
             <div className="mb-6">
-              <BackButton href="/dashboard" />
               <h1 className="text-2xl font-bold text-gray-800 mt-1">
                 Produk Saya
               </h1>

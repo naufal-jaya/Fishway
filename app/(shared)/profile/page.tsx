@@ -59,22 +59,22 @@ export default async function ProfilePage() {
 
   const isSeller = !!store;
 
-const { data: addressesData } = !isSeller ? await supabase
-  .from("addresses")
-  .select("*")
-  .eq("user_id", user.id)
-  .order("is_primary", { ascending: false })
-  .order("created_at", { ascending: false }) : { data: null };
+  const { data: addressesData } = !isSeller ? await supabase
+    .from("addresses")
+    .select("*")
+    .eq("user_id", user.id)
+    .order("is_primary", { ascending: false })
+    .order("created_at", { ascending: false }) : { data: null };
 
   const addresses = (addressesData || []) as Address[];
 
   // Fetch orders — hanya untuk pembeli (seller sudah punya di dashboard)
   const { data: orders } = !isSeller
     ? await supabase
-        .from("orders")
-        .select("id, status, total_amount, created_at, stores(name)")
-        .eq("buyer_id", user.id)
-        .order("created_at", { ascending: false })
+      .from("orders")
+      .select("id, status, total_amount, created_at, stores(name)")
+      .eq("buyer_id", user.id)
+      .order("created_at", { ascending: false })
     : { data: null };
 
   const menungguBayarOrders = orders?.filter(o => o.status === "Menunggu Pembayaran").length || 0;
@@ -134,8 +134,8 @@ const { data: addressesData } = !isSeller ? await supabase
       <Navbar />
       <Container>
         <div className="space-y-6">
+          <BackButton href={isSeller ? "/dashboard" : "/"} />
           <div className="flex items-center gap-3">
-            <BackButton href={isSeller ? "/dashboard" : "/"} />
             <h1 className="text-2xl font-bold text-gray-800">Profil Saya</h1>
           </div>
 
@@ -163,19 +163,19 @@ const { data: addressesData } = !isSeller ? await supabase
 
           {/* Stats — hanya untuk pembeli */}
           {!isSeller && (
-          <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
-            {stats.map((stat) => (
-              <Link
-                key={stat.label}
-                href={stat.href}
-                className="card p-4 text-center hover:shadow-md hover:scale-[1.02] transition-all cursor-pointer"
-              >
-                <p className="text-2xl mb-1">{stat.icon}</p>
-                <p className="text-2xl font-bold text-primary">{stat.value}</p>
-                <p className="text-xs text-gray-500 leading-tight">{stat.label}</p>
-              </Link>
-            ))}
-          </div>
+            <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
+              {stats.map((stat) => (
+                <Link
+                  key={stat.label}
+                  href={stat.href}
+                  className="card p-4 text-center hover:shadow-md hover:scale-[1.02] transition-all cursor-pointer"
+                >
+                  <p className="text-2xl mb-1">{stat.icon}</p>
+                  <p className="text-2xl font-bold text-primary">{stat.value}</p>
+                  <p className="text-xs text-gray-500 leading-tight">{stat.label}</p>
+                </Link>
+              ))}
+            </div>
           )}
 
           {/* Address — beda tampilan seller vs buyer */}
@@ -218,52 +218,52 @@ const { data: addressesData } = !isSeller ? await supabase
 
           {/* Order History — hanya untuk pembeli */}
           {!isSeller && (
-          <div className="card p-5">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="font-bold text-gray-800 flex items-center gap-2">
-                <ClipboardList size={20} className="text-primary" />
-                Pesanan Terakhir
-              </h2>
-              <Link
-                href="/orders"
-                className="text-sm text-primary hover:underline"
-              >
-                Lihat Semua
-              </Link>
+            <div className="card p-5">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="font-bold text-gray-800 flex items-center gap-2">
+                  <ClipboardList size={20} className="text-primary" />
+                  Pesanan Terakhir
+                </h2>
+                <Link
+                  href="/orders"
+                  className="text-sm text-primary hover:underline"
+                >
+                  Lihat Semua
+                </Link>
+              </div>
+              <div className="space-y-3">
+                {recentOrders.length === 0 ? (
+                  <p className="text-sm text-gray-500 text-center py-4">Belum ada pesanan.</p>
+                ) : (
+                  recentOrders.map((order) => {
+                    const oDate = parseSupabaseDate(order.created_at).toLocaleDateString('id-ID', { timeZone: 'Asia/Jakarta' });
+                    const detailHref = `/orders/${order.id}`;
+                    return (
+                      <Link
+                        key={order.id}
+                        href={detailHref}
+                        className="flex items-center justify-between border-b pb-3 last:border-0 last:pb-0 hover:bg-gray-50 rounded-lg px-2 -mx-2 transition-colors"
+                      >
+                        <div>
+                          <p className="font-medium text-gray-800 text-sm">
+                            {(Array.isArray(order.stores) ? order.stores[0]?.name : (order.stores as any)?.name) || "Toko"}
+                          </p>
+                          <p className="text-xs text-gray-400">
+                            {order.id.split("-")[0]} · {oDate}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-bold text-gray-800 text-sm mb-1">
+                            {formatPrice(order.total_amount)}
+                          </p>
+                          <StatusBadge status={order.status} className="text-[10px] px-2 py-0.5" />
+                        </div>
+                      </Link>
+                    );
+                  })
+                )}
+              </div>
             </div>
-            <div className="space-y-3">
-              {recentOrders.length === 0 ? (
-                <p className="text-sm text-gray-500 text-center py-4">Belum ada pesanan.</p>
-              ) : (
-                recentOrders.map((order) => {
-                  const oDate = parseSupabaseDate(order.created_at).toLocaleDateString('id-ID', { timeZone: 'Asia/Jakarta' });
-                  const detailHref = `/orders/${order.id}`;
-                  return (
-                    <Link
-                      key={order.id}
-                      href={detailHref}
-                      className="flex items-center justify-between border-b pb-3 last:border-0 last:pb-0 hover:bg-gray-50 rounded-lg px-2 -mx-2 transition-colors"
-                    >
-                      <div>
-                        <p className="font-medium text-gray-800 text-sm">
-                          {(Array.isArray(order.stores) ? order.stores[0]?.name : (order.stores as any)?.name) || "Toko"}
-                        </p>
-                        <p className="text-xs text-gray-400">
-                          {order.id.split("-")[0]} · {oDate}
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <p className="font-bold text-gray-800 text-sm mb-1">
-                          {formatPrice(order.total_amount)}
-                        </p>
-                        <StatusBadge status={order.status} className="text-[10px] px-2 py-0.5" />
-                      </div>
-                    </Link>
-                  );
-                })
-              )}
-            </div>
-          </div>
           )}
 
           {/* Logout */}

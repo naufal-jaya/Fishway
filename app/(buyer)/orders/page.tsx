@@ -48,8 +48,8 @@ export default async function BuyerOrdersPage({ searchParams }: { searchParams: 
     <div>
       <Navbar />
       <Container>
+        <BackButton href="/" />
         <div className="flex items-center gap-3 mb-6">
-          <BackButton href="/" />
           <h1 className="text-2xl font-bold text-gray-800">Pesanan Saya</h1>
         </div>
 

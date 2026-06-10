@@ -136,61 +136,61 @@ function EditProfileContent() {
     <div>
       <Navbar />
       <Container>
-          <div className="flex items-center gap-3 mb-6">
-            <BackButton href="/profile" />
-            <h1 className="text-2xl font-bold text-gray-800">Edit Profil</h1>
-          </div>
+        <BackButton href="/profile" />
+        <div className="flex items-center gap-3 mb-6">
+          <h1 className="text-2xl font-bold text-gray-800">Edit Profil</h1>
+        </div>
 
-          <div className="grid md:grid-cols-2 gap-6 items-start">
-            {/* KIRI — Informasi Akun */}
-            <form onSubmit={handleSubmit} className="card p-6 space-y-4">
-              <h2 className="font-bold text-gray-800 text-lg border-b pb-3 flex items-center gap-2">
-                <User size={18} className="text-primary" /> Informasi Akun
-              </h2>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  {isSeller ? "Nama Toko" : "Nama Lengkap"}
-                </label>
-                <input
-                  type="text"
-                  name="name"
-                  value={formData.name}
-                  onChange={(e) => { handleChange(e); setErrors((prev) => ({ ...prev, name: undefined })); }}
-                  className={`w-full border rounded-lg p-2 ${errors.name ? "border-red-400 focus:outline-red-400" : ""}`}
-                />
-                {errors.name && <p className="text-xs text-red-500 mt-1">{errors.name}</p>}
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Nomor Telepon</label>
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  name="phone"
-                  value={formData.phone}
-                  onChange={(e) => {
-                    const val = e.target.value.replace(/[^0-9+]/g, "");
-                    setFormData({ ...formData, phone: val });
-                    setErrors((prev) => ({ ...prev, phone: undefined }));
-                  }}
-                  className={`w-full border rounded-lg p-2 ${errors.phone ? "border-red-400 focus:outline-red-400" : ""}`}
-                  placeholder="08123456789"
-                />
-                {errors.phone && <p className="text-xs text-red-500 mt-1">{errors.phone}</p>}
-              </div>
-            </form>
+        <div className="grid md:grid-cols-2 gap-6 items-start">
+          {/* KIRI — Informasi Akun */}
+          <form onSubmit={handleSubmit} className="card p-6 space-y-4">
+            <h2 className="font-bold text-gray-800 text-lg border-b pb-3 flex items-center gap-2">
+              <User size={18} className="text-primary" /> Informasi Akun
+            </h2>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                {isSeller ? "Nama Toko" : "Nama Lengkap"}
+              </label>
+              <input
+                type="text"
+                name="name"
+                value={formData.name}
+                onChange={(e) => { handleChange(e); setErrors((prev) => ({ ...prev, name: undefined })); }}
+                className={`w-full border rounded-lg p-2 ${errors.name ? "border-red-400 focus:outline-red-400" : ""}`}
+              />
+              {errors.name && <p className="text-xs text-red-500 mt-1">{errors.name}</p>}
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Nomor Telepon</label>
+              <input
+                type="text"
+                inputMode="numeric"
+                name="phone"
+                value={formData.phone}
+                onChange={(e) => {
+                  const val = e.target.value.replace(/[^0-9+]/g, "");
+                  setFormData({ ...formData, phone: val });
+                  setErrors((prev) => ({ ...prev, phone: undefined }));
+                }}
+                className={`w-full border rounded-lg p-2 ${errors.phone ? "border-red-400 focus:outline-red-400" : ""}`}
+                placeholder="08123456789"
+              />
+              {errors.phone && <p className="text-xs text-red-500 mt-1">{errors.phone}</p>}
+            </div>
+          </form>
 
-            {/* KANAN — Alamat */}
-            <div className="space-y-4">
-              {isSeller ? <SellerAddressForm /> : <AddressList initialAddresses={addresses} />}
+          {/* KANAN — Alamat */}
+          <div className="space-y-4">
+            {isSeller ? <SellerAddressForm /> : <AddressList initialAddresses={addresses} />}
 
-              <div className="flex gap-3">
-                <button type="button" onClick={() => router.push(redirectUrl)} className="flex-1 btn-outline py-2.5 rounded-xl">Batal</button>
-                <button disabled={loading} onClick={handleSubmit} className="flex-1 btn-primary py-2.5 rounded-xl">
-                  {loading ? "Menyimpan..." : "Simpan Perubahan"}
-                </button>
-              </div>
+            <div className="flex gap-3">
+              <button type="button" onClick={() => router.push(redirectUrl)} className="bg-white flex-1 btn-outline py-2.5 rounded-xl">Batal</button>
+              <button disabled={loading} onClick={handleSubmit} className="flex-1 btn-primary py-2.5 rounded-xl">
+                {loading ? "Menyimpan..." : "Simpan Perubahan"}
+              </button>
             </div>
           </div>
+        </div>
       </Container>
     </div>
   );

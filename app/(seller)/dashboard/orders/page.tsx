@@ -127,8 +127,8 @@ const paginatedOrders = filteredOrders.slice(
       <Navbar />
       <Container>
           {/* Header */}
+          <BackButton href="/dashboard" />
           <div className="mb-6">
-            <BackButton href="/dashboard" />
             <h1 className="text-2xl font-bold text-gray-800 mt-1">
               Manajemen Pesanan
             </h1>
