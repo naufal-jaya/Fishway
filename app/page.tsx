@@ -7,7 +7,7 @@ import { createClient } from "@/utils/supabase/server";
 import { cookies } from "next/headers";
 import { getCityFromCoords } from "@/lib/geocoding";
 import FooterSection from "@/components/FooterSection";
-
+import Image from "next/image";
 
 function normalizeCategory(category: string | null | undefined): string {
   if (!category) return "";
@@ -54,8 +54,8 @@ export default async function HomePage() {
         seller: store?.name || "Penjual",
         location: resolvedLocation || p.location || "Lokasi tidak diketahui",
         description: p.description || "",
-        gambar: (Array.isArray(p.product_images) && p.product_images.length > 0) 
-          ? [...p.product_images].sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0))[0]?.url 
+        gambar: (Array.isArray(p.product_images) && p.product_images.length > 0)
+          ? [...p.product_images].sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0))[0]?.url
           : (p.gambar || "/images/default.png"),
         jenis: p.jenis || "",
         condition: p.condition || "",
@@ -92,10 +92,11 @@ export default async function HomePage() {
         <Navbar />
         <Container className="flex-grow">
           {/* Welcoming Header */}
-          <h1 className="text-xl sm:text-4xl font-bold my-6 sm:my-8 flex flex-wrap items-center gap-2 text-gray-800">
-            Selamat Datang di Fishway{user ? `, ${displayName}` : ""}
+          <h1 className="text-xl sm:text-4xl font-bold my-6 sm:my-8 flex flex-wrap items-center text-gray-800">
+            <span>Selamat Datang di Fishway{user ? `, ${displayName}` : ""}</span>
+            <Image src="/images/mascot/welcome.png" alt="Welcome Mascot" width={64} height={64} className="object-contain w-12 h-12 sm:w-16 sm:h-16" />
           </h1>
-          
+
           {/* Section Title */}
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg sm:text-3xl font-bold text-gray-800">Produk Terbaru</h2>

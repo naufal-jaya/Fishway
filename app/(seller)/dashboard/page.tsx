@@ -8,6 +8,7 @@ import { redirect } from "next/navigation";
 import { Package, ShoppingBag, Clock, Wallet, Phone, Truck, Check, X, ChevronRight, Banknote } from "lucide-react";
 
 import StatusBadge from "@/components/StatusBadge";
+import Image from "next/image";
 
 export default async function SellerDashboardPage() {
   const supabase = createClient(cookies());
@@ -142,26 +143,22 @@ export default async function SellerDashboardPage() {
     {
       label: "Total Produk",
       value: productsCount || 0,
-      icon: <Package className="w-5 h-5" />,
-      color: "bg-blue-50 text-blue-600",
+      icon: <Image src="/images/mascot/produk.png" alt="Produk" width={100} height={100} className="object-contain w-24 h-24" />,
     },
     {
       label: "Pesanan Masuk",
       value: totalOrders,
-      icon: <ShoppingBag className="w-5 h-5" />,
-      color: "bg-green-50 text-green-600",
+      icon: <Image src="/images/mascot/order.png" alt="Pesanan" width={100} height={100} className="object-contain w-24 h-24" />,
     },
     {
       label: "Perlu Diproses",
       value: pendingOrders,
-      icon: <Clock className="w-5 h-5" />,
-      color: "bg-yellow-50 text-yellow-600",
+      icon: <Image src="/images/mascot/proses.png" alt="Proses" width={100} height={100} className="object-contain w-24 h-24" />,
     },
     {
       label: "Total Pendapatan",
       value: formatPrice(totalRevenue),
-      icon: <Wallet className="w-5 h-5" />,
-      color: "bg-purple-50 text-purple-600",
+      icon: <Image src="/images/mascot/pendapatan.png" alt="Pendapatan" width={100} height={100} className="object-contain w-24 h-24" />,
     },
   ];
 
@@ -193,7 +190,7 @@ export default async function SellerDashboardPage() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
             {stats.map((stat) => (
               <div key={stat.label} className="card p-4 flex flex-col items-center text-center">
-                <div className={`w-10 h-10 rounded-lg flex items-center justify-center mb-2 ${stat.color}`}>
+                <div className="rounded-lg flex items-center justify-center mb-2">
                   {stat.icon}
                 </div>
                 <p className="text-xl font-bold text-gray-800 leading-tight">{stat.value}</p>
@@ -206,11 +203,11 @@ export default async function SellerDashboardPage() {
           <div className="grid md:grid-cols-2 gap-4 mb-8">
             <Link href="/dashboard/products" className="card p-6 hover:shadow-md transition-shadow group">
               <div className="flex items-center gap-4">
-                <div className="bg-blue-100 w-14 h-14 rounded-xl flex items-center justify-center">
-                  <Package className="w-7 h-7 text-blue-600" />
+                <div className="rounded-xl flex items-center justify-center">
+                  <Package className="w-14 h-14 text-amber-950" />
                 </div>
                 <div className="flex-1">
-                  <h3 className="font-bold text-gray-800 group-hover:text-primary transition-colors">Kelola Produk</h3>
+                  <h3 className="font-bold text-gray-800">Kelola Produk</h3>
                   <p className="text-sm text-gray-500">{productsCount || 0} produk aktif</p>
                 </div>
                 <span className="text-gray-300 group-hover:text-primary transition-colors text-xl">→</span>
@@ -218,11 +215,11 @@ export default async function SellerDashboardPage() {
             </Link>
             <Link href="/dashboard/orders" className="card p-6 hover:shadow-md transition-shadow group">
               <div className="flex items-center gap-4">
-                <div className="bg-green-100 w-14 h-14 rounded-xl flex items-center justify-center">
-                  <ShoppingBag className="w-7 h-7 text-green-600" />
+                <div className="rounded-xl flex items-center justify-center">
+                  <ShoppingBag className="w-14 h-14 text-orange-700" />
                 </div>
                 <div className="flex-1">
-                  <h3 className="font-bold text-gray-800 group-hover:text-primary transition-colors">Kelola Pesanan</h3>
+                  <h3 className="font-bold text-gray-800">Kelola Pesanan</h3>
                   <p className="text-sm text-gray-500">{totalOrders} total pesanan</p>
                 </div>
                 <span className="text-gray-300 group-hover:text-primary transition-colors text-xl">→</span>
@@ -246,7 +243,7 @@ export default async function SellerDashboardPage() {
                 <Link
                   key={item.label}
                   href={item.href}
-                  className={`card p-4 text-center hover:shadow-md hover:scale-[1.02] transition-all cursor-pointer border ${item.highlightClass}`}
+                  className={`card p-4 text-center hover:shadow-md transition-all cursor-pointer border ${item.highlightClass}`}
                 >
                   <p className="text-2xl mb-1">{item.icon}</p>
                   <p className="text-2xl font-bold text-primary">{item.value}</p>
