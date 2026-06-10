@@ -201,7 +201,7 @@ export default async function SellerDashboardPage() {
 
           {/* Menu Cards */}
           <div className="grid md:grid-cols-2 gap-4 mb-8">
-            <Link href="/dashboard/products" className="card p-6 hover:shadow-md transition-shadow group">
+            <Link href="/dashboard/products" className="card p-6 border-2 border-transparent hover:border-sky-300 transition-all duration-400  group">
               <div className="flex items-center gap-4">
                 <div className="rounded-xl flex items-center justify-center">
                   <Package className="w-14 h-14 text-amber-950" />
@@ -213,7 +213,7 @@ export default async function SellerDashboardPage() {
                 <span className="text-gray-300 group-hover:text-primary transition-colors text-xl">→</span>
               </div>
             </Link>
-            <Link href="/dashboard/orders" className="card p-6 hover:shadow-md transition-shadow group">
+            <Link href="/dashboard/orders" className="card p-6 border-2 border-transparent hover:border-sky-300 transition-all duration-400  group">
               <div className="flex items-center gap-4">
                 <div className="rounded-xl flex items-center justify-center">
                   <ShoppingBag className="w-14 h-14 text-orange-700" />
@@ -243,7 +243,7 @@ export default async function SellerDashboardPage() {
                 <Link
                   key={item.label}
                   href={item.href}
-                  className={`card p-4 text-center hover:shadow-md transition-all cursor-pointer border ${item.highlightClass}`}
+                  className={`card p-4 text-center border-2 border-transparent hover:border-sky-300 transition-all duration-400 cursor-pointer ${item.highlightClass}`}
                 >
                   <p className="text-2xl mb-1">{item.icon}</p>
                   <p className="text-2xl font-bold text-primary">{item.value}</p>

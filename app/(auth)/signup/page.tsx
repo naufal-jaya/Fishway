@@ -164,7 +164,7 @@ export default function SignupPage() {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: `${window.location.origin}/auth/callback?next=/signup`,
+        redirectTo: `${window.location.origin}/auth/callback?next=/signup&action=signup`,
       },
     });
 
@@ -364,7 +364,7 @@ export default function SignupPage() {
   const handleCancelProfile = async () => {
     setIsLoading(true);
     try {
-      await supabase.auth.signOut();
+      await fetch("/api/auth/cancel-signup", { method: "POST" });
     } catch (err) {
       console.error(err);
     } finally {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { createClient } from "@/utils/supabase/supabaseClient";
@@ -12,10 +12,18 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [errors, setErrors] = useState<{ email?: string; password?: string }>(
+  const [errors, setErrors] = useState<{ email?: string; password?: string; google?: string }>(
     {},
   );
   const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("error") === "not_registered") {
+      setErrors((prev) => ({ ...prev, google: "Akun yang dipilih belum terdaftar" }));
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }, []);
 
   const validateEmail = (value: string) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -29,7 +37,7 @@ export default function LoginPage() {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: `${window.location.origin}/auth/callback?next=/`,
+        redirectTo: `${window.location.origin}/auth/callback?next=/&action=login`,
       },
     });
 
@@ -80,6 +88,19 @@ export default function LoginPage() {
       }
 
       console.log("login success", data);
+
+      if (data.user) {
+        const [{ data: buyer }, { data: seller }] = await Promise.all([
+          supabase.from("buyers").select("id").eq("id", data.user.id).maybeSingle(),
+          supabase.from("sellers").select("id").eq("id", data.user.id).maybeSingle(),
+        ]);
+
+        if (!buyer && !seller) {
+          // Profil belum lengkap, arahkan ke halaman signup untuk melengkapi
+          window.location.href = "/signup";
+          return;
+        }
+      }
 
       window.location.href = "/";
     } catch (err) {
@@ -367,6 +388,10 @@ export default function LoginPage() {
               </button>
             ))}
           </div>
+          
+          {errors.google && (
+            <p className="text-red-500 text-xs text-center mt-2 font-medium">{errors.google}</p>
+          )}
 
           <p className="text-center text-sm text-gray-500 mt-3">
             Belum punya akun?{" "}

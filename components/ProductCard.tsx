@@ -6,13 +6,13 @@ import Image from "next/image";
 export default function ProductCard({ product }: { product: Product }) {
   return (
     <Link href={`/product/${product.id}`} className="block group min-w-0">
-      <div className="card flex flex-col h-[280px] overflow-hidden hover:shadow-md transition-shadow min-w-0 bg-white">
+      <div className="card flex flex-col h-[280px] overflow-hidden shadow-md border-2 border-transparent hover:border-sky-300 transition-all duration-800 min-w-0 bg-white">
         {/* IMAGE ROW */}
         <div className="bg-blue-100 h-36 flex-shrink-0 flex items-center justify-center text-5xl overflow-hidden relative">
-          <Image 
-            src={product.gambar || "/images/default.png"} 
-            alt={product.name || "Product"} 
-            fill 
+          <Image
+            src={product.gambar || "/images/default.png"}
+            alt={product.name || "Product"}
+            fill
             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
             className="object-cover"
           />
@@ -26,7 +26,7 @@ export default function ProductCard({ product }: { product: Product }) {
               <span>{product.seller}</span>
             </div>
 
-            <h3 className="font-semibold text-gray-800 text-sm sm:text-base group-hover:text-primary transition-colors line-clamp-1 mt-0.5">
+            <h3 className="font-semibold text-gray-800 text-sm sm:text-base line-clamp-1 mt-0.5">
               {product.name}
             </h3>
 
@@ -62,7 +62,7 @@ export default function ProductCard({ product }: { product: Product }) {
           {/* FOOTER */}
           <div className="flex items-center justify-between pt-2 gap-1.5 border-t border-gray-50 mt-2 min-w-0">
             <div className="text-[10px] sm:text-xs flex text-gray-500 items-center min-w-0 flex-1">
-              <MapPin className="w-3 h-3 sm:w-3.5 sm:h-3.5 mr-0.5 shrink-0" /> 
+              <MapPin className="w-3 h-3 sm:w-3.5 sm:h-3.5 mr-0.5 shrink-0" />
               <span className="truncate">{product.location}</span>
             </div>
 
